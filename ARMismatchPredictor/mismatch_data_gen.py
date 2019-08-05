@@ -152,10 +152,10 @@ def ARDatagenMismatch(params, seed=int(np.absolute(np.floor(100*np.random.randn(
                 # and the previous actual state (will be the current true state from the
                 # measurements)
                 else:
-                    x[j,0,i] = x_complex[0].real
-                    x[j,1,i] = x_complex[1].real
-                    x[j,2,i] = x_complex[0].imag
-                    x[j,3,i] = x_complex[1].imag
+                    x[j,0,i] = x_complex[1].real
+                    x[j,1,i] = x_complex[0].real
+                    x[j,2,i] = x_complex[1].imag
+                    x[j,3,i] = x_complex[0].imag
                 # End of sequence generation loop
             # End of batch generation loop
         # End of series generation loop

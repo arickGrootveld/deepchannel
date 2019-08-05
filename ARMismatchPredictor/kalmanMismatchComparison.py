@@ -30,9 +30,9 @@ if args.filePath == 'None':
     from mismatch_data_gen import ARDatagenMismatch
 
     defaultDataGenValues = {}
-    defaultDataGenValues[u'simLength'] = 100
+    defaultDataGenValues[u'simLength'] = 2000
     defaultDataGenValues[u'AR_n'] = AR_n
-    defaultDataGenValues[u'coefVariance'] = 0.000001
+    defaultDataGenValues[u'coefVariance'] = 0.0000000001
     defaultDataGenValues[u'batchSize'] = 32
     defaultDataGenValues[u'dataLength'] = 20
     defaultDataGenValues[u'seed'] = 1
