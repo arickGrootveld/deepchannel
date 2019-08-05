@@ -4,3 +4,6 @@ ARProcessPredictor/__pycache__
 ARMismatchPredictor/__pycache__
 ARMismatchPredictor/logs
 ARMismatchPredictor/data
+.vscode
+data
+**.swp

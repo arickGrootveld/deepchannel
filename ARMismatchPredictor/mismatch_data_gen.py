@@ -98,7 +98,7 @@ def ARDatagenMismatch(params, seed=int(np.absolute(np.floor(100*np.random.randn(
     arCoeffMeans = [0.5, 0.4]
 
     # Noise covariance matrix / noise mean
-    Q = np.array([[0.1, 0], [0, 0.00000000001]])
+    Q = np.array([[0.1, 0], [0, 0.0000000000001]])
     systNoiseMean = 0
 
     # Observation covariance matrix/ noise mean
@@ -155,7 +155,7 @@ def ARDatagenMismatch(params, seed=int(np.absolute(np.floor(100*np.random.randn(
                     x[j,0,i] = x_complex[0].real
                     x[j,1,i] = x_complex[1].real
                     x[j,2,i] = x_complex[0].imag
-                    x[j,2,i] = x_complex[1].imag
+                    x[j,3,i] = x_complex[1].imag
                 # End of sequence generation loop
             # End of batch generation loop
         # End of series generation loop
