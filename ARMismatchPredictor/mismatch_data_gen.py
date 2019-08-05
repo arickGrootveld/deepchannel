@@ -37,7 +37,7 @@ def ARCoeffecientGeneration(arCoeffMeans,arCoeffecientNoiseVar, seed=-1):
         arCoeffsMatrix[0,1] = arCoeffMeans[1] + arCoeffNoise[1]
 
         # Compute EigenValues of F
-        eVals, eVecs = LA.eig(arCoeffsMatrix)
+        eVals = LA.eig(arCoeffsMatrix)[0]
         # Determine if any of them have a greater magnitude than 1
         if (not np.any(np.absolute(eVals)>1)):
             goodCoeffs=True

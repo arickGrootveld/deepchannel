@@ -30,7 +30,7 @@ if args.filePath == 'None':
     from mismatch_data_gen import ARDatagenMismatch
 
     defaultDataGenValues = {}
-    defaultDataGenValues[u'simLength'] = 10
+    defaultDataGenValues[u'simLength'] = 2
     defaultDataGenValues[u'AR_n'] = AR_n
     defaultDataGenValues[u'coefVariance'] = 0.1
     defaultDataGenValues[u'batchSize'] = 32
@@ -104,14 +104,10 @@ R = np.array([0.1])
 
 # Loop through the series of data
 for i in range(0,measuredStateData.shape[3]):
-    print('iteration')
     # Loop through the batch of data
     for k in range(0,measuredStateData.shape[0]):
-        print('iteration through a batch')
         # Loop through a sequence of data
         for q in range(1,measuredStateData.shape[2]):
-            print('iteration through a sequence')
-
 
             # Calculating the prediction of the next state based on the previous estimate
             x_prediction[k,:,:,q,i] = np.matmul(F, x_correction[k,:,:,q-1,i])
@@ -120,11 +116,6 @@ for i in range(0,measuredStateData.shape[3]):
             # Calculating the predicted MSE from the current MSE, the AR Coefficients,
             # and the covariance matrix
             minPredMSE[k,:,:,q,i] = np.matmul(np.matmul(F,minMSE[k,:,:,q-1,i]), np.transpose(F)) + Q
-
-            # Debugging Stuff, TODO: Remove this once done
-            test = np.matmul(F, minMSE[k,:,:,q-1,i])
-            test2 = np.matmul(test, np.transpose(F))
-            test3 = test2 + Q
 
             # Calculating the new Kalman gain
             intermediate1 = np.matmul(minPredMSE[k,:,:,q,i], np.transpose(H))
@@ -143,6 +134,7 @@ for i in range(0,measuredStateData.shape[3]):
             # Calculating the MSE of our current state estimate
             intermediate1 = np.identity(AR_n) - np.matmul(kalmanGain[k,:,:,q,i], H)
             minMSE[k,:,:,q,i] = np.matmul(intermediate1, minPredMSE[k,:,:,q,i])
+    print('sequence done')
 
 # x_correction
 
