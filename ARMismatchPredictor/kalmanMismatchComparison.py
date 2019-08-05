@@ -23,6 +23,7 @@ parser.add_argument('--ARCoeffs', nargs='+', default=[0.5,0.4],
 args = parser.parse_args()
 
 ARCoeffs = args.ARCoeffs
+AR_n = len(ARCoeffs)
 
 # If no file was passed to it, will just generate its own data to test against
 if args.filePath == 'None':
@@ -30,7 +31,7 @@ if args.filePath == 'None':
 
     defaultDataGenValues = {}
     defaultDataGenValues[u'simLength'] = 10
-    defaultDataGenValues[u'AR_n'] = 2
+    defaultDataGenValues[u'AR_n'] = AR_n
     defaultDataGenValues[u'coefVariance'] = 0.1
     defaultDataGenValues[u'batchSize'] = 32
     defaultDataGenValues[u'dataLength'] = 20
@@ -60,29 +61,30 @@ else:
 # For a better understanding of the vocabulary used in this code, please consult the mismatch_data_gen
 # file, above the ARDatagenMismatch function
 
-# Prediction/estimate formatted into a real and imaginary in the 1st dimension, vectorized in the 2nd
-# dimension, by sequence in the 3rd dimension, by batch in the 4th dimension, and by series in the 5th
-# dimension
-x_correction = np.zeros((2,2,measuredStateData.shape[2],measuredStateData.shape[0],
+# Prediction/estimate formatted into batch elements in the 1st dimension, current and
+# last state value in the 2nd dimension, real and complex in the 3rd dimension,
+# by sequence in the 4th dimension, and by series in the 5th dimension
+x_correction = np.zeros((measuredStateData.shape[0],AR_n,AR_n,measuredStateData.shape[2],
                          measuredStateData.shape[3]))
-x_prediction = np.zeros((2,2,measuredStateData.shape[2],measuredStateData.shape[0],
+x_prediction = np.zeros((measuredStateData.shape[0],AR_n,AR_n,measuredStateData.shape[2],
                          measuredStateData.shape[3]))
 
-# Other Kalman Filter variables formatted in a matrix/vector of values in the 1st  and 2nd dimensions,
-# by sequence in the 3rd dimension, by batch in the 4th dimension, and by series in the 5th dimension
-kalmanGain = np.zeros((2,1, measuredStateData.shape[2], measuredStateData.shape[0],
+# Other Kalman Filter variables formatted into batch elements in the 1st dimension
+# a matrix/vector of values in the 2nd and 3rd dimensions, by sequence in the 4th dimension,
+# and by series in the 5th dimension
+kalmanGain = np.zeros((measuredStateData.shape[0],AR_n, 1, measuredStateData.shape[2],
                        measuredStateData.shape[3]))
-minPredMSE = np.zeros((2,2, measuredStateData.shape[2], measuredStateData.shape[0],
+minPredMSE = np.zeros((measuredStateData.shape[0],AR_n, AR_n, measuredStateData.shape[2],
                        measuredStateData.shape[3]))
-minMSE = np.zeros((2,2, measuredStateData.shape[2], measuredStateData.shape[0],
+minMSE = np.zeros((measuredStateData.shape[0],AR_n, AR_n, measuredStateData.shape[2],
                    measuredStateData.shape[3]))
 
 
 
 # Initializing the correction value to be the expected value of the starting state
-x_correction[:,:,0,0,0] = np.array([[0,0],[0,0]])
+x_correction[0,:,:,0,0] = np.array([[0,0],[0,0]])
 # Initializing the MSE to be the variance in the starting value of the sequence
-minMSE[:,:,0,0,0] = np.array([[0,0], [0,0]])
+minMSE[0,:,:,0,0] = np.array([[0,0], [0,0]])
 
 
 ## Kalman Filter parameters to be used
@@ -90,17 +92,14 @@ minMSE[:,:,0,0,0] = np.array([[0,0], [0,0]])
 # F matrix is made up of AR process mean values
 F = np.array([ARCoeffs,[1,0]])
 
-# system noise mean value
-sysNoiseMean = np.array([[0,0], [0,0]])
-
 # Covariance of the process noise
 Q = np.array([[0.1, 0],[0,0]])
 
 # Observation Matrix mapping the observations into the state space
-H = np.array([1,0])
+H = np.array([1,0])[np.newaxis]
 
 # Covariance of the measurements
-R = 0.1
+R = np.array([0.1])
 
 
 # Loop through the series of data
@@ -112,13 +111,44 @@ for i in range(0,measuredStateData.shape[3]):
         # Loop through a sequence of data
         for q in range(1,measuredStateData.shape[2]):
             print('iteration through a sequence')
+
+
             # Calculating the prediction of the next state based on the previous estimate
-            x_prediction[:,:,q,k,i] = np.matmul(F, x_correction[:,:,q-1,k,i]) + sysNoiseMean
+            x_prediction[k,:,:,q,i] = np.matmul(F, x_correction[k,:,:,q-1,i])
+
+
             # Calculating the predicted MSE from the current MSE, the AR Coefficients,
             # and the covariance matrix
-            minPredMSE[:,:,q,k,i] = np.matmul(np.matmul(F,minMSE[:,:,q-1,k,i]), np.transpose(F)) + Q
-            intermediate1 = np.matmul(minPredMSE[:,:,q,k,i], H)
+            minPredMSE[k,:,:,q,i] = np.matmul(np.matmul(F,minMSE[k,:,:,q-1,i]), np.transpose(F)) + Q
 
+            # Debugging Stuff, TODO: Remove this once done
+            test = np.matmul(F, minMSE[k,:,:,q-1,i])
+            test2 = np.matmul(test, np.transpose(F))
+            test3 = test2 + Q
+
+            # Calculating the new Kalman gain
+            intermediate1 = np.matmul(minPredMSE[k,:,:,q,i], np.transpose(H))
+            # Intermediate2 should be a single dimensional number, so we can simply just divide by it
+            intermediate2 = np.linalg.inv(R + np.matmul(np.matmul(H, minPredMSE[k,:,:,q,i]),
+                                                        np.transpose(H)))
+            kalmanGain[k,:,:,q,i] = np.matmul(intermediate1, intermediate2)
+
+
+            # Calculating the State Correction Value
+            intermediate1 = np.matmul(H,x_prediction[k,:,:,q,i])
+            intermediate2 = measuredStateData[k,:,q,i] - intermediate1
+            x_correction[k,:,:,q,i] = x_prediction[k,:,:,q,i] + np.matmul(kalmanGain[k,:,:,q,i],
+                                                                          intermediate2)
+
+            # Calculating the MSE of our current state estimate
+            intermediate1 = np.identity(AR_n) - np.matmul(kalmanGain[k,:,:,q,i], H)
+            minMSE[k,:,:,q,i] = np.matmul(intermediate1, minPredMSE[k,:,:,q,i])
+
+# x_correction
+
+## TODO: Verify that this works with live data
+## TODO: Do the actual computation of mean squared errors and save that to a .mat file, as well as the average MSE from all sequences
+## TODO: Compare this with Neural Network and LS estimator to determine how effective the NN is
 
 print('test complete')
 print(args)
