@@ -32,7 +32,7 @@ if args.filePath == 'None':
     defaultDataGenValues = {}
     defaultDataGenValues[u'simLength'] = 2000
     defaultDataGenValues[u'AR_n'] = AR_n
-    defaultDataGenValues[u'coefVariance'] = 0.0000000001
+    defaultDataGenValues[u'coefVariance'] = 0
     defaultDataGenValues[u'batchSize'] = 32
     defaultDataGenValues[u'dataLength'] = 20
     defaultDataGenValues[u'seed'] = 1
@@ -143,11 +143,12 @@ for i in range(0,measuredStateData.shape[3]):
             # Calculating the MSE of our current state estimate
             intermediate1 = np.identity(AR_n) - np.matmul(kalmanGain[k,:,:,q,i], H)
             minMSE[k,:,:,q,i] = np.matmul(intermediate1, minPredMSE[k,:,:,q,i])
-        # print('sequence done')
-        # Calculating the actual MSE between the kalman filters final prediction, and the actual value
+        ## Calculating the actual MSE between the kalman filters final prediction, and the actual value ##
 
         # Converting the true states into their complex equivelants
         currentTrueStateComplex = trueStateData[k,0,i] + (1j* trueStateData[k,2,i])
+        # TODO: Replace the code two lines below with the code 1 line below
+        # nextTrueStateComplex = trueStateData[k,1,i] + (1j*trueStateData[k,3,i])
         nextTrueStateComplex = trueStateData[k,1,i] + (1j*trueStateData[k,3,i])
 
 

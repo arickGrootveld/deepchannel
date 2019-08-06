@@ -98,7 +98,8 @@ def ARDatagenMismatch(params, seed=int(np.absolute(np.floor(100*np.random.randn(
     arCoeffMeans = [0.5, 0.4]
 
     # Noise covariance matrix / noise mean
-    Q = np.array([[0.1, 0], [0, 0.0000000000001]])
+    Q = np.array([[0.1, 0], [0, 0]])
+    QChol = np.array([[np.sqrt(Q[0,0]), 0],[0, 0]])
     systNoiseMean = 0
 
     # Observation covariance matrix/ noise mean
@@ -120,9 +121,9 @@ def ARDatagenMismatch(params, seed=int(np.absolute(np.floor(100*np.random.randn(
             # Loop for generating the sequence of data for each batch element #
             for m in range(0, sequenceLength + 1):
                 # Generate system noise vector
-                rSysNoise = np.divide(np.matmul(LA.cholesky(Q),
+                rSysNoise = np.divide(np.matmul(QChol,
                                         np.random.randn(AR_n, 1) + systNoiseMean), np.sqrt(2))
-                iSysNoise = np.divide(np.matmul(1j * LA.cholesky(Q),
+                iSysNoise = np.divide(np.matmul(1j * QChol,
                                         np.random.randn(AR_n, 1) + systNoiseMean), np.sqrt(2))
                 v = rSysNoise + iSysNoise
 
