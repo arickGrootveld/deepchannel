@@ -30,11 +30,11 @@ if args.filePath == 'None':
     from mismatch_data_gen import ARDatagenMismatch
 
     defaultDataGenValues = {}
-    defaultDataGenValues[u'simLength'] = 2000
+    defaultDataGenValues[u'simLength'] = 1000
     defaultDataGenValues[u'AR_n'] = AR_n
     defaultDataGenValues[u'coefVariance'] = 0
     defaultDataGenValues[u'batchSize'] = 32
-    defaultDataGenValues[u'dataLength'] = 20
+    defaultDataGenValues[u'dataLength'] = 10
     defaultDataGenValues[u'seed'] = 1
 
     dataGenValues = [defaultDataGenValues['simLength'],
@@ -55,7 +55,7 @@ else:
     matData = hdf5s.loadmat(args.filePath)
     measuredStateData = matData['measuredData']
     trueStateData = matData['predAndCurState']
-    print(matData['measuredData'])
+    print('loaded from file: ', args.filePath)
 
 ##### Kalman Filter Implementation #####
 # Initializing the Kalman Filter variables
@@ -144,7 +144,7 @@ for i in range(0,measuredStateData.shape[3]):
             intermediate1 = np.identity(AR_n) - np.matmul(kalmanGain[k,:,:,q,i], H)
             minMSE[k,:,:,q,i] = np.matmul(intermediate1, minPredMSE[k,:,:,q,i])
         ## Calculating the actual MSE between the kalman filters final prediction, and the actual value ##
-
+        ## TODO: REMOVE THIS CODE WHEN DONE DEBUGGING
         # Converting the true states into their complex equivelants
         currentTrueStateComplex = trueStateData[k,0,i] + (1j* trueStateData[k,2,i])
         # TODO: Replace the code two lines below with the code 1 line below
@@ -159,8 +159,8 @@ for i in range(0,measuredStateData.shape[3]):
         totalTrueEstimateMSE += trueEstimateMSE
         totalTruePredMSE += truePredictionMSE
 
-        
-        #PredMSE = torch.sum((output[:, 1] - y_test[:, 1]) ** 2 + (output[:, 3] - y_test[:, 3]) ** 2) / output.size(0)
+        # TODO: REMOVE THIS LINE
+        test = 0
 
     print('batch done')
 
