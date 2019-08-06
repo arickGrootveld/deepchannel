@@ -14,6 +14,7 @@ import sys
 sys.path.append("..") # Adds higher directory to python modules path.
 from model import TCN
 from data_gen import ARdatagen
+from mismatch_data_gen import ARDatagenMismatch
 
 # Timer for logging how long the training takes to execute
 import time
@@ -86,7 +87,7 @@ parser.add_argument('--seed', type=int, default=1111,
                     help='random seed (default: 1111)')
 
 # Data Generation Length
-parser.add_argument('--simu_len', type=float, default=50000,
+parser.add_argument('--simu_len', type=float, default=2000,
                     help='amount of data generated for training (default: 50000)')
 
 # Length of data used for Evaluation of models effectiveness
@@ -163,45 +164,43 @@ cuda_device = args.cuda_device
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~~~~~~~~~~~~ LOAD DATA/GENERATE MODEL ~~~~~~~~~~~~~~~~ ###
+# Here we have the option of loading from a saved .mat file or just calling the data generation
+# function explicitly - to load data, use the matloader function
+
+# AR data generation parameters
+AR_n = 2
+AR_var = 0.1
 
 # ~~~~~~~~~~~~~~~~~~ LOAD TRAINING SET
 
-# Real numbers on the left column, imaginary on the right column
-# Generate AR process data - both measured and real state
-stateData, measuredData = ARdatagen(2, simu_len, seed, data_polar)
+##########################
+# Load data from .mat files if needed
+##dataReal = np.loadtxt('realData.txt', delimiter=',')
+##dataObserved = np.loadtxt('observedData.txt', delimiter=',')
+##########################
+
+# Generate AR process training data set - both measured and real states
+trueState, measuredState = ARDatagenMismatch([simu_len, AR_n, AR_var, batch_size, seq_length], seed)
 
 # Logging the train data
-fileContent[u'trainDataMeas'] = measuredData
-fileContent[u'trainDataActual'] = stateData
+fileContent[u'trainDataActual'] = trueState
+fileContent[u'trainDataMeas'] = measuredState
 
-##########################
-# Load data from text files if needed
-##dataReal = np.loadtxt('realData.txt', delimiter=',')
-##dataObserved = np.loadtxt('observedData.txt', delimiter=',')
-##########################
 # Convert numpy arrays to tensors
-stateData = torch.from_numpy(stateData)
-measuredData = torch.from_numpy(measuredData)
+trueState = torch.from_numpy(trueState)
+measuredState = torch.from_numpy(measuredState)
 
 # Resize tensors
-stateData = stateData.t()
-measuredData = measuredData.t()
+#stateData = stateData.t()
+#measuredData = measuredData.t()
 
-stateData = stateData.unsqueeze(1)
-measuredData = measuredData.unsqueeze(1)
+#stateData = stateData.unsqueeze(1)
+#measuredData = measuredData.unsqueeze(1)
 
-stateData = torch.reshape(stateData, (1, 2, -1))
-measuredData = torch.reshape(measuredData, (1, 2, -1))
-
+#stateData = torch.reshape(stateData, (1, 2, -1))
+#measuredData = torch.reshape(measuredData, (1, 2, -1))
 
 # ~~~~~~~~~~~~~~~~~~ LOAD TEST SET
-# Real numbers on the left column, imaginary on the right column
-# Generate AR process data - both measured and real state
-stateDataTEST, measuredDataTEST = ARdatagen(2, testDataLen, seed+1, data_polar)
-
-# Logging the eval data
-fileContent[u'evalDataMeas'] = measuredDataTEST
-fileContent[u'evalDataActual'] = stateDataTEST
 
 ##########################
 # Load data from text files if needed
@@ -209,19 +208,29 @@ fileContent[u'evalDataActual'] = stateDataTEST
 ##dataObserved = np.loadtxt('observedData.txt', delimiter=',')
 ##########################
 
+# Generate AR process testing data set - both measured and real state
+trueStateTEST, measuredStateTEST = ARDatagenMismatch([simu_len, AR_n, AR_var, batch_size, seq_length], seed+1)
+
+# Logging the eval data
+fileContent[u'evalDataActual'] = trueStateTEST
+fileContent[u'evalDataMeas'] = measuredStateTEST
+
 # Convert numpy arrays to tensors
-stateDataTEST = torch.from_numpy(stateDataTEST)
-measuredDataTEST = torch.from_numpy(measuredDataTEST)
+trueStateTEST = torch.from_numpy(trueStateTEST)
+measuredStateTEST = torch.from_numpy(measuredStateTEST)
 
 # Resize tensors
-stateDataTEST = stateDataTEST.t()
-measuredDataTEST = measuredDataTEST.t()
+#stateDataTEST = stateDataTEST.t()
+#measuredDataTEST = measuredDataTEST.t()
 
-stateDataTEST = stateDataTEST.unsqueeze(1)
-measuredDataTEST = measuredDataTEST.unsqueeze(1)
+#stateDataTEST = stateDataTEST.unsqueeze(1)
+#measuredDataTEST = measuredDataTEST.unsqueeze(1)
 
-stateDataTEST = torch.reshape(stateDataTEST, (1, 2, -1))
-measuredDataTEST = torch.reshape(measuredDataTEST, (1, 2, -1))
+#stateDataTEST = torch.reshape(stateDataTEST, (1, 2, -1))
+#measuredDataTEST = torch.reshape(measuredDataTEST, (1, 2, -1))
+
+# !!!!!!!!!!!!!!!!!!!!!! CHANGE THIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 # Generate the model
 model = TCN(input_channels, n_classes, channel_sizes, kernel_size=kernel_size, dropout=dropout)
@@ -232,10 +241,10 @@ model = TCN(input_channels, n_classes, channel_sizes, kernel_size=kernel_size, d
 if args.cuda:
     torch.cuda.device(cuda_device)
     model.cuda()
-    stateData = stateData.cuda()
-    measuredData = measuredData.cuda()
-    stateDataTEST = stateDataTEST.cuda()
-    measuredDataTEST = measuredDataTEST.cuda()
+    trueState = trueState.cuda()
+    measuredState = measuredState.cuda()
+    trueStateTEST = trueStateTEST.cuda()
+    measuredStateTEST = measuredStateTEST.cuda()
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~~~~~~~~~~~~~~~~~~~ OPTIMIZER ~~~~~~~~~~~~~~~~~~~~~~~~ ###
@@ -246,10 +255,6 @@ optimizer = getattr(optim, args.optim)(model.parameters(), lr=lr)
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~~~~~~~~~~~~~~~~~~~ TRAINING ~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 
-
-## TRAINING LOOP MUST BE CHANGED TO WORK WITH CURRENT DATA GEN
-## WHICH OUTPUTS A 4D TENSOR OF TOEPLITZ TENSORS 
-
 def train(epoch):
 
     # Initialize training model and parameters
@@ -257,26 +262,17 @@ def train(epoch):
     model.train()
     total_loss = 0
 
-################################
+ ################################
 
-    # Training loop - run until we only have one batch size of data left
-    for i in range(0, (measuredData.size(2))-(seq_length*batch_size)):
+    # Training loop - run until we process every series of data
+    for i in range(0, measuredState.size(3)):
 
-        # Get the first segment
-        x = measuredData[:, :, i:i+seq_length]
-        y = stateData[:, :, i+seq_length-1:i+seq_length+1]
-
-        # Construct data (toeplitz) matrix
-        for j in range(i+1, batch_size+i):
-            x = torch.cat((x, measuredData[:, :, j:j+seq_length]), 0)
-            y = torch.cat((y, stateData[:, :, j+seq_length-1:j+seq_length+1]), 0)
-
+        # Grab the current series
+        x = measuredState[:, :, :, i]
+        y = trueState[:, :, i]
 
         x = x.float()
         y = y.float()
-
-        # Resize
-        y = torch.reshape(y, (32, 4))
 
         # Forward/backpass
         optimizer.zero_grad()
@@ -291,14 +287,14 @@ def train(epoch):
         optimizer.step()
         total_loss += loss.item()
 
-        # Display training results
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        # Display training results -- THIS MIGHT HAVE TO BE CHANGED !!!!!!!!!!!!!!!!
         if i % args.log_interval == 0:
             cur_loss = total_loss / args.log_interval
-            processed = min(i+batch_size, measuredData.size(2))
+            processed = min(i+batch_size, measuredState.size(2))
 
             print('Train Epoch: {:2d} [{:6d}/{:6d} ({:.0f}%)]\tLearning rate: {:.4f}\tLoss: {:.6f}'.format(
-                epoch, processed, measuredData.size(2), 100.*processed/measuredData.size(2), lr, cur_loss))
-
+                epoch, processed, measuredState.size(2), 100.*processed/measuredState.size(2), lr, cur_loss))
             PredMSE = torch.sum((output[:, 1] - y[:, 1]) ** 2 + (output[:, 3] - y[:, 3]) ** 2) / output.size(0)
             TrueMSE = torch.sum((output[:, 0] - y[:, 0]) ** 2 + (output[:, 2] - y[:, 2]) ** 2) / output.size(0)
             print('PredMSE: ', PredMSE)
@@ -318,22 +314,14 @@ def evaluate():
     n = 0
 
     # Training loop - run until we only have one batch size of data left
-    for i in range(0, (measuredDataTEST.size(2)) - (seq_length * batch_size)):
+    for i in range(0, (measuredStateTEST.size(2))):
 
-        # Get the first segment
-        x_test = measuredDataTEST[:, :, i:i+seq_length]
-        y_test = stateDataTEST[:, :, i+seq_length-1:i+seq_length+1]
+        # Grab the current series
+        x_test = measuredStateTEST[:, :, :, i]
+        y_test = trueStateTEST[:, :, i]
 
-        # Construct data (toeplitz) matrix
-        for j in range(i+1, batch_size+i):
-            x_test = torch.cat((x_test, measuredDataTEST[:, :, j:j+seq_length]), 0)
-            y_test = torch.cat((y_test, stateDataTEST[:, :, j+seq_length-1:j+seq_length+1]), 0)
-
-        # reshaping
         x_test = x_test.float()
         y_test = y_test.float()
-        y_test = y_test.squeeze()
-        y_test = torch.reshape(y_test, (32, 4))
 
         # Model evaluation
         model.eval()
@@ -349,6 +337,8 @@ def evaluate():
             TotalAvgTrueMSE+=TrueMSE
         n+=1
 
+
+    # THIS MIGHT HAVE TO BE CHANGED !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     # Print average MSE over entire test set (true and predicted)
     TotalAvgPredMSE = TotalAvgPredMSE / n
     TotalAvgTrueMSE = TotalAvgTrueMSE / n
@@ -369,11 +359,10 @@ for ep in range(1, epochs+1):
     tloss = evaluate()
 
 print("check check")
+
 # End timing
 end = time.time()
 simRunTime=(end-start)
-
-
 
 
 fileContent[u'trainingLength(seconds)'] = simRunTime

@@ -64,7 +64,7 @@ def ARCoeffecientGeneration(arCoeffMeans,arCoeffecientNoiseVar, seed=-1):
 #       x (tensor [batchSize x 4  x simuLength]) - a tensor of the real state values of the AR
 #                               process separated into batch elements in the 1st dimension,
 #                               complex and real state values of the AR process in the 2nd
-#                               dimension, and separated by batch in the 3rd dimension
+#                               dimension, and separated by series in the 3rd dimension
 #           x[:,0,:] (float) - real value of the current actual state
 #           x[:,1,:] (float) - real value of the next actual state
 #           x[:,2,:] (float) - imaginary value of the current actual state
@@ -74,7 +74,7 @@ def ARCoeffecientGeneration(arCoeffMeans,arCoeffecientNoiseVar, seed=-1):
 #                               values of the AR process separated into batch elements in the 1st
 #                               dimension, separated into real and complex numbers in the 2nd
 #                               dimension, separated into a sequence of observations in the 3rd
-#                               dimension, and separated by batch in the 4th dimension
+#                               dimension, and separated by series in the 4th dimension
 #           z[:,0,:,:] (float) - real values of the measured state
 #           z[:,1,:,:] (float) - imaginary values of the measured state
 
