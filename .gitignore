@@ -1,6 +1,9 @@
 ARProcessPredictor/logs
 ARProcessPredictor/data
 ARProcessPredictor/__pycache__
-ARModelMismatch/__pycache__
-ARModelMismatch/logs
-ARModelMismatch/data
+ARMismatchPredictor/__pycache__
+ARMismatchPredictor/logs
+ARMismatchPredictor/data
+.vscode
+data
+**.swp

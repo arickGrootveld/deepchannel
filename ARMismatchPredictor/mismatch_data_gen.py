@@ -37,7 +37,7 @@ def ARCoeffecientGeneration(arCoeffMeans,arCoeffecientNoiseVar, seed=-1):
         arCoeffsMatrix[0,1] = arCoeffMeans[1] + arCoeffNoise[1]
 
         # Compute EigenValues of F
-        eVals, eVecs = LA.eig(arCoeffsMatrix)
+        eVals = LA.eig(arCoeffsMatrix)[0]
         # Determine if any of them have a greater magnitude than 1
         if (not np.any(np.absolute(eVals)>1)):
             goodCoeffs=True
@@ -84,6 +84,13 @@ def ARCoeffecientGeneration(arCoeffMeans,arCoeffecientNoiseVar, seed=-1):
 #          Each element is a sequence
 #   Series: A set of data generated to be processed once by the model. Each element is a batch.
 #           This code generates one Series of length: simLength
+
+# Additional Notes about this function:
+#   - This function saves all the returned values to a data file, as well as every true state of
+#     the data for debugging purposes. It will print the name of the file that it saves the data
+#     to when it finishs running. The values that are stored for all the true state values are
+#     stored as complex numbers to save formatting time while debugging, because those values
+#     will not be used by the neural network this will not effect the model
 def ARDatagenMismatch(params, seed=int(np.absolute(np.floor(100*np.random.randn())))):
     # Set the seed value for repeatable results
     simLength = params[0]
@@ -98,7 +105,8 @@ def ARDatagenMismatch(params, seed=int(np.absolute(np.floor(100*np.random.randn(
     arCoeffMeans = [0.5, 0.4]
 
     # Noise covariance matrix / noise mean
-    Q = np.array([[0.1, 0], [0, 0.00000000001]])
+    Q = np.array([[0.1, 0], [0, 0]])
+    QChol = np.array([[np.sqrt(Q[0,0]), 0],[0, 0]])
     systNoiseMean = 0
 
     # Observation covariance matrix/ noise mean
@@ -110,6 +118,11 @@ def ARDatagenMismatch(params, seed=int(np.absolute(np.floor(100*np.random.randn(
     # Pre-allocating the matrix that will store the measured data to be fed into the model
     z = np.zeros((batchSize, 2, sequenceLength, simLength), dtype=float)
 
+    # Pre-allocating a matrix to save all true state values, for DEBUGGING
+    # Matrix format is batch element in 1st dimension, current and previous state in 2nd dimension,
+    # sequence element in the 3rd dimension, and then series element in the 4th dimension
+    all_xs = np.zeros((batchSize, 2, sequenceLength+1, simLength), dtype=complex)
+
     ### Loop for generating all the batches of data (a series) ###
     for i in range(0,simLength):
         ## Loop for generating a batch of data ##
@@ -120,9 +133,9 @@ def ARDatagenMismatch(params, seed=int(np.absolute(np.floor(100*np.random.randn(
             # Loop for generating the sequence of data for each batch element #
             for m in range(0, sequenceLength + 1):
                 # Generate system noise vector
-                rSysNoise = np.divide(np.matmul(LA.cholesky(Q),
+                rSysNoise = np.divide(np.matmul(QChol,
                                         np.random.randn(AR_n, 1) + systNoiseMean), np.sqrt(2))
-                iSysNoise = np.divide(np.matmul(1j * LA.cholesky(Q),
+                iSysNoise = np.divide(np.matmul(1j * QChol,
                                         np.random.randn(AR_n, 1) + systNoiseMean), np.sqrt(2))
                 v = rSysNoise + iSysNoise
 
@@ -140,6 +153,10 @@ def ARDatagenMismatch(params, seed=int(np.absolute(np.floor(100*np.random.randn(
                     x_complex = np.matmul(F,x_complex)
                     x_complex[0] = (x_complex[0] + v)[0]
                     z_complex = x_complex[0] + w
+
+                # Grabbing all true state values to help with DEBUGGING
+                all_xs[j,:,m,i] = x_complex
+
                 # Still in the measurement generation process
                 if(m<sequenceLength):
                     # Storing the measured data in its appropriate batch element, its appropriate
@@ -152,10 +169,10 @@ def ARDatagenMismatch(params, seed=int(np.absolute(np.floor(100*np.random.randn(
                 # and the previous actual state (will be the current true state from the
                 # measurements)
                 else:
-                    x[j,0,i] = x_complex[0].real
-                    x[j,1,i] = x_complex[1].real
-                    x[j,2,i] = x_complex[0].imag
+                    x[j,0,i] = x_complex[1].real
+                    x[j,1,i] = x_complex[0].real
                     x[j,2,i] = x_complex[1].imag
+                    x[j,3,i] = x_complex[0].imag
                 # End of sequence generation loop
             # End of batch generation loop
         # End of series generation loop
@@ -166,6 +183,7 @@ def ARDatagenMismatch(params, seed=int(np.absolute(np.floor(100*np.random.randn(
     logContent = {}
     logContent[u'measuredData'] = z
     logContent[u'predAndCurState'] = x
+    logContent[u'allTrueStateValues'] = all_xs
     matSave(storageFilePath,dataFile,logContent)
 
     # Return data

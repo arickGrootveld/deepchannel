@@ -30,11 +30,12 @@ if args.filePath == 'None':
     from mismatch_data_gen import ARDatagenMismatch
 
     defaultDataGenValues = {}
-    defaultDataGenValues[u'simLength'] = 10
+    defaultDataGenValues[u'simLength'] = 1000
     defaultDataGenValues[u'AR_n'] = AR_n
-    defaultDataGenValues[u'coefVariance'] = 0.1
+    defaultDataGenValues[u'coefVariance'] = 0
     defaultDataGenValues[u'batchSize'] = 32
-    defaultDataGenValues[u'dataLength'] = 20
+    defaultDataGenValues[u'dataLength'] = 10
+    defaultDataGenValues[u'seed'] = 1
 
     dataGenValues = [defaultDataGenValues['simLength'],
                      defaultDataGenValues['AR_n'],
@@ -42,7 +43,7 @@ if args.filePath == 'None':
                      defaultDataGenValues['batchSize'],
                      defaultDataGenValues['dataLength']]
 
-    trueStateData, measuredStateData = ARDatagenMismatch(dataGenValues)
+    trueStateData, measuredStateData = ARDatagenMismatch(dataGenValues, defaultDataGenValues['seed'])
 
 # If a file path was passed to it, load the data from the file. Expects it to be formatted how
 # ARDatagenMismatch formats it
@@ -54,7 +55,7 @@ else:
     matData = hdf5s.loadmat(args.filePath)
     measuredStateData = matData['measuredData']
     trueStateData = matData['predAndCurState']
-    print(matData['measuredData'])
+    print('loaded from file: ', args.filePath)
 
 ##### Kalman Filter Implementation #####
 # Initializing the Kalman Filter variables
@@ -62,12 +63,12 @@ else:
 # file, above the ARDatagenMismatch function
 
 # Prediction/estimate formatted into batch elements in the 1st dimension, current and
-# last state value in the 2nd dimension, real and complex in the 3rd dimension,
-# by sequence in the 4th dimension, and by series in the 5th dimension
-x_correction = np.zeros((measuredStateData.shape[0],AR_n,AR_n,measuredStateData.shape[2],
-                         measuredStateData.shape[3]))
-x_prediction = np.zeros((measuredStateData.shape[0],AR_n,AR_n,measuredStateData.shape[2],
-                         measuredStateData.shape[3]))
+# last state value in the 2nd dimension, by sequence in the 3rd dimension, and by series 
+# in the 4th dimension
+x_correction = np.zeros((measuredStateData.shape[0],AR_n,measuredStateData.shape[2],
+                         measuredStateData.shape[3]), dtype=complex)
+x_prediction = np.zeros((measuredStateData.shape[0],AR_n,measuredStateData.shape[2],
+                         measuredStateData.shape[3]), dtype=complex)
 
 # Other Kalman Filter variables formatted into batch elements in the 1st dimension
 # a matrix/vector of values in the 2nd and 3rd dimensions, by sequence in the 4th dimension,
@@ -82,7 +83,7 @@ minMSE = np.zeros((measuredStateData.shape[0],AR_n, AR_n, measuredStateData.shap
 
 
 # Initializing the correction value to be the expected value of the starting state
-x_correction[0,:,:,0,0] = np.array([[0,0],[0,0]])
+x_correction[0,:,0,0] = np.array([0,0])
 # Initializing the MSE to be the variance in the starting value of the sequence
 minMSE[0,:,:,0,0] = np.array([[0,0], [0,0]])
 
@@ -101,30 +102,28 @@ H = np.array([1,0])[np.newaxis]
 # Covariance of the measurements
 R = np.array([0.1])
 
+# Initializing the total MSE that we will use to follow the MSE through each iteration
+totalTruePredMSE = 0
+totalTruePredMSE1 = 0
+totalTrueEstimateMSE = 0
+totalTrueEstimateMSE1 = 0
 
 # Loop through the series of data
 for i in range(0,measuredStateData.shape[3]):
-    print('iteration')
     # Loop through the batch of data
     for k in range(0,measuredStateData.shape[0]):
-        print('iteration through a batch')
         # Loop through a sequence of data
         for q in range(1,measuredStateData.shape[2]):
-            print('iteration through a sequence')
-
+            # Formatting the measured data properly
+            measuredDataComplex = measuredStateData[k,0,q,i] + (measuredStateData[k,1,q,i] *1j)
 
             # Calculating the prediction of the next state based on the previous estimate
-            x_prediction[k,:,:,q,i] = np.matmul(F, x_correction[k,:,:,q-1,i])
+            x_prediction[k,:,q,i] = np.matmul(F, x_correction[k,:,q-1,i])
 
 
             # Calculating the predicted MSE from the current MSE, the AR Coefficients,
             # and the covariance matrix
             minPredMSE[k,:,:,q,i] = np.matmul(np.matmul(F,minMSE[k,:,:,q-1,i]), np.transpose(F)) + Q
-
-            # Debugging Stuff, TODO: Remove this once done
-            test = np.matmul(F, minMSE[k,:,:,q-1,i])
-            test2 = np.matmul(test, np.transpose(F))
-            test3 = test2 + Q
 
             # Calculating the new Kalman gain
             intermediate1 = np.matmul(minPredMSE[k,:,:,q,i], np.transpose(H))
@@ -135,15 +134,56 @@ for i in range(0,measuredStateData.shape[3]):
 
 
             # Calculating the State Correction Value
-            intermediate1 = np.matmul(H,x_prediction[k,:,:,q,i])
-            intermediate2 = measuredStateData[k,:,q,i] - intermediate1
-            x_correction[k,:,:,q,i] = x_prediction[k,:,:,q,i] + np.matmul(kalmanGain[k,:,:,q,i],
+            intermediate1 = np.matmul(H,x_prediction[k,:,q,i])
+            # intermediate2 = measuredStateData[k,:,q,i] - intermediate1
+            intermediate2 = measuredDataComplex - intermediate1
+            x_correction[k,:,q,i] = x_prediction[k,:,q,i] + np.matmul(kalmanGain[k,:,:,q,i],
                                                                           intermediate2)
 
             # Calculating the MSE of our current state estimate
             intermediate1 = np.identity(AR_n) - np.matmul(kalmanGain[k,:,:,q,i], H)
             minMSE[k,:,:,q,i] = np.matmul(intermediate1, minPredMSE[k,:,:,q,i])
+        ## Calculating the actual MSE between the kalman filters final prediction, and the actual value ##
+        ## TODO: REMOVE THIS CODE WHEN DONE DEBUGGING
+        # Converting the true states into their complex equivelants
+        currentTrueStateComplex = trueStateData[k,0,i] + (1j* trueStateData[k,2,i])
+        # TODO: Replace the code two lines below with the code 1 line below
+        # nextTrueStateComplex = trueStateData[k,1,i] + (1j*trueStateData[k,3,i])
+        nextTrueStateComplex = trueStateData[k,1,i] + (1j*trueStateData[k,3,i])
 
+
+        # Calculating the instantaneous MSE of our estimate and prediction
+        trueEstimateMSE = np.absolute(x_correction[k,0,q,i] - currentTrueStateComplex) ** 2
+        truePredictionMSE = np.absolute(x_prediction[k,0,q,i] - nextTrueStateComplex) ** 2
+
+        totalTrueEstimateMSE += trueEstimateMSE
+        totalTruePredMSE += truePredictionMSE
+
+        # TODO: REMOVE THIS LINE
+        test = 0
+
+    print('batch done')
+
+    # Averaging the MSE over the batch, and then printing it before reseting it
+    totalTrueEstimateMSE = totalTrueEstimateMSE/(trueStateData.shape[0])
+    totalTruePredMSE = totalTruePredMSE/(trueStateData.shape[0])
+    print('total MSE of estimate: ', totalTrueEstimateMSE)
+    print('total MSE of prediction: ', totalTruePredMSE)
+    totalTrueEstimateMSE1 += totalTrueEstimateMSE
+    totalTruePredMSE1 += totalTruePredMSE
+    totalTrueEstimateMSE = 0
+    totalTruePredMSE = 0
+    
+    #numpy.sum(())
+
+    # TODO: Verify the MSE here is larger than the expected MSE
+    # TODO: Verify that these are the correct indexs of the states to compare
+    #actualEstimateMSE = 
+totalTrueEstimateMSE1 =  totalTrueEstimateMSE1/(measuredStateData.shape[3])
+totalTruePredMSE1 = totalTruePredMSE1/(measuredStateData.shape[3])
+
+print('averaged over everything our estimate MSE is: ', totalTrueEstimateMSE1)
+print('averaged over everything our prediction MSE is: ', totalTruePredMSE1)
 # x_correction
 
 ## TODO: Verify that this works with live data
