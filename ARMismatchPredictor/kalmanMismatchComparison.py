@@ -21,8 +21,9 @@ parser.add_argument('--ARCoeffs', nargs='+', default=[0.5,0.4],
 
 
 args = parser.parse_args()
-
-ARCoeffs = args.ARCoeffs
+ARCoeffs = []
+for coeffs in args.ARCoeffs:
+    ARCoeffs.append(float(coeffs))
 AR_n = len(ARCoeffs)
 
 # If no file was passed to it, will just generate its own data to test against
@@ -30,11 +31,11 @@ if args.filePath == 'None':
     from mismatch_data_gen import ARDatagenMismatch
 
     defaultDataGenValues = {}
-    defaultDataGenValues[u'simLength'] = 1000
+    defaultDataGenValues[u'simLength'] = 5
     defaultDataGenValues[u'AR_n'] = AR_n
     defaultDataGenValues[u'coefVariance'] = 0
     defaultDataGenValues[u'batchSize'] = 32
-    defaultDataGenValues[u'dataLength'] = 10
+    defaultDataGenValues[u'dataLength'] = 1000
     defaultDataGenValues[u'seed'] = 1
 
     dataGenValues = [defaultDataGenValues['simLength'],

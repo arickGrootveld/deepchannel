@@ -3,10 +3,6 @@
 import numpy as np
 from numpy import linalg as LA
 from utilities import matSave
-# import hdf5storage as hdf5s
-# import os
-# import os.path as path
-
 
 # ARCoeffecientGeneration: Function that returns a matrix that works as an AR processes F matrix
 #   Inputs:  (arCoeffMeans, arCoefficientNoiseVar)
@@ -146,16 +142,16 @@ def ARDatagenMismatch(params, seed=int(np.absolute(np.floor(100*np.random.randn(
                                         np.random.randn(1) + observNoiseMean),np.sqrt(2))
                 w = rObsNoise + iObsNoise
                 if(m==0):
-                    x_complex = np.zeros((2), dtype=complex)
+                    x_complex = np.zeros((2,1), dtype=complex)
                     z_complex = 0 + 0j
                 else:
-                    # Don't think too hard about these lines
                     x_complex = np.matmul(F,x_complex)
-                    x_complex[0] = (x_complex[0] + v)[0]
+                    x_complex = x_complex + v
                     z_complex = x_complex[0] + w
 
                 # Grabbing all true state values to help with DEBUGGING
-                all_xs[j,:,m,i] = x_complex
+                # Indexing into x_complex in this way because it has shape (2,1) but we want it to be shaped (2,)
+                all_xs[j,:,m,i] = x_complex[:, 0]
 
                 # Still in the measurement generation process
                 if(m<sequenceLength):
