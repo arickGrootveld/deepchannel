@@ -7,3 +7,4 @@ ARMismatchPredictor/data
 .vscode
 data
 **.swp
+ARMismatchPredictor/ar_mismatch_test.py
