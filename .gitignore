@@ -8,3 +8,4 @@ ARMismatchPredictor/data
 data
 **.swp
 ARMismatchPredictor/ar_mismatch_test.py
+**.idea
