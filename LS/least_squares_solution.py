@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 from numpy.linalg import inv
 import numpy as np
 
@@ -25,7 +22,11 @@ def least_squares_estimator_predictor(Xhat, Y, state, M, N):
 
 N = 10 # Truncation order of an IIR filter
 M = 30 # Least Squares order
-a_ls_1 = np.zeros((N,M))
 num_states = 4
+state = 1
+Xhat = np.squeeze(predAndCurState[1,state,:])
+Y1 = np.squeeze(trainDataMeas[0:size(Xhat,1), state])
+
+a_ls_1 = np.zeros((N,num_states))
 for i in np.arange(num_states):
-    a_ls_1, MSE1[i] = least_squares_estimator_predictor(Xhat[i], Y[:,i], i, M, N)
+    a_ls_1[i], MSE1[i] = least_squares_estimator_predictor(Xhat[i], Y[:,i], i, M, N)
