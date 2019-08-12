@@ -13,7 +13,6 @@ from os import path
 import sys
 sys.path.append("..") # Adds higher directory to python modules path.
 from model import TCN
-from data_gen import ARdatagen
 from mismatch_data_gen import ARDatagenMismatch
 
 # Timer for logging how long the training takes to execute
@@ -87,7 +86,7 @@ parser.add_argument('--seed', type=int, default=1111,
                     help='random seed (default: 1111)')
 
 # Data Generation Length
-parser.add_argument('--simu_len', type=float, default=2000,
+parser.add_argument('--simu_len', type=float, default=250000,
                     help='amount of data generated for training (default: 50000)')
 
 # Length of data used for Evaluation of models effectiveness
@@ -128,7 +127,6 @@ while(fileSpaceFound==False):
     if not (path.exists(logName)):
         print(logName)
         fileSpaceFound=True
-#logName='./logs/log' + str(logNumber) + '.mat'
 
 # Logging the parameters of the model
 print('model parameters: ', args)
@@ -190,18 +188,6 @@ fileContent[u'trainDataMeas'] = measuredState
 trueState = torch.from_numpy(trueState)
 measuredState = torch.from_numpy(measuredState)
 
-# Resize tensors
-#stateData = stateData.t()
-#measuredData = measuredData.t()
-
-#stateData = stateData.unsqueeze(1)
-#measuredData = measuredData.unsqueeze(1)
-
-#stateData = torch.reshape(stateData, (1, 2, -1))
-#measuredData = torch.reshape(measuredData, (1, 2, -1))
-
-# ~~~~~~~~~~~~~~~~~~ LOAD TEST SET
-
 ##########################
 # Load data from text files if needed
 ##dataReal = np.loadtxt('realData.txt', delimiter=',')
@@ -218,19 +204,6 @@ fileContent[u'evalDataMeas'] = measuredStateTEST
 # Convert numpy arrays to tensors
 trueStateTEST = torch.from_numpy(trueStateTEST)
 measuredStateTEST = torch.from_numpy(measuredStateTEST)
-
-# Resize tensors
-#stateDataTEST = stateDataTEST.t()
-#measuredDataTEST = measuredDataTEST.t()
-
-#stateDataTEST = stateDataTEST.unsqueeze(1)
-#measuredDataTEST = measuredDataTEST.unsqueeze(1)
-
-#stateDataTEST = torch.reshape(stateDataTEST, (1, 2, -1))
-#measuredDataTEST = torch.reshape(measuredDataTEST, (1, 2, -1))
-
-# !!!!!!!!!!!!!!!!!!!!!! CHANGE THIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 # Generate the model
 model = TCN(input_channels, n_classes, channel_sizes, kernel_size=kernel_size, dropout=dropout)
@@ -258,7 +231,6 @@ optimizer = getattr(optim, args.optim)(model.parameters(), lr=lr)
 def train(epoch):
 
     # Initialize training model and parameters
-    global lr1
     model.train()
     total_loss = 0
 

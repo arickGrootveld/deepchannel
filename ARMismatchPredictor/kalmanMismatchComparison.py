@@ -31,12 +31,12 @@ if args.filePath == 'None':
     from mismatch_data_gen import ARDatagenMismatch
 
     defaultDataGenValues = {}
-    defaultDataGenValues[u'simLength'] = 5
+    defaultDataGenValues[u'simLength'] = 20
     defaultDataGenValues[u'AR_n'] = AR_n
     defaultDataGenValues[u'coefVariance'] = 0
-    defaultDataGenValues[u'batchSize'] = 32
-    defaultDataGenValues[u'dataLength'] = 1000
-    defaultDataGenValues[u'seed'] = 1
+    defaultDataGenValues[u'batchSize'] = 1000
+    defaultDataGenValues[u'dataLength'] = 300
+    defaultDataGenValues[u'seed'] = 320
 
     dataGenValues = [defaultDataGenValues['simLength'],
                      defaultDataGenValues['AR_n'],
@@ -136,7 +136,6 @@ for i in range(0,measuredStateData.shape[3]):
 
             # Calculating the State Correction Value
             intermediate1 = np.matmul(H,x_prediction[k,:,q,i])
-            # intermediate2 = measuredStateData[k,:,q,i] - intermediate1
             intermediate2 = measuredDataComplex - intermediate1
             x_correction[k,:,q,i] = x_prediction[k,:,q,i] + np.matmul(kalmanGain[k,:,:,q,i],
                                                                           intermediate2)
@@ -148,8 +147,6 @@ for i in range(0,measuredStateData.shape[3]):
         ## TODO: REMOVE THIS CODE WHEN DONE DEBUGGING
         # Converting the true states into their complex equivelants
         currentTrueStateComplex = trueStateData[k,0,i] + (1j* trueStateData[k,2,i])
-        # TODO: Replace the code two lines below with the code 1 line below
-        # nextTrueStateComplex = trueStateData[k,1,i] + (1j*trueStateData[k,3,i])
         nextTrueStateComplex = trueStateData[k,1,i] + (1j*trueStateData[k,3,i])
 
 
@@ -174,18 +171,14 @@ for i in range(0,measuredStateData.shape[3]):
     totalTruePredMSE1 += totalTruePredMSE
     totalTrueEstimateMSE = 0
     totalTruePredMSE = 0
-    
-    #numpy.sum(())
 
     # TODO: Verify the MSE here is larger than the expected MSE
     # TODO: Verify that these are the correct indexs of the states to compare
-    #actualEstimateMSE = 
 totalTrueEstimateMSE1 =  totalTrueEstimateMSE1/(measuredStateData.shape[3])
 totalTruePredMSE1 = totalTruePredMSE1/(measuredStateData.shape[3])
 
 print('averaged over everything our estimate MSE is: ', totalTrueEstimateMSE1)
 print('averaged over everything our prediction MSE is: ', totalTruePredMSE1)
-# x_correction
 
 ## TODO: Verify that this works with live data
 ## TODO: Do the actual computation of mean squared errors and save that to a .mat file, as well as the average MSE from all sequences
