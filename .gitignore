@@ -9,3 +9,4 @@ data
 **.swp
 ARMismatchPredictor/ar_mismatch_test.py
 **.idea
+**/__pycache__

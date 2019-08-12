@@ -1,7 +1,5 @@
 # Generate an AR process with mismatched AR coefficients - for training and evaluation of model
 
-import numpy as np
-from numpy import linalg as LA
 from utilities import matSave
 import torch
 
@@ -145,7 +143,7 @@ def ARDatagenMismatch(params, seed=int(np.absolute(np.floor(100*np.random.randn(
     # and then series element in the 5th dimension
     all_xs = torch.zeros((batchSize, 2, 2, sequenceLength+1, simLength), dtype=torch.float)
 
-    if(not cuda):
+    if(cuda):
         v.cuda()
         w.cuda()
 
@@ -203,7 +201,7 @@ def ARDatagenMismatch(params, seed=int(np.absolute(np.floor(100*np.random.randn(
 
                 # Grabbing all true state values to help with DEBUGGING
                 # Indexing into x_complex in this way because it has shape (2,1) but we want it to be shaped (2,)
-                # all_xs[j,:,m,i] = x_complex[:, 0]
+                all_xs[j,:,:,m,i] = x_complex
 
                 # Still in the measurement generation process
                 if(m<sequenceLength):
@@ -235,10 +233,10 @@ def ARDatagenMismatch(params, seed=int(np.absolute(np.floor(100*np.random.randn(
     storageFilePath = './data'
     dataFile = 'data'
     logContent = {}
-    logContent[u'measuredData'] = z
-    logContent[u'predAndCurState'] = x
-    logContent[u'allTrueStateValues'] = all_xs
+    logContent[u'measuredData'] = z.numpy()
+    logContent[u'predAndCurState'] = x.numpy()
+    logContent[u'allTrueStateValues'] = all_xs.numpy()
     matSave(storageFilePath,dataFile,logContent)
 
     # Return data
-    return(x, z)
+    return(x.numpy(), z.numpy())

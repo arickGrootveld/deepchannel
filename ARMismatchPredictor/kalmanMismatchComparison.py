@@ -1,7 +1,16 @@
+import sys
+sys.path.append('..')
+
 import numpy as np
 import argparse
 import hdf5storage as hdf5s
 import os.path as path
+import time
+from utilities import matSave
+
+
+
+start = time.time()
 
 parser = argparse.ArgumentParser(description='Kalman Filter implementation that tests the mean squared '
                                              'error of a KF that has mismatched parameters from '
@@ -24,25 +33,37 @@ for coeffs in args.ARCoeffs:
     ARCoeffs.append(float(coeffs))
 AR_n = len(ARCoeffs)
 
+
+
+
+
 # If no file was passed to it, will just generate its own data to test against
 if args.filePath == 'None':
     from mismatch_data_gen import ARDatagenMismatch
+    import torch.cuda as cuda
+
+    # Use GPU to speed up data generation if it is available
+    useCuda = False
+    if cuda.is_available():
+        useCuda = True
 
     defaultDataGenValues = {}
-    defaultDataGenValues[u'simLength'] = 200
+    defaultDataGenValues[u'simLength'] = 100
     defaultDataGenValues[u'AR_n'] = AR_n
     defaultDataGenValues[u'coefVariance'] = 0
-    defaultDataGenValues[u'batchSize'] = 1000
+    defaultDataGenValues[u'batchSize'] = 100
     defaultDataGenValues[u'dataLength'] = 300
     defaultDataGenValues[u'seed'] = 320
+    defaultDataGenValues[u'cuda'] = True
 
-    dataGenValues = [defaultDataGenValues['simLength'],
+    dataGenParameters = [defaultDataGenValues['simLength'],
                      defaultDataGenValues['AR_n'],
                      defaultDataGenValues['coefVariance'],
                      defaultDataGenValues['batchSize'],
                      defaultDataGenValues['dataLength']]
 
-    trueStateData, measuredStateData = ARDatagenMismatch(dataGenValues, defaultDataGenValues['seed'])
+
+    trueStateData, measuredStateData = ARDatagenMismatch(dataGenParameters, defaultDataGenValues['seed'], cuda=defaultDataGenValues['cuda'])
 
 # If a file path was passed to it, load the data from the file. Expects it to be formatted how
 # ARDatagenMismatch formats it
@@ -103,9 +124,9 @@ R = np.array([0.1])
 
 # Initializing the total MSE that we will use to follow the MSE through each iteration
 totalTruePredMSE = 0
-totalTruePredMSE1 = 0
+finalTruePredMSE = 0
 totalTrueEstimateMSE = 0
-totalTrueEstimateMSE1 = 0
+finalTrueEstimateMSE = 0
 
 # Loop through the series of data
 for i in range(0,measuredStateData.shape[3]):
@@ -142,7 +163,6 @@ for i in range(0,measuredStateData.shape[3]):
             intermediate1 = np.identity(AR_n) - np.matmul(kalmanGain[k,:,:,q,i], H)
             minMSE[k,:,:,q,i] = np.matmul(intermediate1, minPredMSE[k,:,:,q,i])
         ## Calculating the actual MSE between the kalman filters final prediction, and the actual value ##
-        ## TODO: REMOVE THIS CODE WHEN DONE DEBUGGING
         # Converting the true states into their complex equivelants
         currentTrueStateComplex = trueStateData[k,0,i] + (1j* trueStateData[k,2,i])
         nextTrueStateComplex = trueStateData[k,1,i] + (1j*trueStateData[k,3,i])
@@ -155,32 +175,40 @@ for i in range(0,measuredStateData.shape[3]):
         totalTrueEstimateMSE += trueEstimateMSE
         totalTruePredMSE += truePredictionMSE
 
-        # TODO: REMOVE THIS LINE
-        test = 0
-
-    print('batch done')
 
     # Averaging the MSE over the batch, and then printing it before reseting it
     totalTrueEstimateMSE = totalTrueEstimateMSE/(trueStateData.shape[0])
     totalTruePredMSE = totalTruePredMSE/(trueStateData.shape[0])
-    print('total MSE of estimate: ', totalTrueEstimateMSE)
-    print('total MSE of prediction: ', totalTruePredMSE)
-    totalTrueEstimateMSE1 += totalTrueEstimateMSE
-    totalTruePredMSE1 += totalTruePredMSE
+    # print('total MSE of estimate: ', totalTrueEstimateMSE)
+    # print('total MSE of prediction: ', totalTruePredMSE)
+    finalTrueEstimateMSE += totalTrueEstimateMSE
+    finalTruePredMSE += totalTruePredMSE
     totalTrueEstimateMSE = 0
     totalTruePredMSE = 0
 
-    # TODO: Verify the MSE here is larger than the expected MSE
-    # TODO: Verify that these are the correct indexs of the states to compare
-totalTrueEstimateMSE1 =  totalTrueEstimateMSE1/(measuredStateData.shape[3])
-totalTruePredMSE1 = totalTruePredMSE1/(measuredStateData.shape[3])
+finalTrueEstimateMSE =  totalTrueEstimateMSE1/(measuredStateData.shape[3])
+finalTruePredMSE = totalTruePredMSE1/(measuredStateData.shape[3])
 
 print('averaged over everything our estimate MSE is: ', totalTrueEstimateMSE1)
 print('averaged over everything our prediction MSE is: ', totalTruePredMSE1)
 
-## TODO: Verify that this works with live data
-## TODO: Do the actual computation of mean squared errors and save that to a .mat file, as well as the average MSE from all sequences
-## TODO: Compare this with Neural Network and LS estimator to determine how effective the NN is
+end = time.time()
 
-print('test complete')
-print(args)
+elapsedTime = (end - start)
+print('simulation took: ', elapsedTime, ' seconds')
+
+logData = {}
+
+logData[u'predictionMSE'] = finalTruePredMSE
+logData[u'estimatedMSE'] = finalTrueEstimateMSE
+logData[u'elapsedTime'] = elapsedTime
+logData[u'kalmanPredictions'] = x_prediction
+logData[u'kalmanEstimates'] =  x_correction
+logData[u'kalmanPredMMSE'] = minPredMSE
+logData[u'kalmanEstMMSE'] = minMSE
+logData[u'kalmanGains'] =  kalmanGain
+
+if not args.filePath == 'None':
+    logData[u'dataFileName'] = args.filePath
+
+matSave('logs', 'KFLog', logData)
