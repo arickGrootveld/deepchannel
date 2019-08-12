@@ -18,8 +18,6 @@ parser.add_argument('--ARCoeffs', nargs='+', default=[0.5,0.4],
 # TODO: As of right now this is not synced up with the data generated, so you need to manually
 # TODO: update this in both places if you want to generate fresh data with different AR params
 
-
-
 args = parser.parse_args()
 ARCoeffs = []
 for coeffs in args.ARCoeffs:
@@ -31,7 +29,7 @@ if args.filePath == 'None':
     from mismatch_data_gen import ARDatagenMismatch
 
     defaultDataGenValues = {}
-    defaultDataGenValues[u'simLength'] = 20
+    defaultDataGenValues[u'simLength'] = 200
     defaultDataGenValues[u'AR_n'] = AR_n
     defaultDataGenValues[u'coefVariance'] = 0
     defaultDataGenValues[u'batchSize'] = 1000

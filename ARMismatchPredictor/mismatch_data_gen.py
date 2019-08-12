@@ -3,6 +3,7 @@
 import numpy as np
 from numpy import linalg as LA
 from utilities import matSave
+import torch
 
 # ARCoeffecientGeneration: Function that returns a matrix that works as an AR processes F matrix
 #   Inputs:  (arCoeffMeans, arCoefficientNoiseVar)
@@ -13,29 +14,35 @@ from utilities import matSave
 #   Outputs: (arCoeffMatrix)
 #       arCoeffMatrix (tensor [2 x 2]) - the F matrix of an AR process (Bar-Shalom's notation)
 #                                                                   
-def ARCoeffecientGeneration(arCoeffMeans,arCoeffecientNoiseVar, seed=-1):
+def ARCoeffecientGeneration(arCoeffMeans,arCoeffecientNoiseVar, seed=-1, cuda=False):
     if(seed > 0):
-        np.random.seed(seed)
+        torch.manual_seed(seed)
 
-    arCoeffsMatrix = np.identity(2)
+    arCoeffsMatrix = torch.eye(2)
     arCoeffsMatrix[1] = arCoeffsMatrix[0]
     goodCoeffs = False
     # Pre-Allocating the arCoeffNoise array
-    arCoeffNoise = [0,0]
+    arCoeffNoise = torch.empty(2,1, dtype=torch.float)
+    eigValsEvaluated = torch.empty(2, dtype=torch.float)
+    if (cuda):
+        arCoeffsMatrix.cuda()
+        arCoeffNoise.cuda()
+        eigValsEvaluated.cuda()
+
     while(not goodCoeffs):
         # Generate new AR Coefficients until you get a pair who's eigenvalues are 
         # less than 1.
         # We do this because the system would explode to infinity if the eigenvalues 
         # were greater than 1.
-        arCoeffNoise[0] = np.random.randn(1) * arCoeffecientNoiseVar
-        arCoeffNoise[1] = np.random.randn(1) * arCoeffecientNoiseVar
+        arCoeffNoise[0] = torch.randn(1) * arCoeffecientNoiseVar
+        arCoeffNoise[1] = torch.randn(1) * arCoeffecientNoiseVar
         arCoeffsMatrix[0,0] = arCoeffMeans[0] + arCoeffNoise[0]
         arCoeffsMatrix[0,1] = arCoeffMeans[1] + arCoeffNoise[1]
 
         # Compute EigenValues of F
-        eVals = LA.eig(arCoeffsMatrix)[0]
+        eigValsEvaluated = torch.abs(torch.eig(arCoeffsMatrix, eigenvectors=False).eigenvalues) > 1
         # Determine if any of them have a greater magnitude than 1
-        if (not np.any(np.absolute(eVals)>1)):
+        if (not eigValsEvaluated.any()):
             goodCoeffs=True
     return arCoeffsMatrix
 
@@ -87,37 +94,75 @@ def ARCoeffecientGeneration(arCoeffMeans,arCoeffecientNoiseVar, seed=-1):
 #     to when it finishs running. The values that are stored for all the true state values are
 #     stored as complex numbers to save formatting time while debugging, because those values
 #     will not be used by the neural network this will not effect the model
-def ARDatagenMismatch(params, seed=int(np.absolute(np.floor(100*np.random.randn())))):
+def ARDatagenMismatch(params, seed=int(np.absolute(np.floor(100*np.random.randn()))), cuda=False):
     # Set the seed value for repeatable results
     simLength = params[0]
     AR_n = params[1]
     AR_coeffecient_noise_var = params[2]
     batchSize = params[3]
     sequenceLength = params[4]
-    np.random.seed(seed)
+    torch.manual_seed(seed)
 
     # Gain matrix on the previous values
     # TODO: Make the AR coefficient means be a parameter you can pass to the function
-    arCoeffMeans = [0.5, 0.4]
+    arCoeffMeans = torch.tensor([0.5, 0.4])
 
     # Noise covariance matrix / noise mean
-    Q = np.array([[0.1, 0], [0, 0]])
-    QChol = np.array([[np.sqrt(Q[0,0]), 0],[0, 0]])
-    systNoiseMean = 0
+    Q = torch.tensor([[0.1, 0], [0, 0]])
+    QChol = torch.tensor([[torch.sqrt(Q[0,0]), 0],[0, 0]])
 
     # Observation covariance matrix/ noise mean
-    R = np.array([0.1])
-    observNoiseMean=0
+    R = torch.tensor([0.1])
 
     # Pre-allocating the matrix that will store the true values of the predicted and current state
-    x = np.zeros((batchSize, 4, simLength), dtype=float)
+    x = torch.zeros((batchSize, 4, simLength), dtype=torch.float)
     # Pre-allocating the matrix that will store the measured data to be fed into the model
-    z = np.zeros((batchSize, 2, sequenceLength, simLength), dtype=float)
+    z = torch.zeros((batchSize, 2, sequenceLength, simLength), dtype=torch.float)
+
+    # Pre-allocating for the system noise vector
+    # Matrix format: 1st element is the real part of the noise, 2nd element is the imaginary part of the noise,
+    #                1st dimension is current state noise, 2nd dimension is the last state noise (this will always
+    #                be 0)
+    v = torch.empty(2,2, dtype=torch.float)
+
+    # Pre-allocating for the observation noise vector
+    # Matrix format: 1st element is the real part of the noise, 2nd element is the imaginary part of the noise
+    w = torch.empty(2, dtype=torch.float)
+
+    # Pre-allocating for the current true state and observed state vectors
+    # Matrix format (x_complex): 1st dimension is the current state, 2nd dimension is the previous state,
+    #                            first element of each dimension is the real part of the state, second element
+    #                            is the imaginary portion of the current state
+    x_complex = torch.empty(2,2,dtype=torch.float)
+
+    # Matrix format (z_complex): 1st element is the real value of the current observed state, 2nd element is
+    #                            the imaginary portion of the observed state
+    z_complex = torch.empty(2, dtype=torch.float)
 
     # Pre-allocating a matrix to save all true state values, for DEBUGGING
     # Matrix format is batch element in 1st dimension, current and previous state in 2nd dimension,
-    # sequence element in the 3rd dimension, and then series element in the 4th dimension
-    all_xs = np.zeros((batchSize, 2, sequenceLength+1, simLength), dtype=complex)
+    # real and complex in the 3rd dimension, sequence element in the 4th dimension,
+    # and then series element in the 5th dimension
+    all_xs = torch.zeros((batchSize, 2, 2, sequenceLength+1, simLength), dtype=torch.float)
+
+    if(not cuda):
+        v.cuda()
+        w.cuda()
+
+        x_complex.cuda()
+        z_complex.cuda()
+
+        z.cuda()
+        x.cuda()
+
+        R.cuda()
+        Q.cuda()
+        QChol.cuda()
+
+        arCoeffMeans.cuda()
+
+        all_xs.cuda()
+
 
     ### Loop for generating all the batches of data (a series) ###
     for i in range(0,simLength):
@@ -129,46 +174,53 @@ def ARDatagenMismatch(params, seed=int(np.absolute(np.floor(100*np.random.randn(
             # Loop for generating the sequence of data for each batch element #
             for m in range(0, sequenceLength + 1):
                 # Generate system noise vector
-                rSysNoise = np.divide(np.matmul(QChol,
-                                        np.random.randn(AR_n, 1) + systNoiseMean), np.sqrt(2))
-                iSysNoise = np.divide(np.matmul(1j * QChol,
-                                        np.random.randn(AR_n, 1) + systNoiseMean), np.sqrt(2))
-                v = rSysNoise + iSysNoise
+                rSysNoise = torch.div(torch.matmul(QChol,
+                                        torch.randn(AR_n, 1)), torch.sqrt(torch.tensor(2, dtype=torch.float)))
+                iSysNoise = torch.div(torch.matmul(QChol,
+                                        torch.randn(AR_n, 1)), torch.sqrt(torch.tensor(2, dtype=torch.float)))
+                # Forced to squeeze the noise values because they needed to be 2x1 tensors to multiply, but v[0]
+                # is 2x in dimension (same for v[1])
+                v[:,0] = torch.squeeze(rSysNoise)
+                v[:,1] = torch.squeeze(iSysNoise)
 
                 # Generate observation noise vector
-                rObsNoise = np.divide(np.matmul(np.sqrt(R),
-                                        np.random.randn(1) + observNoiseMean),np.sqrt(2))
-                iObsNoise = np.divide(np.matmul(1j*np.sqrt(R),
-                                        np.random.randn(1) + observNoiseMean),np.sqrt(2))
-                w = rObsNoise + iObsNoise
+                rObsNoise = torch.div(torch.matmul(torch.sqrt(R),
+                                        torch.randn(1)),torch.sqrt(torch.tensor(2, dtype=torch.float)))
+                iObsNoise = torch.div(torch.matmul(torch.sqrt(R),
+                                        torch.randn(1)),torch.sqrt(torch.tensor(2, dtype=torch.float)))
+                w[0] = torch.squeeze(rObsNoise)
+                w[1] = torch.squeeze(iObsNoise)
+                # On first iteration through make the noise equal to zero so there the initial state starts at 0
                 if(m==0):
-                    x_complex = np.zeros((2,1), dtype=complex)
-                    z_complex = 0 + 0j
+                    x_complex = torch.zeros(2,2, dtype=torch.float)
+                    z_complex = torch.zeros(2, dtype=torch.float)
                 else:
-                    x_complex = np.matmul(F,x_complex)
+                    # x_complex[:,0] = torch.matmul(F,x_complex[:,0])
+                    # x_complex[:,1] = torch.matmul(F, x_complex[:,1])
+                    x_complex = torch.matmul(F,x_complex)
                     x_complex = x_complex + v
                     z_complex = x_complex[0] + w
 
                 # Grabbing all true state values to help with DEBUGGING
                 # Indexing into x_complex in this way because it has shape (2,1) but we want it to be shaped (2,)
-                all_xs[j,:,m,i] = x_complex[:, 0]
+                # all_xs[j,:,m,i] = x_complex[:, 0]
 
                 # Still in the measurement generation process
                 if(m<sequenceLength):
                     # Storing the measured data in its appropriate batch element, its appropriate
                     # complex and real components, its appropriate sequence element, and the right
                     # series element
-                    z[j,0,m,i] = z_complex.real
-                    z[j,1,m,i] = z_complex.imag
+                    z[j,0,m,i] = z_complex[0]
+                    z[j,1,m,i] = z_complex[1]
                 # If we are on the sequenceLength + 1 iteration we need to grab the current
                 # true state (will be the next predicted true state from the measurements),
                 # and the previous actual state (will be the current true state from the
                 # measurements)
                 if(m==sequenceLength-1):
-                    x[j,0,i] = x_complex[0].real
-                    x[j,1,i] = x_complex[0].real
-                    x[j,2,i] = x_complex[0].imag
-                    x[j,3,i] = x_complex[0].imag
+                    x[j,0,i] = x_complex[0,0]
+                    x[j,1,i] = x_complex[0,0]
+                    x[j,2,i] = x_complex[0,1]
+                    x[j,3,i] = x_complex[0,1]
 
                 #else:
                  #   x[j,0,i] = x_complex[1].real
