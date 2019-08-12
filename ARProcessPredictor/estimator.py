@@ -90,7 +90,7 @@ parser.add_argument('--simu_len', type=float, default=250000,
                     help='amount of data generated for training (default: 50000)')
 
 # Length of data used for Evaluation of models effectiveness
-parser.add_argument('--test_len', type=float, default=1e6,
+parser.add_argument('--test_len', type=float, default=1e3,
                     help='amount of data generated for testing (default: 1e6)')
 
 
@@ -167,7 +167,7 @@ cuda_device = args.cuda_device
 
 # AR data generation parameters
 AR_n = 2
-AR_var = 0.1
+AR_var = 0
 
 # ~~~~~~~~~~~~~~~~~~ LOAD TRAINING SET
 
