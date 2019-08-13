@@ -78,20 +78,20 @@ parser.add_argument('--optim', type=str, default='Adam',
                     help='optimizer to use (default: Adam)')
 
 # Hidden units per layer
-parser.add_argument('--nhid', type=int, default=10,
-                    help='number of hidden units per layer (default: 10)')
+parser.add_argument('--nhid', type=int, default=5,
+                    help='number of hidden units per layer (default: 5)')
 
 # Random seed value
 parser.add_argument('--seed', type=int, default=1111,
                     help='random seed (default: 1111)')
 
 # Data Generation Length
-parser.add_argument('--simu_len', type=float, default=250000,
-                    help='amount of data generated for training (default: 50000)')
+parser.add_argument('--simu_len', type=float, default=1e5,
+                    help='amount of data generated for training (default: 1e3)')
 
 # Length of data used for Evaluation of models effectiveness
-parser.add_argument('--test_len', type=float, default=1e3,
-                    help='amount of data generated for testing (default: 1e6)')
+parser.add_argument('--test_len', type=float, default=1e5,
+                    help='amount of data generated for testing (default: 1e3)')
 
 
 # Format of data input to model as either complex and real or angle and magnitude

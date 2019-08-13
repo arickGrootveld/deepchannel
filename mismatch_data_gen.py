@@ -61,6 +61,7 @@ def ARCoeffecientGeneration(arCoeffMeans,arCoeffecientNoiseVar, seed=-1, cuda=Fa
 #                             element of a batch
 #       seed (int) {default=a random number} - the seed of the random number generator
 #                                              for this AR process
+#       cuda (Bool) {default=False} - whether to use the GPU and cuda for data generation or not
 #   Outputs: (x, z)
 #       x (tensor [batchSize x 4  x simuLength]) - a tensor of the real state values of the AR
 #                               process separated into batch elements in the 1st dimension,
@@ -92,7 +93,7 @@ def ARCoeffecientGeneration(arCoeffMeans,arCoeffecientNoiseVar, seed=-1, cuda=Fa
 #     to when it finishs running. The values that are stored for all the true state values are
 #     stored as complex numbers to save formatting time while debugging, because those values
 #     will not be used by the neural network this will not effect the model
-def ARDatagenMismatch(params, seed=int(np.absolute(np.floor(100*np.random.randn()))), cuda=False):
+def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1)))), cuda=False):
     # Set the seed value for repeatable results
     simLength = params[0]
     AR_n = params[1]
@@ -214,10 +215,10 @@ def ARDatagenMismatch(params, seed=int(np.absolute(np.floor(100*np.random.randn(
                 # true state (will be the next predicted true state from the measurements),
                 # and the previous actual state (will be the current true state from the
                 # measurements)
-                if(m==sequenceLength-1):
-                    x[j,0,i] = x_complex[0,0]
+                if(m==sequenceLength):
+                    x[j,0,i] = x_complex[1,0]
                     x[j,1,i] = x_complex[0,0]
-                    x[j,2,i] = x_complex[0,1]
+                    x[j,2,i] = x_complex[1,1]
                     x[j,3,i] = x_complex[0,1]
 
                 #else:

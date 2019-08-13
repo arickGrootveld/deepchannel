@@ -40,20 +40,14 @@ AR_n = len(ARCoeffs)
 # If no file was passed to it, will just generate its own data to test against
 if args.filePath == 'None':
     from mismatch_data_gen import ARDatagenMismatch
-    import torch.cuda as cuda
-
-    # Use GPU to speed up data generation if it is available
-    useCuda = False
-    if cuda.is_available():
-        useCuda = True
 
     defaultDataGenValues = {}
-    defaultDataGenValues[u'simLength'] = 100
+    defaultDataGenValues[u'simLength'] = 1000
     defaultDataGenValues[u'AR_n'] = AR_n
-    defaultDataGenValues[u'coefVariance'] = 0
-    defaultDataGenValues[u'batchSize'] = 100
-    defaultDataGenValues[u'dataLength'] = 300
-    defaultDataGenValues[u'seed'] = 320
+    defaultDataGenValues[u'coefVariance'] = 0.2
+    defaultDataGenValues[u'batchSize'] = 32
+    defaultDataGenValues[u'dataLength'] = 20
+    defaultDataGenValues[u'seed'] = 123
     defaultDataGenValues[u'cuda'] = True
 
     dataGenParameters = [defaultDataGenValues['simLength'],
@@ -167,10 +161,12 @@ for i in range(0,measuredStateData.shape[3]):
         currentTrueStateComplex = trueStateData[k,0,i] + (1j* trueStateData[k,2,i])
         nextTrueStateComplex = trueStateData[k,1,i] + (1j*trueStateData[k,3,i])
 
+        finalPrediction = np.matmul(F, x_correction[k,:,q,i])[0]
+        finaEstimate = x_correction[k,:,q,i][0]
 
         # Calculating the instantaneous MSE of our estimate and prediction
-        trueEstimateMSE = np.absolute(x_correction[k,0,q,i] - currentTrueStateComplex) ** 2
-        truePredictionMSE = np.absolute(x_prediction[k,0,q,i] - nextTrueStateComplex) ** 2
+        trueEstimateMSE = np.absolute(finaEstimate - currentTrueStateComplex) ** 2
+        truePredictionMSE = np.absolute(finalPrediction - nextTrueStateComplex) ** 2
 
         totalTrueEstimateMSE += trueEstimateMSE
         totalTruePredMSE += truePredictionMSE
@@ -186,11 +182,11 @@ for i in range(0,measuredStateData.shape[3]):
     totalTrueEstimateMSE = 0
     totalTruePredMSE = 0
 
-finalTrueEstimateMSE =  totalTrueEstimateMSE1/(measuredStateData.shape[3])
-finalTruePredMSE = totalTruePredMSE1/(measuredStateData.shape[3])
+finalTrueEstimateMSE =  finalTrueEstimateMSE/(measuredStateData.shape[3])
+finalTruePredMSE = finalTruePredMSE/(measuredStateData.shape[3])
 
-print('averaged over everything our estimate MSE is: ', totalTrueEstimateMSE1)
-print('averaged over everything our prediction MSE is: ', totalTruePredMSE1)
+print('averaged over everything our estimate MSE is: ', finalTrueEstimateMSE)
+print('averaged over everything our prediction MSE is: ', finalTruePredMSE)
 
 end = time.time()
 
@@ -210,5 +206,8 @@ logData[u'kalmanGains'] =  kalmanGain
 
 if not args.filePath == 'None':
     logData[u'dataFileName'] = args.filePath
+
+else:
+    logData[u'defaultDataGenValues'] = defaultDataGenValues
 
 matSave('logs', 'KFLog', logData)
