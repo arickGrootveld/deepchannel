@@ -42,12 +42,12 @@ if args.filePath == 'None':
     from mismatch_data_gen import ARDatagenMismatch
 
     defaultDataGenValues = {}
-    defaultDataGenValues[u'simLength'] = 1000
+    defaultDataGenValues[u'simLength'] = 4000
     defaultDataGenValues[u'AR_n'] = AR_n
     defaultDataGenValues[u'coefVariance'] = 0.2
     defaultDataGenValues[u'batchSize'] = 32
     defaultDataGenValues[u'dataLength'] = 20
-    defaultDataGenValues[u'seed'] = 123
+    defaultDataGenValues[u'seed'] = 10
     defaultDataGenValues[u'cuda'] = True
 
     dataGenParameters = [defaultDataGenValues['simLength'],

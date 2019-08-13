@@ -5,6 +5,7 @@
 
 import torch
 import argparse
+from argparse import RawTextHelpFormatter
 import torch.optim as optim
 import torch.nn.functional as F
 import os
@@ -26,7 +27,7 @@ import hdf5storage as hdf5s
 ### Argument parser for easier and cleaner user interface
 
 # Create argument parser
-parser = argparse.ArgumentParser(description='Sequence Modeling - Complex Channel Gain Estimation')
+parser = argparse.ArgumentParser(description='Sequence Modeling - Complex Channel Gain Estimation', formatter_class=RawTextHelpFormatter)
 
 # Batch size
 parser.add_argument('--batch_size', type=int, default=32, metavar='N',
@@ -38,8 +39,8 @@ parser.add_argument('--cuda', action='store_true',
 
 # CUDA device
 parser.add_argument('--cuda_device', type=int, default=0,
-                    help='cuda device to use if running on cuda, only works if cuda \
-                    is enabled (default 0)')
+                    help='cuda device to use if running on cuda, only works if cuda'
+                    'is enabled (default 0)')
 
 # Dropout rate
 parser.add_argument('--dropout', type=float, default=0.15,
@@ -93,10 +94,20 @@ parser.add_argument('--simu_len', type=float, default=1e5,
 parser.add_argument('--test_len', type=float, default=1e5,
                     help='amount of data generated for testing (default: 1e3)')
 
+# Load data to train with from data file
+parser.add_argument('--trainDataFile', type=str, default='None',
+                    help='file path to load training data from, if None then it will generate its own data '
+                         '(default=\'None\') \r\n{if a data file is loaded from, the --simLength, --batch_size, '
+                         '--seq_len, --AR_var, and --seed parameters \r\nwill do nothing, because these values are used for data '
+                         'generation. \r\nThe same applies to the --trainDataFile argument}')
 
-# Format of data input to model as either complex and real or angle and magnitude
-parser.add_argument('--polar', action='store_true',
-                    help='data from AR process in polar format (default: False)')
+# Load data to test models with from data file
+parser.add_argument('--testDataFile', type=str, default='None',
+                    help='file path to load test data from, if None then it will generate its own data (default=\'None\')')
+
+parser.add_argument('--AR_var', type=float, default=0.1,
+                    help='variance of the AR parameters in the data generation (default=0.1)')
+
 
 # Parse out the input arguments
 args = parser.parse_args()
@@ -156,9 +167,12 @@ dropout = args.dropout
 lr = args.lr
 simu_len = int(args.simu_len)
 seed = args.seed
-data_polar = args.polar
 testDataLen = int(args.test_len)
 cuda_device = args.cuda_device
+AR_var = args.AR_var
+
+trainFile = args.trainDataFile
+testFile = args.testDataFile
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~~~~~~~~~~~~ LOAD DATA/GENERATE MODEL ~~~~~~~~~~~~~~~~ ###
@@ -167,22 +181,23 @@ cuda_device = args.cuda_device
 
 # AR data generation parameters
 AR_n = 2
-AR_var = 0
+
 
 # ~~~~~~~~~~~~~~~~~~ LOAD TRAINING SET
+if(trainFile == 'None'):
 
-##########################
-# Load data from .mat files if needed
-##dataReal = np.loadtxt('realData.txt', delimiter=',')
-##dataObserved = np.loadtxt('observedData.txt', delimiter=',')
-##########################
+    # Generate AR process training data set - both measured and real states
+    trueState, measuredState = ARDatagenMismatch([simu_len, AR_n, AR_var, batch_size, seq_length], seed)
 
-# Generate AR process training data set - both measured and real states
-trueState, measuredState = ARDatagenMismatch([simu_len, AR_n, AR_var, batch_size, seq_length], seed)
-
-# Logging the train data
-fileContent[u'trainDataActual'] = trueState
-fileContent[u'trainDataMeas'] = measuredState
+    # Logging the train data
+    fileContent[u'trainDataActual'] = trueState
+    fileContent[u'trainDataMeas'] = measuredState
+# loading the data from the file
+else:
+    # Grab the data from the .mat file
+    trainDataDict = hdf5s.loadmat(trainFile)
+    measuredState = trainDataDict['measuredData']
+    trueState = trainDataDict['predAndCurState']
 
 # Convert numpy arrays to tensors
 trueState = torch.from_numpy(trueState)
@@ -193,13 +208,16 @@ measuredState = torch.from_numpy(measuredState)
 ##dataReal = np.loadtxt('realData.txt', delimiter=',')
 ##dataObserved = np.loadtxt('observedData.txt', delimiter=',')
 ##########################
-
-# Generate AR process testing data set - both measured and real state
-trueStateTEST, measuredStateTEST = ARDatagenMismatch([simu_len, AR_n, AR_var, batch_size, seq_length], seed+1)
-
-# Logging the eval data
-fileContent[u'evalDataActual'] = trueStateTEST
-fileContent[u'evalDataMeas'] = measuredStateTEST
+if(testFile == 'None'):
+    # Generate AR process testing data set - both measured and real state
+    trueStateTEST, measuredStateTEST = ARDatagenMismatch([simu_len, AR_n, AR_var, batch_size, seq_length], seed+1)
+    # Logging the eval data
+    fileContent[u'evalDataActual'] = trueStateTEST
+    fileContent[u'evalDataMeas'] = measuredStateTEST
+else:
+    testDataDict = hdf5s.loadmat(testFile)
+    measuredStateTEST = testDataDict['measuredData']
+    trueStateTEST = testDataDict['predAndCurState']
 
 # Convert numpy arrays to tensors
 trueStateTEST = torch.from_numpy(trueStateTEST)
@@ -309,9 +327,6 @@ def evaluate():
             TotalAvgTrueMSE+=TrueMSE
         n+=1
 
-
-    # THIS MIGHT HAVE TO BE CHANGED !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    # Print average MSE over entire test set (true and predicted)
     TotalAvgPredMSE = TotalAvgPredMSE / n
     TotalAvgTrueMSE = TotalAvgTrueMSE / n
 
