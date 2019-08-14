@@ -67,8 +67,8 @@ parser.add_argument('--seq_len', type=int, default=20,
                     help='sequence length (default: 20)')
 
 # Reporting interval
-parser.add_argument('--log-interval', type=int, default=5000, metavar='N',
-                    help='report interval (default: 5000')
+parser.add_argument('--log-interval', type=int, default=200, metavar='N',
+                    help='report interval (default: 200')
 
 # Learning rate
 parser.add_argument('--lr', type=float, default=2e-4,
@@ -177,7 +177,7 @@ testFile = args.testDataFile
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~~~~~~~~~~~~ LOAD DATA/GENERATE MODEL ~~~~~~~~~~~~~~~~ ###
 # Here we have the option of loading from a saved .mat file or just calling the data generation
-# function explicitly - to load data, use the matloader function
+# function explicitly
 
 # AR data generation parameters
 AR_n = 2
@@ -187,7 +187,7 @@ AR_n = 2
 if(trainFile == 'None'):
 
     # Generate AR process training data set - both measured and real states
-    trueState, measuredState = ARDatagenMismatch([simu_len, AR_n, AR_var, batch_size, seq_length], seed)
+    trueState, measuredState = ARDatagenMismatch([simu_len, AR_n, AR_var, batch_size, seq_length], seed, args.cuda)
 
     # Logging the train data
     fileContent[u'trainDataActual'] = trueState
@@ -203,14 +203,9 @@ else:
 trueState = torch.from_numpy(trueState)
 measuredState = torch.from_numpy(measuredState)
 
-##########################
-# Load data from text files if needed
-##dataReal = np.loadtxt('realData.txt', delimiter=',')
-##dataObserved = np.loadtxt('observedData.txt', delimiter=',')
-##########################
 if(testFile == 'None'):
     # Generate AR process testing data set - both measured and real state
-    trueStateTEST, measuredStateTEST = ARDatagenMismatch([simu_len, AR_n, AR_var, batch_size, seq_length], seed+1)
+    trueStateTEST, measuredStateTEST = ARDatagenMismatch([simu_len, AR_n, AR_var, batch_size, seq_length], seed+1, args.cuda)
     # Logging the eval data
     fileContent[u'evalDataActual'] = trueStateTEST
     fileContent[u'evalDataMeas'] = measuredStateTEST
@@ -278,13 +273,13 @@ def train(epoch):
         total_loss += loss.item()
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        # Display training results -- THIS MIGHT HAVE TO BE CHANGED !!!!!!!!!!!!!!!!
+        # Display training results
         if i % args.log_interval == 0:
             cur_loss = total_loss / args.log_interval
-            processed = min(i+batch_size, measuredState.size(2))
+            processed = i
 
             print('Train Epoch: {:2d} [{:6d}/{:6d} ({:.0f}%)]\tLearning rate: {:.4f}\tLoss: {:.6f}'.format(
-                epoch, processed, measuredState.size(2), 100.*processed/measuredState.size(2), lr, cur_loss))
+                epoch, processed, measuredState.size(3), 100.*processed/measuredState.size(3), lr, cur_loss))
             PredMSE = torch.sum((output[:, 1] - y[:, 1]) ** 2 + (output[:, 3] - y[:, 3]) ** 2) / output.size(0)
             TrueMSE = torch.sum((output[:, 0] - y[:, 0]) ** 2 + (output[:, 2] - y[:, 2]) ** 2) / output.size(0)
             print('PredMSE: ', PredMSE)
@@ -303,6 +298,9 @@ def evaluate():
     TotalAvgTrueMSE = 0
     n = 0
 
+    # Pre-allocating space for the tensor that will contain the MSEs of each batch from our training set
+    testPredMSEs = torch.empty(measuredStateTEST.size(2))
+    testEstMSEs = torch.empty(measuredState.size(2))
     # Training loop - run until we only have one batch size of data left
     for i in range(0, (measuredStateTEST.size(2))):
 
@@ -323,6 +321,8 @@ def evaluate():
 
             PredMSE = torch.sum((output[:, 1] - y_test[:, 1]) ** 2 + (output[:, 3] - y_test[:, 3]) ** 2) / output.size(0)
             TrueMSE = torch.sum((output[:, 0] - y_test[:, 0]) ** 2 + (output[:, 2] - y_test[:, 2]) ** 2) / output.size(0)
+            testEstMSEs[i] = TrueMSE
+            testPredMSEs[i] = PredMSE
             TotalAvgPredMSE+=PredMSE
             TotalAvgTrueMSE+=TrueMSE
         n+=1
@@ -330,11 +330,19 @@ def evaluate():
     TotalAvgPredMSE = TotalAvgPredMSE / n
     TotalAvgTrueMSE = TotalAvgTrueMSE / n
 
+    predVariance = torch.sum((testPredMSEs[:]-TotalAvgPredMSE)**2)/testPredMSEs.size(0)
+    estVariance = torch.sum((testEstMSEs[:]-TotalAvgTrueMSE)**2)/testEstMSEs.size(0)
+
     # Logging
     fileContent[u'TotalAvgPredMSE'] = repr(TotalAvgPredMSE.item())
     fileContent[u'TotalAvgTrueMSE'] = repr(TotalAvgTrueMSE.item())
+
+    fileContent[u'estimatedVariance'] = estVariance.item()
+    fileContent[u'predictedVariance'] = predVariance.item()
     print('TotalAvgPredMSE: ', TotalAvgPredMSE.item())
     print('TotalAvgTrueMSE: ', TotalAvgTrueMSE.item())
+    print('Variance of Prediction: ', predVariance.item())
+    print('Variance of Estimate: ', estVariance.item())
 
     return test_loss.item()
 
@@ -350,6 +358,7 @@ print("check check")
 # End timing
 end = time.time()
 simRunTime=(end-start)
+print('this simulation took:', simRunTime, 'seconds to run')
 
 
 fileContent[u'trainingLength(seconds)'] = simRunTime

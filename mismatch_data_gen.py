@@ -12,7 +12,7 @@ import torch
 #   Outputs: (arCoeffMatrix)
 #       arCoeffMatrix (tensor [2 x 2]) - the F matrix of an AR process (Bar-Shalom's notation)
 #                                                                   
-def ARCoeffecientGeneration(arCoeffMeans,arCoeffecientNoiseVar, seed=-1, cuda=False):
+def ARCoeffecientGeneration(arCoeffMeans,arCoeffecientNoiseVar, seed=-1):
     if(seed > 0):
         torch.manual_seed(seed)
 
@@ -22,10 +22,6 @@ def ARCoeffecientGeneration(arCoeffMeans,arCoeffecientNoiseVar, seed=-1, cuda=Fa
     # Pre-Allocating the arCoeffNoise array
     arCoeffNoise = torch.empty(2,1, dtype=torch.float)
     eigValsEvaluated = torch.empty(2, dtype=torch.float)
-    if (cuda):
-        arCoeffsMatrix.cuda()
-        arCoeffNoise.cuda()
-        eigValsEvaluated.cuda()
 
     while(not goodCoeffs):
         # Generate new AR Coefficients until you get a pair who's eigenvalues are 
@@ -101,6 +97,7 @@ def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1))
     batchSize = params[3]
     sequenceLength = params[4]
     torch.manual_seed(seed)
+
 
     # Gain matrix on the previous values
     # TODO: Make the AR coefficient means be a parameter you can pass to the function
@@ -221,11 +218,6 @@ def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1))
                     x[j,2,i] = x_complex[1,1]
                     x[j,3,i] = x_complex[0,1]
 
-                #else:
-                 #   x[j,0,i] = x_complex[1].real
-                  #  x[j,1,i] = x_complex[0].real
-                  #  x[j,2,i] = x_complex[1].imag
-                  #  x[j,3,i] = x_complex[0].imag
                 # End of sequence generation loop
             # End of batch generation loop
         # End of series generation loop
