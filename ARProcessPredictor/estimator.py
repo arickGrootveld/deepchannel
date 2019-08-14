@@ -142,7 +142,12 @@ while(fileSpaceFound==False):
 # Logging the parameters of the model
 print('model parameters: ', args)
 fileContent = {}
-# First write
+
+# Writing to the file here even though it will get overriden, because we want other TCN processes to see
+# that data will already be stored in this file, and to increment past it
+hdf5s.savemat(logName, fileContent)
+
+# Saving the command line arguments that were passed as the model parameters
 fileContent[u'model parameters'] = repr(args)
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~~~~~~~~~~~~~~~~~~~ CUDA  CHECK ~~~~~~~~~~~~~~~~~~~~~~ ###
