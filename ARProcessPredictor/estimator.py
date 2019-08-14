@@ -230,7 +230,7 @@ model = TCN(input_channels, n_classes, channel_sizes, kernel_size=kernel_size, d
 ### ~~~~~~~~~~~~~~~~~ LOAD DATA INTO CUDA ~~~~~~~~~~~~~~~~~~~ ###
 
 if args.cuda:
-    torch.cuda.device(cuda_device)
+    torch.cuda.set_device(cuda_device)
     model.cuda()
     trueState = trueState.cuda()
     measuredState = measuredState.cuda()
