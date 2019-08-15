@@ -102,11 +102,8 @@ def ARCoeffecientGeneration(arCoeffMeans,arCoeffecientNoiseVar, seed=-1):
 #           from an AR Process
 
 # Additional Notes about this function:
-#   - This function saves all the returned values to a data file, as well as every true state of
-#     the data for debugging purposes. It will print the name of the file that it saves the data
-#     to when it finishes running. The values that are stored for all the true state values are
-#     stored as complex numbers to save formatting time while debugging, because those values
-#     will not be used by the neural network this will not effect the model
+#   - This function saves all values that it returns to a .mat data file, including the parameters
+#     it used to generate the data. This file name will be printed when it is saved
 def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1)))), cuda=False):
     # Set the seed value for repeatable results
     simLength = params[0]
@@ -204,8 +201,6 @@ def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1))
                 x_complex = torch.zeros(2,2, dtype=torch.float)
                 z_complex = torch.zeros(2, dtype=torch.float)
             else:
-                # x_complex[:,0] = torch.matmul(F,x_complex[:,0])
-                # x_complex[:,1] = torch.matmul(F, x_complex[:,1])
                 x_complex = torch.matmul(F,x_complex)
                 x_complex = x_complex + v
                 z_complex = x_complex[0] + w
@@ -238,6 +233,9 @@ def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1))
     logContent[u'observedStates'] = z.numpy()
     logContent[u'systemStates'] = x.numpy()
     logContent[u'finalStateValues'] = final_states.numpy()
+    logContent[u'parameters'] = params
+    logContent[u'seed'] = seed
+    logContent[u'cuda'] = cuda
     filename = matSave(storageFilePath,dataFile,logContent)
 
     data=(x.numpy(), z.numpy(), final_states.numpy())

@@ -196,14 +196,18 @@ AR_n = 2
 
 # ~~~~~~~~~~~~~~~~~~ LOAD TRAINING SET
 if(trainFile == 'None'):
-
+    # Pre allocating the tensors for the Observed and System state values
+    trueState = np.empty((batch_size, 4, trainSeriesLength), dtype=float)
+    measuredState = np.empty((batch_size, 2, seq_length, trainSeriesLength), dtype=float)
     # Generate AR process training data set - both measured and real states
     trainStateData, trainStateInfo = ARDatagenMismatch([simu_len, AR_n, AR_var, seq_length], seed, args.cuda)
-
-    # loop to get data into format of batches
-
+    for i in range(trainSeriesLength):
+        # Swapping rows and columns to make the dimensions match
+        trueState[:,:,i] = np.transpose(trainStateData[2][:,i*batch_size:(i+1)*batch_size])
+        # Swapping rows and columns, then having to swap the 2nd and 3rd dimensions to make dimensionality match
+        measuredState[:,:,:,i] = np.swapaxes(np.transpose(trainStateData[1][:,:,i*batch_size:(1+i)*batch_size]), 1, 2)
     # Logging the train data
-    fileContent[u'trainDataActual'] = trainStateData
+    fileContent[u'trainDataActual'] = trueState
     fileContent[u'trainDataMeas'] = measuredState
 # loading the data from the file
 else:
