@@ -1,6 +1,7 @@
 import hdf5storage as hdf5s
 import os
 import os.path as path
+import numpy as np
 
 # matSave: Function that saves data to a specified .mat file, with the specific file it will be
 #          saved to being 'directory/basename{#}.mat', where # is the lowest number that will
@@ -27,3 +28,17 @@ def matSave(directory, basename, data):
     # Saving the data to the log file
     hdf5s.savemat(logName, data)
     return(logName)
+
+def convertToBatched(systemDataToBeConverted, observedDataToBeFormatted, batchSize):
+    numSequences = observedDataToBeFormatted.shape[2]
+    seqLength = observedDataToBeFormatted.shape[1]
+    seriesLength = int(numSequences/batchSize)
+
+    trueState = np.empty((batchSize, 4, seriesLength), dtype=float)
+    measuredState = np.empty((batchSize, 2, seqLength, seriesLength), dtype=float)
+
+    for i in range(seriesLength):
+        trueState[:, :, i] = np.transpose(systemDataToBeConverted[:, i * batchSize:(i + 1) * batchSize])
+        measuredState[:, :, :, i] = np.swapaxes(
+            np.transpose(observedDataToBeFormatted[:, :, i * batchSize:(1 + i) * batchSize]), 1, 2)
+    return(trueState, measuredState)

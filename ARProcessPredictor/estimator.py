@@ -16,6 +16,7 @@ import sys
 sys.path.append("..") # Adds higher directory to python modules path.
 from model import TCN
 from mismatch_data_gen import ARDatagenMismatch
+from utilities import convertToBatched
 
 # Timer for logging how long the training takes to execute
 import time
@@ -196,27 +197,39 @@ AR_n = 2
 
 # ~~~~~~~~~~~~~~~~~~ LOAD TRAINING SET
 if(trainFile == 'None'):
-    # Pre allocating the tensors for the Observed and System state values
-    trueState = np.empty((batch_size, 4, trainSeriesLength), dtype=float)
-    measuredState = np.empty((batch_size, 2, seq_length, trainSeriesLength), dtype=float)
     # Generate AR process training data set - both measured and real states
     trainStateData, trainStateInfo = ARDatagenMismatch([simu_len, AR_n, AR_var, seq_length], seed, args.cuda)
-    for i in range(trainSeriesLength):
-        # Swapping rows and columns to make the dimensions match
-        trueState[:,:,i] = np.transpose(trainStateData[2][:,i*batch_size:(i+1)*batch_size])
-        # Swapping rows and columns, then having to swap the 2nd and 3rd dimensions to make dimensionality match
-        measuredState[:,:,:,i] = np.swapaxes(np.transpose(trainStateData[1][:,:,i*batch_size:(1+i)*batch_size]), 1, 2)
+    # Convert the data from normal formatting to batches
+    trueState, measuredState = convertToBatched(trainStateData[2], trainStateData[1], batch_size)
+
+    # for i in range(trainSeriesLength):
+    #     # Swapping rows and columns to make the dimensions match
+    #     trueState[:,:,i] = np.transpose(trainStateData[2][:,i*batch_size:(i+1)*batch_size])
+    #     # Swapping rows and columns, then having to swap the 2nd and 3rd dimensions to make dimensionality match
+    #     measuredState[:,:,:,i] = np.swapaxes(np.transpose(trainStateData[1][:,:,i*batch_size:(1+i)*batch_size]), 1, 2)
+
+    #  #  #  #  #  #  #
+    # No longer need to log the data to the log file, because the name of the data file that we got the data from will
+    # be saved
+    #
     # Logging the train data
-    fileContent[u'trainDataActual'] = trueState
-    fileContent[u'trainDataMeas'] = measuredState
-# loading the data from the file
+    # fileContent[u'trainDataActual'] = trueState
+    # fileContent[u'trainDataMeas'] = measuredState
+    #  #  #  #  #  #
+
+# loading data from file
 else:
     # Grab the data from the .mat file
     trainDataDict = hdf5s.loadmat(trainFile)
-    measuredState = trainDataDict['measuredData']
-    trueState = trainDataDict['predAndCurState']
 
-trueState = np.zeros(batch_size, 2, seq_length, )
+    # Convert the loaded data into batches for the TCN to run with
+    trueState, measuredState = convertToBatched(trainDataDict['finalStateValues'], trainDataDict['observedStateValues'],
+                                                batch_size)
+
+    #  #  #  #  #  #
+    # measuredState = trainDataDict['measuredData']
+    # trueState = trainDataDict['predAndCurState']
+    #  #  #  #  #  #
 
 # Convert numpy arrays to tensors
 trueState = torch.from_numpy(trueState)
@@ -226,14 +239,27 @@ measuredState = torch.from_numpy(measuredState)
 
 if(testFile == 'None'):
     # Generate AR process testing data set - both measured and real state
-    trueStateTEST, measuredStateTEST = ARDatagenMismatch([simu_len, AR_n, AR_var, batch_size, seq_length], seed+1, args.cuda)
-    # Logging the eval data
-    fileContent[u'evalDataActual'] = trueStateTEST
-    fileContent[u'evalDataMeas'] = measuredStateTEST
+    testStateData, testStateInfo = ARDatagenMismatch([simu_len, AR_n, AR_var, seq_length], seed+1, args.cuda)
+    # Convert the data from normal formatting to batches
+    trueStateTEST, measuredStateTEST = convertToBatched(testStateData[2], testStateData[1], batch_size)
+
+    #  #  #  #  #  #
+    # See above for why this is commented out
+    # # Logging the eval data
+    # fileContent[u'evalDataActual'] = trueStateTEST
+    # fileContent[u'evalDataMeas'] = measuredStateTEST
+    #  #  #  #  #  #
 else:
+
+
     testDataDict = hdf5s.loadmat(testFile)
-    measuredStateTEST = testDataDict['measuredData']
-    trueStateTEST = testDataDict['predAndCurState']
+    trueStateTEST, measuredStateTEST = convertToBatched(testDataDict['finalStateValues'], testDataDict['observedStateValues'],
+                                                batch_size)
+
+    #  #  #  #  #  #
+    # measuredStateTEST = testDataDict['measuredData']
+    # trueStateTEST = testDataDict['predAndCurState']
+    #  #  #  #  #  #
 
 # Convert numpy arrays to tensors
 trueStateTEST = torch.from_numpy(trueStateTEST)
