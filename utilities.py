@@ -9,7 +9,8 @@ import os.path as path
 #       directory (str) - the directory for the data to be saved in
 #       basename (str) - the name of the file you want the data saved to before the appended number
 #       data (dict) - a dict of data to be saved to the .mat file
-#   Outputs: None
+#   Outputs: (logName)
+#       logName (str) - the name of the file that the data was saved to
 def matSave(directory, basename, data):
     # Create the data directory if it doesn't exist
     if not (path.exists(directory)):
@@ -25,3 +26,4 @@ def matSave(directory, basename, data):
             fileSpaceFound = True
     # Saving the data to the log file
     hdf5s.savemat(logName, data)
+    return(logName)

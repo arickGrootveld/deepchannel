@@ -8,12 +8,8 @@ from mismatch_data_gen import ARDatagenMismatch
 parser = argparse.ArgumentParser(description='Generate data for testing purposes. For use with the Kalman Filter mismatch code,\
                                              and the TCN')
 # Number of batches of data
-parser.add_argument('--simLength', type=float, default=1000,
-                    help='the number of batches of data to generate (default=1000)')
-
-# Size of batches
-parser.add_argument('--batchSize', type=float, default=32,
-                    help='size of the batches that will be generated (default=32)')
+parser.add_argument('--simLength', type=float, default=10,
+                    help='the number of batches of data to generate (default=10)')
 
 # Sequence Length of each batch element
 parser.add_argument('--sequenceLength', type=float, default=20,
@@ -41,7 +37,7 @@ args = parser.parse_args()
 # Setting up a time to determine how long data generation takes
 start = time.time()
 
-trueState, measuredState = ARDatagenMismatch([int(args.simLength),args.AR_n, args.arVar,int(args.batchSize), int(args.sequenceLength)],
+stateData, info = ARDatagenMismatch([int(args.simLength),args.AR_n, args.arVar, int(args.sequenceLength)],
                                              args.seed, args.cuda)
 end=time.time()
 
