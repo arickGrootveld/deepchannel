@@ -10,6 +10,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 import os
 from os import path
+import numpy as np
 
 import sys
 sys.path.append("..") # Adds higher directory to python modules path.
@@ -179,6 +180,11 @@ AR_var = args.AR_var
 trainFile = args.trainDataFile
 testFile = args.testDataFile
 
+# Calculating the number of batches that will need to be created given the simulation length and the batch size
+trainSeriesLength = int(simu_len/batch_size)
+
+# Doing the same calculation as above for the test data set
+testSeriesLength = int(testDataLen/batch_size)
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~~~~~~~~~~~~ LOAD DATA/GENERATE MODEL ~~~~~~~~~~~~~~~~ ###
 # Here we have the option of loading from a saved .mat file or just calling the data generation
@@ -192,10 +198,12 @@ AR_n = 2
 if(trainFile == 'None'):
 
     # Generate AR process training data set - both measured and real states
-    trueState, measuredState = ARDatagenMismatch([simu_len, AR_n, AR_var, batch_size, seq_length], seed, args.cuda)
+    trainStateData, trainStateInfo = ARDatagenMismatch([simu_len, AR_n, AR_var, seq_length], seed, args.cuda)
+
+    # loop to get data into format of batches
 
     # Logging the train data
-    fileContent[u'trainDataActual'] = trueState
+    fileContent[u'trainDataActual'] = trainStateData
     fileContent[u'trainDataMeas'] = measuredState
 # loading the data from the file
 else:
@@ -204,9 +212,13 @@ else:
     measuredState = trainDataDict['measuredData']
     trueState = trainDataDict['predAndCurState']
 
+trueState = np.zeros(batch_size, 2, seq_length, )
+
 # Convert numpy arrays to tensors
 trueState = torch.from_numpy(trueState)
 measuredState = torch.from_numpy(measuredState)
+
+
 
 if(testFile == 'None'):
     # Generate AR process testing data set - both measured and real state
