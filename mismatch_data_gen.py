@@ -101,7 +101,7 @@ def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1))
 
     # Gain matrix on the previous values
     # TODO: Make the AR coefficient means be a parameter you can pass to the function
-    arCoeffMeans = torch.tensor([0.5, 0.4])
+    arCoeffMeans = torch.tensor([0.5, -0.4])
 
     # Noise covariance matrix / noise mean
     Q = torch.tensor([[0.1, 0], [0, 0]])
@@ -141,6 +141,13 @@ def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1))
     # and then series element in the 5th dimension
     all_xs = torch.zeros((batchSize, 2, 2, sequenceLength+1, simLength), dtype=torch.float)
 
+    # Pre-allocating for the F matrix storage, for use in the Kalman Filter code.
+    # The Kalman filter needs to know the AR parameters for each batch AR process to
+    # compute the best MSE we can possibly achieve - this allows us to compare the
+    # neural network MSE values to the best possible MSE values we can achieve
+    all_F = torch.zeros((AR_n, AR_n, simLength*batchSize), dtype=torch.float)
+
+
     if(cuda):
         v.cuda()
         w.cuda()
@@ -167,6 +174,10 @@ def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1))
         # and the current actual state
         for j in range(0, batchSize):
             F = ARCoeffecientGeneration(arCoeffMeans, AR_coeffecient_noise_var)
+
+            # Store F matrices
+            all_F[:, :, i*batchSize + j] = F
+
             # Loop for generating the sequence of data for each batch element #
             for m in range(0, sequenceLength + 1):
                 # Generate system noise vector
@@ -227,6 +238,7 @@ def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1))
     dataFile = 'data'
     logContent = {}
     logContent[u'measuredData'] = z.numpy()
+    logContent[u'allF'] = all_F.numpy()
     logContent[u'predAndCurState'] = x.numpy()
     logContent[u'allTrueStateValues'] = all_xs.numpy()
     matSave(storageFilePath,dataFile,logContent)

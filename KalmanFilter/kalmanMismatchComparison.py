@@ -22,8 +22,8 @@ parser.add_argument('--filePath', type=str, default='None',
 
 # AR Coefficients that the Kalman filter is given
 # TODO: Throw an exception if the length of the ARCoeffs list is not 2
-parser.add_argument('--ARCoeffs', nargs='+', default=[0.5,0.4],
-                     help='AR Coefficients that Kalman Filter will use (default=[0.5,0.4])')
+parser.add_argument('--ARCoeffs', nargs='+', default=[0.4465,-0.3694],
+                     help='AR Coefficients that Kalman Filter will use (default=[0.4465,-0.3694])')
 # TODO: As of right now this is not synced up with the data generated, so you need to manually
 # TODO: update this in both places if you want to generate fresh data with different AR params
 
@@ -42,7 +42,7 @@ if args.filePath == 'None':
     from mismatch_data_gen import ARDatagenMismatch
 
     defaultDataGenValues = {}
-    defaultDataGenValues[u'simLength'] = 4000
+    defaultDataGenValues[u'simLength'] = 40
     defaultDataGenValues[u'AR_n'] = AR_n
     defaultDataGenValues[u'coefVariance'] = 0.2
     defaultDataGenValues[u'batchSize'] = 32
@@ -60,7 +60,7 @@ if args.filePath == 'None':
     trueStateData, measuredStateData = ARDatagenMismatch(dataGenParameters, defaultDataGenValues['seed'], cuda=defaultDataGenValues['cuda'])
 
 # If a file path was passed to it, load the data from the file. Expects it to be formatted how
-# ARDatagenMismatch formats it
+# ARDatagenMismatch formats it - also loads all F matrices for best possible MSE value computation
 else:
     # Throw error if filepath could not be found
     if(not path.exists(args.filePath)):
@@ -69,7 +69,10 @@ else:
     matData = hdf5s.loadmat(args.filePath)
     measuredStateData = matData['measuredData']
     trueStateData = matData['predAndCurState']
+    all_F = matData['allF']
     print('loaded from file: ', args.filePath)
+
+
 
 ##### Kalman Filter Implementation #####
 # Initializing the Kalman Filter variables
