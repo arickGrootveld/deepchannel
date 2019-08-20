@@ -28,8 +28,8 @@ def ARCoeffecientGeneration(arCoeffMeans,arCoeffecientNoiseVar, seed=-1):
         # less than 1.
         # We do this because the system would explode to infinity if the eigenvalues 
         # were greater than 1.
-        arCoeffNoise[0] = torch.randn(1) * arCoeffecientNoiseVar
-        arCoeffNoise[1] = torch.randn(1) * arCoeffecientNoiseVar
+        arCoeffNoise[0] = torch.randn(1) * torch.sqrt(torch.tensor(arCoeffecientNoiseVar))
+        arCoeffNoise[1] = torch.randn(1) * torch.sqrt(torch.tensor(arCoeffecientNoiseVar))
         arCoeffsMatrix[0,0] = arCoeffMeans[0] + arCoeffNoise[0]
         arCoeffsMatrix[0,1] = arCoeffMeans[1] + arCoeffNoise[1]
 
