@@ -125,18 +125,71 @@ finalTruePredMSE = 0
 totalTrueEstimateMSE = 0
 finalTrueEstimateMSE = 0
 
+############################################################################################
+########################### PARALLEL KALMAN FILTER PARAMETERS ##############################
+#TODO add parameters
+
+# Dimensions of all parameters are the same as before. Only difference is that now, we know
+# the F matrices which are loaded from a saved matlab file.
+
+x_correction_parallel = np.zeros((measuredStateData.shape[0],AR_n,measuredStateData.shape[2],
+                         measuredStateData.shape[3]), dtype=complex)
+x_prediction_parallel = np.zeros((measuredStateData.shape[0],AR_n,measuredStateData.shape[2],
+                         measuredStateData.shape[3]), dtype=complex)
+
+kalmanGain_parallel = np.zeros((measuredStateData.shape[0],AR_n, 1, measuredStateData.shape[2],
+                       measuredStateData.shape[3]))
+minPredMSE_parallel = np.zeros((measuredStateData.shape[0],AR_n, AR_n, measuredStateData.shape[2],
+                       measuredStateData.shape[3]))
+minMSE_parallel = np.zeros((measuredStateData.shape[0],AR_n, AR_n, measuredStateData.shape[2],
+                   measuredStateData.shape[3]))
+
+# Initializing the correction value to be the expected value of the starting state
+x_correction_parallel[0,:,0,0] = np.array([0,0])
+# Initializing the MSE to be the variance in the starting value of the sequence
+minMSE_parallel[0,:,:,0,0] = np.array([[0,0], [0,0]])
+
+# F matrix is made up of AR process mean values
+F_parallel = np.array([ARCoeffs,[1,0]])
+
+# Covariance of the process noise
+Q_parallel = np.array([[0.1, 0],[0,0]])
+
+# Observation Matrix mapping the observations into the state space
+H_parallel = np.array([1,0])[np.newaxis]
+
+# Covariance of the measurements
+R_parallel = np.array([0.1])
+
+# Initializing the total MSE that we will use to follow the MSE through each iteration
+totalTruePredMSE_parallel = 0
+finalTruePredMSE_parallel = 0
+totalTrueEstimateMSE_parallel = 0
+finalTrueEstimateMSE_parallel = 0
+
+############################################################################################
+F_IX = 0
 # Loop through the series of data
 for i in range(0,measuredStateData.shape[3]):
     # Loop through the batch of data
     for k in range(0,measuredStateData.shape[0]):
+
+        F_parallel = all_F[:, :, F_IX]
+        F_IX += 1
+
         # Loop through a sequence of data
         for q in range(1,measuredStateData.shape[2]):
+
+            #############################################################################
+            ############################# KALMAN FILTER 1  ##############################
+            # This is the original Kalman Filter - does not know the true mean of the
+            # AR processes that are input, only knows the theoretical mean values.
+
             # Formatting the measured data properly
             measuredDataComplex = measuredStateData[k,0,q,i] + (measuredStateData[k,1,q,i] *1j)
 
             # Calculating the prediction of the next state based on the previous estimate
             x_prediction[k,:,q,i] = np.matmul(F, x_correction[k,:,q-1,i])
-
 
             # Calculating the predicted MSE from the current MSE, the AR Coefficients,
             # and the covariance matrix
@@ -149,18 +202,53 @@ for i in range(0,measuredStateData.shape[3]):
                                                         np.transpose(H)))
             kalmanGain[k,:,:,q,i] = np.matmul(intermediate1, intermediate2)
 
-
             # Calculating the State Correction Value
             intermediate1 = np.matmul(H,x_prediction[k,:,q,i])
             intermediate2 = measuredDataComplex - intermediate1
             x_correction[k,:,q,i] = x_prediction[k,:,q,i] + np.matmul(kalmanGain[k,:,:,q,i],
                                                                           intermediate2)
-
             # Calculating the MSE of our current state estimate
             intermediate1 = np.identity(AR_n) - np.matmul(kalmanGain[k,:,:,q,i], H)
             minMSE[k,:,:,q,i] = np.matmul(intermediate1, minPredMSE[k,:,:,q,i])
+
+            #############################################################################
+            ############################# KALMAN FILTER 2  ##############################
+            # This is the parallel Kalman Filter - knows the true mean of the AR processes
+            # that are input (this is used to provide a lower bound for performance which we
+            # can use to check the network against). The MSE of this Kalman Filter should
+            # be the theoretical best we can achieve.
+            #TODO implement the parallel filter with MSE
+
+            # Formatting the measured data properly
+            measuredDataComplex = measuredStateData[k, 0, q, i] + (measuredStateData[k, 1, q, i] * 1j)
+
+            # Calculating the prediction of the next state based on the previous estimate
+            x_prediction_parallel[k, :, q, i] = np.matmul(F_parallel, x_correction_parallel[k, :, q - 1, i])
+
+            # Calculating the predicted MSE from the current MSE, the AR Coefficients,
+            # and the covariance matrix
+            minPredMSE_parallel[k, :, :, q, i] = np.matmul(np.matmul(F_parallel, minMSE_parallel[k, :, :, q - 1, i]), np.transpose(F_parallel)) + Q_parallel
+
+            # Calculating the new Kalman gain
+            intermediate1 = np.matmul(minPredMSE_parallel[k, :, :, q, i], np.transpose(H_parallel))
+            # Intermediate2 should be a single dimensional number, so we can simply just divide by it
+            intermediate2 = np.linalg.inv(R_parallel + np.matmul(np.matmul(H_parallel, minPredMSE_parallel[k, :, :, q, i]),
+                                                        np.transpose(H_parallel)))
+            kalmanGain_parallel[k, :, :, q, i] = np.matmul(intermediate1, intermediate2)
+
+            # Calculating the State Correction Value
+            intermediate1 = np.matmul(H_parallel, x_prediction_parallel[k, :, q, i])
+            intermediate2 = measuredDataComplex - intermediate1
+            x_correction_parallel[k, :, q, i] = x_prediction_parallel[k, :, q, i] + np.matmul(kalmanGain_parallel[k, :, :, q, i], intermediate2)
+            # Calculating the MSE of our current state estimate
+            intermediate1 = np.identity(AR_n) - np.matmul(kalmanGain_parallel[k, :, :, q, i], H_parallel)
+            minMSE_parallel[k, :, :, q, i] = np.matmul(intermediate1, minPredMSE_parallel[k, :, :, q, i])
+
+        #############################################################################
+        ############################# KALMAN FILTER 1  ##############################
+
         ## Calculating the actual MSE between the kalman filters final prediction, and the actual value ##
-        # Converting the true states into their complex equivelants
+        # Converting the true states into their complex equivalents
         currentTrueStateComplex = trueStateData[k,0,i] + (1j* trueStateData[k,2,i])
         nextTrueStateComplex = trueStateData[k,1,i] + (1j*trueStateData[k,3,i])
 
@@ -174,7 +262,21 @@ for i in range(0,measuredStateData.shape[3]):
         totalTrueEstimateMSE += trueEstimateMSE
         totalTruePredMSE += truePredictionMSE
 
+        #############################################################################
+        ############################# KALMAN FILTER 2  ##############################
 
+        finalPrediction_parallel = np.matmul(F_parallel, x_correction_parallel[k, :, q, i])[0]
+        finaEstimate_parallel = x_correction_parallel[k, :, q, i][0]
+
+        # Calculating the instantaneous MSE of our estimate and prediction
+        trueEstimateMSE_parallel = np.absolute(finaEstimate_parallel - currentTrueStateComplex) ** 2
+        truePredictionMSE_parallel = np.absolute(finalPrediction_parallel - nextTrueStateComplex) ** 2
+
+        totalTrueEstimateMSE_parallel += trueEstimateMSE_parallel
+        totalTruePredMSE_parallel += truePredictionMSE_parallel
+
+    #############################################################################
+    ############################# KALMAN FILTER 1  ##############################
     # Averaging the MSE over the batch, and then printing it before reseting it
     totalTrueEstimateMSE = totalTrueEstimateMSE/(trueStateData.shape[0])
     totalTruePredMSE = totalTruePredMSE/(trueStateData.shape[0])
@@ -185,11 +287,38 @@ for i in range(0,measuredStateData.shape[3]):
     totalTrueEstimateMSE = 0
     totalTruePredMSE = 0
 
+    #############################################################################
+    ############################# KALMAN FILTER 2  ##############################
+    # Averaging the MSE over the batch, and then printing it before reseting it
+    totalTrueEstimateMSE_parallel = totalTrueEstimateMSE_parallel/(trueStateData.shape[0])
+    totalTruePredMSE_parallel = totalTruePredMSE_parallel/(trueStateData.shape[0])
+    # print('total MSE of estimate: ', totalTrueEstimateMSE)
+    # print('total MSE of prediction: ', totalTruePredMSE)
+    finalTrueEstimateMSE_parallel += totalTrueEstimateMSE_parallel
+    finalTruePredMSE_parallel += totalTruePredMSE_parallel
+    totalTrueEstimateMSE_parallel = 0
+    totalTruePredMSE_parallel = 0
+
+
+#############################################################################
+############################# KALMAN FILTER 1  ##############################
 finalTrueEstimateMSE =  finalTrueEstimateMSE/(measuredStateData.shape[3])
 finalTruePredMSE = finalTruePredMSE/(measuredStateData.shape[3])
 
+#############################################################################
+############################# KALMAN FILTER 2  ##############################
+finalTrueEstimateMSE_parallel =  finalTrueEstimateMSE_parallel/(measuredStateData.shape[3])
+finalTruePredMSE_parallel = finalTruePredMSE_parallel/(measuredStateData.shape[3])
+
+
 print('averaged over everything our estimate MSE is: ', finalTrueEstimateMSE)
 print('averaged over everything our prediction MSE is: ', finalTruePredMSE)
+
+print('averaged over everything our BEST POSSIBLE estimate MSE is: ', finalTrueEstimateMSE_parallel)
+print('averaged over everything our BEST POSSIBLE prediction MSE is: ', finalTruePredMSE_parallel)
+
+####################################################################
+# File logging - time and relevant parameters saved to matlab file #
 
 end = time.time()
 
@@ -200,6 +329,10 @@ logData = {}
 
 logData[u'predictionMSE'] = finalTruePredMSE
 logData[u'estimatedMSE'] = finalTrueEstimateMSE
+
+logData[u'BPpredictionMSE'] = finalTruePredMSE_parallel
+logData[u'BPestimatedMSE'] = finalTrueEstimateMSE_parallel
+
 logData[u'elapsedTime'] = elapsedTime
 logData[u'kalmanPredictions'] = x_prediction
 logData[u'kalmanEstimates'] =  x_correction
