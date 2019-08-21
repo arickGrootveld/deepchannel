@@ -6,13 +6,19 @@ import torch
 # ARCoeffecientGeneration: Function that returns a matrix that works as an AR processes F matrix
 #   Inputs:  (arCoeffMeans, arCoefficientNoiseVar)
 #       arCoeffMeans (array) - mean values of the AR coefficients to be generated
-#           arCoeffMeans[0] (float) - first AR coefficient
-#           arCoeffMeans[1] (float) - second AR coefficient
-#       arCoefficientNoiseVar (float) - variance of the AR coefficients to be generated
+#           arCoeffMeans[0] (float) - first AR coefficient mean
+#           arCoeffMeans[1] (float) - second AR coefficient mean
+#       arCoefficientNoiseStd (float) - standard deviation of the AR coefficients to be generate
+#       seed (float) {default=-1} - the seed for the random number generation of the seed. If
+#                                   this value is below 0, it will not use any seed.
+#                                   !!! WARNING: passing the same seed to this function while
+#                                                iteratively creating AR parameters (say in a
+#                                                for loop) will create the same AR Parameters
+#                                                each time !!!
 #   Outputs: (arCoeffMatrix)
 #       arCoeffMatrix (tensor [2 x 2]) - the F matrix of an AR process (Bar-Shalom's notation)
 #                                                                   
-def ARCoeffecientGeneration(arCoeffMeans,arCoeffecientNoiseVar, seed=-1):
+def ARCoeffecientGeneration(arCoeffMeans,arCoeffecientNoiseStd, seed=-1):
     if(seed > 0):
         torch.manual_seed(seed)
 
@@ -28,8 +34,8 @@ def ARCoeffecientGeneration(arCoeffMeans,arCoeffecientNoiseVar, seed=-1):
         # less than 1.
         # We do this because the system would explode to infinity if the eigenvalues 
         # were greater than 1.
-        arCoeffNoise[0] = torch.randn(1) * arCoeffecientNoiseVar
-        arCoeffNoise[1] = torch.randn(1) * arCoeffecientNoiseVar
+        arCoeffNoise[0] = torch.randn(1) * arCoeffecientNoiseStd
+        arCoeffNoise[1] = torch.randn(1) * arCoeffecientNoiseStd
         arCoeffsMatrix[0,0] = arCoeffMeans[0] + arCoeffNoise[0]
         arCoeffsMatrix[0,1] = arCoeffMeans[1] + arCoeffNoise[1]
 
@@ -166,7 +172,7 @@ def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1))
         # Iterating through one additional time so that we can get the actual next state
         # and the current actual state
         for j in range(0, batchSize):
-            F = ARCoeffecientGeneration(arCoeffMeans, AR_coeffecient_noise_var)
+            F = ARCoeffecientGeneration(arCoeffMeans, torch.sqrt(AR_coeffecient_noise_var))
             # Loop for generating the sequence of data for each batch element #
             for m in range(0, sequenceLength + 1):
                 # Generate system noise vector
