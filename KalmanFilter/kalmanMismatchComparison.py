@@ -127,7 +127,6 @@ finalTrueEstimateMSE = 0
 
 ############################################################################################
 ########################### PARALLEL KALMAN FILTER PARAMETERS ##############################
-#TODO add parameters
 
 # Dimensions of all parameters are the same as before. Only difference is that now, we know
 # the F matrices which are loaded from a saved matlab file.
@@ -217,7 +216,7 @@ for i in range(0,measuredStateData.shape[3]):
             # that are input (this is used to provide a lower bound for performance which we
             # can use to check the network against). The MSE of this Kalman Filter should
             # be the theoretical best we can achieve.
-            #TODO implement the parallel filter with MSE
+
 
             # Formatting the measured data properly
             measuredDataComplex = measuredStateData[k, 0, q, i] + (measuredStateData[k, 1, q, i] * 1j)
