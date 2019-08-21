@@ -175,8 +175,6 @@ for i in range(0,measuredStateData.shape[3]):
     # Averaging the MSE over the batch, and then printing it before reseting it
     totalTrueEstimateMSE = totalTrueEstimateMSE/(trueStateData.shape[0])
     totalTruePredMSE = totalTruePredMSE/(trueStateData.shape[0])
-    # print('total MSE of estimate: ', totalTrueEstimateMSE)
-    # print('total MSE of prediction: ', totalTruePredMSE)
     finalTrueEstimateMSE += totalTrueEstimateMSE
     finalTruePredMSE += totalTruePredMSE
     totalTrueEstimateMSE = 0
