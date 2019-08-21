@@ -174,7 +174,7 @@ def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1))
         # Iterating through one additional time so that we can get the actual next state
         # and the current actual state
         for j in range(0, batchSize):
-            F = ARCoeffecientGeneration(arCoeffMeans, torch.sqrt(AR_coeffecient_noise_var))
+            F = ARCoeffecientGeneration(arCoeffMeans, AR_coeffecient_noise_var)
             # Loop for generating the sequence of data for each batch element #
             for m in range(0, sequenceLength + 1):
                 # Generate system noise vector
