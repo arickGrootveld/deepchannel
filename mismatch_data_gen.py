@@ -109,7 +109,7 @@ def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1))
 
     # Gain matrix on the previous values
     # TODO: Make the AR coefficient means be a parameter you can pass to the function
-    arCoeffMeans = torch.tensor([0.5, 0.4])
+    arCoeffMeans = torch.tensor([0.5, -0.4])
 
     # Noise covariance matrix / noise mean
     Q = torch.tensor([[0.1, 0], [0, 0]])
