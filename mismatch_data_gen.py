@@ -18,7 +18,7 @@ import torch
 #   Outputs: (arCoeffMatrix)
 #       arCoeffMatrix (tensor [2 x 2]) - the F matrix of an AR process (Bar-Shalom's notation)
 #                                                                   
-def ARCoeffecientGeneration(arCoeffMeans,arCoeffecientNoiseStd, seed=-1):
+def ARCoeffecientGeneration(arCoeffMeans,arCoeffecientNoiseVar, seed=-1):
     if(seed > 0):
         torch.manual_seed(seed)
 
@@ -34,8 +34,10 @@ def ARCoeffecientGeneration(arCoeffMeans,arCoeffecientNoiseStd, seed=-1):
         # less than 1.
         # We do this because the system would explode to infinity if the eigenvalues 
         # were greater than 1.
-        arCoeffNoise[0] = torch.randn(1) * arCoeffecientNoiseStd
-        arCoeffNoise[1] = torch.randn(1) * arCoeffecientNoiseStd
+
+        arCoeffNoise[0] = torch.randn(1) * torch.sqrt(torch.tensor(arCoeffecientNoiseVar))
+        arCoeffNoise[1] = torch.randn(1) * torch.sqrt(torch.tensor(arCoeffecientNoiseVar))
+
         arCoeffsMatrix[0,0] = arCoeffMeans[0] + arCoeffNoise[0]
         arCoeffsMatrix[0,1] = arCoeffMeans[1] + arCoeffNoise[1]
 
