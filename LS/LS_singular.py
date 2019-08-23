@@ -18,22 +18,25 @@ parser = argparse.ArgumentParser(description='Least Squares implementation that 
                                              'channel states and calculates the MSE of these values')
 
 # File path to load data from
-parser.add_argument('--filePath', type=str, default='None',
-                    help='path to .mat file to load data from')
+parser.add_argument('--filePathTrain', type=str, default='None',
+                    help='path to .mat file to load training data from')
+
+parser.add_argument('--filePathTest', type=str, default='None',
+                    help='path to .mat file to load test data from')
 
 args = parser.parse_args()
 
 
 # Throw error if filepath could not be found
-if(not path.exists(args.filePath)):
-    raise Exception('file path: "{}" could not be found'.format(args.filePath))
+if(not path.exists(args.filePathTrain)):
+    raise Exception('file path: "{}" could not be found'.format(args.filePathTrain))
 
-# Load relevant data
-matData = hdf5s.loadmat(args.filePath)
+# Load relevant training data
+matData = hdf5s.loadmat(args.filePathTrain)
 ARValues = matData['allTrueStateValues']
 measuredStateData = matData['measuredData']
 trueStateData = matData['predAndCurState']
-print('loaded from file: ', args.filePath)
+print('loaded from file: ', args.filePathTrain)
 
 # The least squares algorithm uses the following matrix multiplication to achieve the predictions and estimations
 
@@ -45,7 +48,7 @@ print('loaded from file: ', args.filePath)
 N = 10
 
 # M - length of observation vector/number of LS equations
-M = 900
+M = 900000
 
 # Pre-allocating the matrix that will store the measured data
 z = np.zeros((M, N), dtype=complex)
@@ -90,8 +93,53 @@ a_ls = np.matmul(intermediate, x_est)
 # b - prediction
 b_ls = np.matmul(intermediate, x_pred)
 
+# a_ls = np.transpose(np.matrix([.546845223756256 + 0.108182806879480j, 0.133227098016353 + 0.008626744487407j, -0.080117991483541 - 0.123662858151174j, -0.204860984672930 + 0.203284158366416j,
+#                   0.089800564601550 + 0.077211768209860j, 0.160578773433174 + 0.033510337476693j, 0.061665434155100 + 0.106041355547560j,
+#                   0.259676378708334 + 0.127092995228038j, -0.001848188584772 - 0.154626193733209j, 0.228794245949007 + 0.083261545696778j], dtype=complex))
+
+
+
+##############################################################################################
+################################ LEAST SQUARES TESTING SCRIPT ################################
+
+
+# Throw error if filepath could not be found
+if(not path.exists(args.filePathTest)):
+    raise Exception('file path: "{}" could not be found'.format(args.filePathTest))
+
+# Load relevant training data
+matData = hdf5s.loadmat(args.filePathTest)
+ARValues = matData['allTrueStateValues']
+measuredStateData = matData['measuredData']
+trueStateData = matData['predAndCurState']
+print('loaded from file: ', args.filePathTest)
+
+# Turn observations into complex form from separated real and imaginary components
+measuredStateDataComplex = measuredStateData[:,0,:] + (measuredStateData[:,1,:]*1j)
+measuredStateDataComplex = np.squeeze(measuredStateDataComplex)
+
+ARValues = ARValues[:, 0, :, :, :]
+ARValuesComplex = ARValues[:, 0, :, :] + (ARValues[:, 1, :, :]*1j)
+ARValuesComplex = np.squeeze(ARValuesComplex)
+
+
+# Iterate through the number of LS equations
+for j in range(0, M):
+
+    # Grab segments of the AR process and format into a (M x N) matrix
+    z[M-1-j, :] = np.flip(measuredStateDataComplex[j:N+j])
+
+    # # DEBUGGING
+    #x_est[M-1-j, 0] = measuredStateDataComplex[N-1+j]
+    #x_pred[M-1-j, 0] = measuredStateDataComplex[N+j]
+
+    # Grab the real state values
+    x_est[(M-1)-j, 0] = ARValuesComplex[N-1+j]
+    x_pred[(M-1)-j, 0] = ARValuesComplex[N+j]
+
+
 # Calculate MSE of estimation
-f = abs((x_est - np.matmul(z, a_ls))) ** 2
+f = np.square(abs((x_est - np.matmul(z, a_ls))))
 MSEE = np.mean(f)
 
 # Calculate MSE of prediction
