@@ -48,7 +48,7 @@ print('loaded from file: ', args.filePathTrain)
 N = 10
 
 # M - length of observation vector/number of LS equations
-M = 900000
+M = 500000
 
 # Pre-allocating the matrix that will store the measured data
 z = np.zeros((M, N), dtype=complex)
@@ -96,8 +96,10 @@ b_ls = np.matmul(intermediate, x_pred)
 # a_ls = np.transpose(np.matrix([.546845223756256 + 0.108182806879480j, 0.133227098016353 + 0.008626744487407j, -0.080117991483541 - 0.123662858151174j, -0.204860984672930 + 0.203284158366416j,
 #                   0.089800564601550 + 0.077211768209860j, 0.160578773433174 + 0.033510337476693j, 0.061665434155100 + 0.106041355547560j,
 #                   0.259676378708334 + 0.127092995228038j, -0.001848188584772 - 0.154626193733209j, 0.228794245949007 + 0.083261545696778j], dtype=complex))
-
-
+#
+# b_ls = np.transpose(np.matrix([0.1053 + 0.1479j, -0.3444 - 0.1524j, -0.0662 + 0.4348j, 0.3479 + 0.4943,
+#                   0.4902 + 0.0119j, 0.0771 - 0.2991j, 0.0346 + 0.0441j,
+#                   0.3030 - 0.3349j, -0.1375 - 0.4279j, -0.3129 + 0.0726j], dtype=complex))
 
 ##############################################################################################
 ################################ LEAST SQUARES TESTING SCRIPT ################################
@@ -143,7 +145,7 @@ f = np.square(abs((x_est - np.matmul(z, a_ls))))
 MSEE = np.mean(f)
 
 # Calculate MSE of prediction
-f = abs((x_pred - np.matmul(z, b_ls))) ** 2
+f = np.square(abs((x_pred - np.matmul(z, b_ls))))
 MSEP = np.mean(f)
 
 print("MSEE Avg: ")
