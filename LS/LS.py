@@ -40,12 +40,11 @@ print('loaded from file: ', args.filePath)
 #  predications/observations             measurements       filter taps
 #           (M x 1)             =          (M x N)      *     (N x 1)
 
-
 # N - length of the history/filter taps
-N = 20
+N = measuredStateData.shape[2]
 
 # M - length of observation vector/number of LS equations
-M = 50
+M = measuredStateData.shape[0]*measuredStateData.shape[3]
 
 # Pre-allocating the matrix that will store the measured data
 z = np.zeros((M, N), dtype=complex)
@@ -55,64 +54,180 @@ z = np.zeros((M, N), dtype=complex)
 x_est = np.zeros((M,1), dtype=complex)
 x_pred = np.zeros((M,1), dtype=complex)
 
-######################################################################################
-############################## LEAST SQUARES COMPUTATIONS ############################
-
 # Turn observations into complex form from separated real and imaginary components
-measuredStateDataComplex = measuredStateData[:,0,:] + (measuredStateData[:,1,:]*1j)
+measuredStateDataComplex = measuredStateData[:,0,:, :] + (measuredStateData[:,1,:, :]*1j)
 measuredStateDataComplex = np.squeeze(measuredStateDataComplex)
 
+# Turn real state values into complex form from separated real and imaginary components
 ARValues = ARValues[:, 0, :, :, :]
 ARValuesComplex = ARValues[:, 0, :, :] + (ARValues[:, 1, :, :]*1j)
 ARValuesComplex = np.squeeze(ARValuesComplex)
 
-MSEE_Avg = 0
-MSPE_Avg = 0
+######################################################################################
+############################## LEAST SQUARES COMPUTATIONS ############################
 
-# Iterate through the sequence
-for i in range(0, measuredStateDataComplex.shape[0]-(M+N-2)):
+# Iterate through the series
+for i in range(0, ARValuesComplex.shape[2]):
 
-    # Iterate through the number of LS equations
-    for j in range(0, M):
+    # Iterate through the batch
+    for j in range (0, ARValuesComplex.shape[0]):
 
-        # Grab segments of the AR process and format into a (M x N) matrix
-        z[M-1-j, :] = np.flip(measuredStateDataComplex[j+i:N+j+i])
-        #z_pred[M-1-j, :] = np.flip(measuredStateDataComplex[j+i:N+j+i])
+        # Constructing the observation matrix
+        z[i*ARValuesComplex.shape[0]+j, :] = np.flipud(measuredStateDataComplex[j, 0:N, i])
 
-    # Grab the real state values
-    x_est[0:M, 0] = np.flip(ARValuesComplex[i:i+M], 0)
-    x_pred[0:M, 0] = np.flip(ARValuesComplex[i+1:i+1+M], 0)
+        # Construct the estimation and prediction real states for MSE calculation and training
+        x_est[i*ARValuesComplex.shape[0]+j, :] = ARValuesComplex[j, ARValuesComplex.shape[1]-2, i]
+        x_pred[i * ARValuesComplex.shape[0] + j, :] = ARValuesComplex[j, ARValuesComplex.shape[1]-1, i]
 
-    # Calculate both sets of filter coefficients
-    intermediate = np.matmul(np.linalg.inv((np.matmul(np.transpose(z), z))), np.transpose(z))
+#
+# # Set up averaging MSE variables
+# MSEE_Avg = 0
+# MSPE_Avg = 0
 
-    # a - estimate
-    a_ls = np.matmul(intermediate, x_est)
+# TODO -> FIX SINGULAR PROBLEM
+z = z[:, 0:19]
 
-    # b - prediction
-    b_ls = np.matmul(intermediate, x_pred)
+intermediate = np.matmul(np.linalg.inv((np.matmul(np.transpose(z), z))), np.transpose(z))
 
-    avg = 1/(M+1)
+# a - estimate coefficients
+a_ls = np.matmul(intermediate, x_est)
 
-#TODO verify this works -> errors might exist in indexing and finding the MSE values themselves (abs part)
+# b - prediction coefficients
+b_ls = np.matmul(intermediate, x_pred)
 
-    # MSE Estimation
-    f = (x_est - np.matmul(z, a_ls))
-    MSEE = np.abs(avg*(np.matmul(np.transpose(f), f)))
-    MSEE_Avg += MSEE
+# Calculate MSE of estimation
+f = abs((x_est - np.matmul(z, a_ls))) ** 2
+MSEE = np.mean(f)
 
-    # MSE Prediction
-    f = (x_pred - np.matmul(z, b_ls))
-    MSPE = np.abs(avg*(np.matmul(np.transpose(f), f)))
-    MSPE_Avg+=MSPE
-
-MSEE_Avg = MSEE_Avg/(measuredStateDataComplex.shape[0]-(M+N-2))
-MSPE_Avg = MSPE_Avg/(measuredStateDataComplex.shape[0]-(M+N-2))
+# Calculate MSE of prediction
+f = abs((x_pred - np.matmul(z, b_ls))) ** 2
+MSEP = np.mean(f)
 
 print("MSEE Avg: ")
-print(MSEE_Avg)
+print(MSEE)
 print("MSPE Avg: ")
-print(MSPE_Avg)
+print(MSEP)
+
+#     # Grab segments of the AR process and format into a (M x N) matrix
+#     z[M-1-j, :] = np.flip(measuredStateDataComplex[j:N+j])
+#     #z_pred[M-1-j, :] = np.flip(measuredStateDataComplex[j+i:N+j+i])
+#
+# # Grab the real state values
+# x_est[0:M, 0] = np.flip(ARValuesComplex[N:M+N], 0)
+# x_pred[0:M, 0] = np.flip(ARValuesComplex[N:M+N], 0)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# TODO this code isn't right, training a sequence is not iterative
+#
+# # Iterate through the sequence
+# for i in range(0, measuredStateDataComplex.shape[0]-(M+N-2)-1):
+#
+#     # Iterate through the number of LS equations
+#     for j in range(0, M):
+#
+#         # Grab segments of the AR process and format into a (M x N) matrix
+#         z[M-1-j, :] = np.flip(measuredStateDataComplex[j+i:N+j+i])
+#         #z_pred[M-1-j, :] = np.flip(measuredStateDataComplex[j+i:N+j+i])
+#
+#     # Grab the real state values
+#     x_est[0:M, 0] = np.flip(ARValuesComplex[i+N:i+M+N], 0)
+#     x_pred[0:M, 0] = np.flip(ARValuesComplex[i+N:i+M+N], 0)
+#
+#     # Calculate both sets of filter coefficients
+#     intermediate = np.matmul(np.linalg.inv((np.matmul(np.transpose(z), z))), np.transpose(z))
+#
+#     # a - estimate
+#     a_ls = np.matmul(intermediate, x_est)
+#
+#     # b - prediction
+#     b_ls = np.matmul(intermediate, x_pred)
+#
+#     avg = 1/(M+1)
+#
+# #TODO verify this works -> errors might exist in indexing and finding the MSE values themselves (abs part)
+#
+#     # MSE Estimation
+
+
+# TODO THIS IS THE CALCULATION WITH COMPLEX MSE RESULT
+#     f = abs((x_est - np.matmul(z, a_ls))) ** 2
+#     mean = avg(f)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+##############################################################################################
+
+
+#     MSEE = np.abs(avg*(np.matmul(np.transpose(f), f)))
+#     MSEE_Avg += MSEE
+#
+#     # MSE Prediction
+#     f = (x_pred - np.matmul(z, b_ls))
+#     MSPE = np.abs(avg*(np.matmul(np.transpose(f), f)))
+#     MSPE_Avg+=MSPE
+#
+#
+#
+# MSEE_Avg = MSEE_Avg/(measuredStateDataComplex.shape[0]-(M+N-1))
+# MSPE_Avg = MSPE_Avg/(measuredStateDataComplex.shape[0]-(M+N-1))
+#
+# print("MSEE Avg: ")
+# print(MSEE_Avg)
+# print("MSPE Avg: ")
+# print(MSPE_Avg)
+#
+#
+# # Iterate through the number of LS equations
+# for j in range(0, M):
+#
+#     # Grab segments of the AR process and format into a (M x N) matrix
+#     z[M-1-j, :] = np.flip(measuredStateDataComplex[j+994:N+j+994])
+#     #z_pred[M-1-j, :] = np.flip(measuredStateDataComplex[j+i:N+j+i])
+#
+# x_pred[0:M, 0] = np.flip(ARValuesComplex[996:1001], 0)
+#
+# # MSE Estimation
+# f = (x_pred - np.matmul(z, b_ls))
+# MSPE = np.abs(avg*(np.matmul(np.transpose(f), f)))
+#
+# ass = 0
+
+
+
+
+###################################################################################
+
+
 
 
 # def least_squares_estimator_predictor(Xhat, Y, state, M, N):
@@ -132,9 +247,6 @@ print(MSPE_Avg)
 #     MSE = 1/(M+1) * np.transpose((Xhat1 - Ymat*a_ls))*(Xhat1 - Ymat*a_ls)
 #
 #     return a_ls, MSE
-#
-#
-#
 #
 #
 # N = 10 # Truncation order of an IIR filter
