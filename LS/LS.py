@@ -79,12 +79,8 @@ for i in range(0, ARValuesComplex.shape[2]):
         x_est[i*ARValuesComplex.shape[0]+j, :] = ARValuesComplex[j, ARValuesComplex.shape[1]-2, i]
         x_pred[i * ARValuesComplex.shape[0] + j, :] = ARValuesComplex[j, ARValuesComplex.shape[1]-1, i]
 
-#
-# # Set up averaging MSE variables
-# MSEE_Avg = 0
-# MSPE_Avg = 0
 
-# TODO -> FIX SINGULAR PROBLEM
+# Singular matrix problem fix
 z = z[:, 0:19]
 
 intermediate = np.matmul(np.linalg.inv((np.matmul(np.transpose(z), z))), np.transpose(z))
@@ -94,6 +90,14 @@ a_ls = np.matmul(intermediate, x_est)
 
 # b - prediction coefficients
 b_ls = np.matmul(intermediate, x_pred)
+
+
+
+
+
+
+
+# TODO -> different x_est and a_ls/b_ls for testing?
 
 # Calculate MSE of estimation
 f = abs((x_est - np.matmul(z, a_ls))) ** 2
