@@ -45,10 +45,10 @@ print('loaded from file: ', args.filePathTrain)
 
 
 # N - length of the history/filter taps
-N = 10
+N = 50
 
 # M - length of observation vector/number of LS equations
-M = 500000
+M = 70000
 
 # Pre-allocating the matrix that will store the measured data
 z = np.zeros((M, N), dtype=complex)
@@ -83,9 +83,13 @@ for j in range(0, M):
     x_est[(M-1)-j, 0] = ARValuesComplex[N-1+j]
     x_pred[(M-1)-j, 0] = ARValuesComplex[N+j]
 
+z = np.flipud(z)
+x_est = np.flipud(x_est)
+x_pred = np.flipud(x_pred)
 
 # Calculate both sets of filter coefficients
-intermediate = np.matmul(np.linalg.pinv((np.matmul(np.transpose(z), z))), np.transpose(z))
+#intermediate = np.matmul(np.linalg.pinv((np.matmul(np.transpose(z), z))), np.transpose(z))
+intermediate = np.linalg.pinv(z)
 
 # a - estimate
 a_ls = np.matmul(intermediate, x_est)
@@ -139,13 +143,17 @@ for j in range(0, M):
     x_est[(M-1)-j, 0] = ARValuesComplex[N-1+j]
     x_pred[(M-1)-j, 0] = ARValuesComplex[N+j]
 
+z = np.flipud(z)
+x_est = np.flipud(x_est)
+x_pred = np.flipud(x_pred)
 
 # Calculate MSE of estimation
-f = np.square(abs((x_est - np.matmul(z, a_ls))))
+f = abs(np.square(x_est - np.matmul(z, a_ls)))
+#f = abs(np.square((x_est.real) - (np.matmul(z, a_ls).real)) + np.square(1j*(((x_est.imag) - (np.matmul(z, a_ls).imag)))))
 MSEE = np.mean(f)
 
 # Calculate MSE of prediction
-f = np.square(abs((x_pred - np.matmul(z, b_ls))))
+f = abs(np.square(x_pred - np.matmul(z, b_ls)))
 MSEP = np.mean(f)
 
 print("MSEE Avg: ")
