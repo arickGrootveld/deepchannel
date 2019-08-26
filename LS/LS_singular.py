@@ -155,7 +155,5 @@ MSEVals[u'MSE_est'] = MSEE
 MSEVals[u'MSE_pred'] = MSEP
 
 matSave("logs", "lsSingular", MSEVals)
-#       directory (str) - the directory for the data to be saved in
-#       basename (str) - the name of the file you want the data saved to before the appended number
-#       data (dict) - a dict of data to be saved to the .mat file
+
 
