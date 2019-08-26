@@ -4,8 +4,7 @@ import time
 import argparse
 import os.path as path
 import hdf5storage as hdf5s
-import torch
-import cmath
+from utilities import matSave
 
 #####################################################################################
 ######################### Least Squares Channel Estimation ##########################
@@ -48,7 +47,7 @@ print('loaded from file: ', args.filePathTrain)
 N = 50
 
 # M - length of observation vector/number of LS equations
-M = 70000
+M = 700000
 
 # Pre-allocating the matrix that will store the measured data
 z = np.zeros((M, N), dtype=complex)
@@ -83,12 +82,8 @@ for j in range(0, M):
     x_est[(M-1)-j, 0] = ARValuesComplex[N-1+j]
     x_pred[(M-1)-j, 0] = ARValuesComplex[N+j]
 
-z = np.flipud(z)
-x_est = np.flipud(x_est)
-x_pred = np.flipud(x_pred)
 
 # Calculate both sets of filter coefficients
-#intermediate = np.matmul(np.linalg.pinv((np.matmul(np.transpose(z), z))), np.transpose(z))
 intermediate = np.linalg.pinv(z)
 
 # a - estimate
@@ -96,14 +91,6 @@ a_ls = np.matmul(intermediate, x_est)
 
 # b - prediction
 b_ls = np.matmul(intermediate, x_pred)
-
-# a_ls = np.transpose(np.matrix([.546845223756256 + 0.108182806879480j, 0.133227098016353 + 0.008626744487407j, -0.080117991483541 - 0.123662858151174j, -0.204860984672930 + 0.203284158366416j,
-#                   0.089800564601550 + 0.077211768209860j, 0.160578773433174 + 0.033510337476693j, 0.061665434155100 + 0.106041355547560j,
-#                   0.259676378708334 + 0.127092995228038j, -0.001848188584772 - 0.154626193733209j, 0.228794245949007 + 0.083261545696778j], dtype=complex))
-#
-# b_ls = np.transpose(np.matrix([0.1053 + 0.1479j, -0.3444 - 0.1524j, -0.0662 + 0.4348j, 0.3479 + 0.4943,
-#                   0.4902 + 0.0119j, 0.0771 - 0.2991j, 0.0346 + 0.0441j,
-#                   0.3030 - 0.3349j, -0.1375 - 0.4279j, -0.3129 + 0.0726j], dtype=complex))
 
 ##############################################################################################
 ################################ LEAST SQUARES TESTING SCRIPT ################################
@@ -143,55 +130,32 @@ for j in range(0, M):
     x_est[(M-1)-j, 0] = ARValuesComplex[N-1+j]
     x_pred[(M-1)-j, 0] = ARValuesComplex[N+j]
 
-z = np.flipud(z)
-x_est = np.flipud(x_est)
-x_pred = np.flipud(x_pred)
 
 # Calculate MSE of estimation
 f = abs(np.square(x_est - np.matmul(z, a_ls)))
-#f = abs(np.square((x_est.real) - (np.matmul(z, a_ls).real)) + np.square(1j*(((x_est.imag) - (np.matmul(z, a_ls).imag)))))
 MSEE = np.mean(f)
 
 # Calculate MSE of prediction
 f = abs(np.square(x_pred - np.matmul(z, b_ls)))
 MSEP = np.mean(f)
 
+
+########################################################
+# Log and Print Results
+
 print("MSEE Avg: ")
 print(MSEE)
 print("MSPE Avg: ")
 print(MSEP)
 
+MSEVals = {}
+MSEVals[u'M'] = M
+MSEVals[u'N'] = N
+MSEVals[u'MSE_est'] = MSEE
+MSEVals[u'MSE_pred'] = MSEP
 
+matSave("logs", "lsSingular", MSEVals)
+#       directory (str) - the directory for the data to be saved in
+#       basename (str) - the name of the file you want the data saved to before the appended number
+#       data (dict) - a dict of data to be saved to the .mat file
 
-# def least_squares_estimator_predictor(Xhat, Y, state, M, N):
-#     # inputs - Xhat, Y, state, N, M
-#     # outputs - a_ls, MSE
-#
-#     Y1 = Y[:,state]
-#     Xhat1 = Xhat[0:M, state]
-#     Ymat = np.zeros((M,N+1))
-#
-#     k = 1
-#     for j in np.arange(N+1):
-#         Ymat[:,j] = Y1[k+1: k+M]
-#         k = k + 1
-#
-#     a_ls =  (inv(np.transpose(Ymat)*Ymat))*(np.transpose(Ymat)*Xhat1)
-#     MSE = 1/(M+1) * np.transpose((Xhat1 - Ymat*a_ls))*(Xhat1 - Ymat*a_ls)
-#
-#     return a_ls, MSE
-#
-#
-#
-#
-#
-# N = 10 # Truncation order of an IIR filter
-# M = 30 # Least Squares order
-# num_states = 4
-# state = 1
-# Xhat = np.squeeze(predAndCurState[1,state,:])
-# Y1 = np.squeeze(trainDataMeas[0:size(Xhat,1), state])
-#
-# a_ls_1 = np.zeros((N,num_states))
-# for i in np.arange(num_states):
-#     a_ls_1[i], MSE1[i] = least_squares_estimator_predictor(Xhat[i], Y[:,i], i, M, N)
