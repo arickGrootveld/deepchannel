@@ -1,5 +1,4 @@
 import sys
-sys.path.append('..')
 import argparse
 import time
 
@@ -8,8 +7,8 @@ from mismatch_data_gen import ARDatagenMismatch
 parser = argparse.ArgumentParser(description='Generate data for testing purposes. For use with the Kalman Filter mismatch code,\
                                              and the TCN')
 # Number of batches of data
-parser.add_argument('--simLength', type=float, default=1000,
-                    help='the number of batches of data to generate (default=1000)')
+parser.add_argument('--simLength', type=float, default=100,
+                    help='the number of batches of data to generate (default=100)')
 
 # Size of batches
 parser.add_argument('--batchSize', type=float, default=32,
@@ -20,8 +19,8 @@ parser.add_argument('--sequenceLength', type=float, default=20,
                     help='number of samples in each AR process that makes up a batch element (default=20)')
 
 # Variance of AR Coeffieients
-parser.add_argument('--arVar', type=float, default=0.1,
-                    help='the variance of the AR Coefficients for each AR process (default=0.1)')
+parser.add_argument('--arVar', type=float, default=0,
+                    help='the variance of the AR Coefficients for each AR process (default=0)')
 
 # Order of AR process
 parser.add_argument('--AR_n', type=int, default=2,

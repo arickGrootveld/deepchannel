@@ -2,6 +2,7 @@
 
 from utilities import matSave
 import torch
+from scipy import linalg as sciAlg
 
 # ARCoeffecientGeneration: Function that returns a matrix that works as an AR processes F matrix
 #   Inputs:  (arCoeffMeans, arCoefficientNoiseVar)
@@ -35,8 +36,8 @@ def ARCoeffecientGeneration(arCoeffMeans,arCoeffecientNoiseVar, seed=-1):
         # We do this because the system would explode to infinity if the eigenvalues 
         # were greater than 1.
 
-        arCoeffNoise[0] = torch.randn(1) * torch.sqrt(torch.tensor(arCoeffecientNoiseVar))
-        arCoeffNoise[1] = torch.randn(1) * torch.sqrt(torch.tensor(arCoeffecientNoiseVar))
+        arCoeffNoise[0] = torch.randn(1) * torch.sqrt(torch.tensor(arCoeffecientNoiseVar, dtype=torch.float))
+        arCoeffNoise[1] = torch.randn(1) * torch.sqrt(torch.tensor(arCoeffecientNoiseVar, dtype=torch.float))
 
         arCoeffsMatrix[0,0] = arCoeffMeans[0] + arCoeffNoise[0]
         arCoeffsMatrix[0,1] = arCoeffMeans[1] + arCoeffNoise[1]
@@ -118,6 +119,9 @@ def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1))
     # Observation covariance matrix/ noise mean
     R = torch.tensor([0.1])
 
+    # Matrix mapping real states into observation domain (required for Riccati Equation)
+    H = torch.tensor([[1,0]])
+
     # Pre-allocating the matrix that will store the true values of the predicted and current state
     x = torch.zeros((batchSize, 4, simLength), dtype=torch.float)
     # Pre-allocating the matrix that will store the measured data to be fed into the model
@@ -156,6 +160,11 @@ def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1))
     all_F = torch.zeros((AR_n, AR_n, simLength*batchSize), dtype=torch.float)
 
 
+    # Pre-allocating for the Ricatti convergences of each of the processes
+    # These values are what the Riccati equation for each of the processes given the F matrices would converge to
+    # The format is: 1st Dim corresponds to the sequence, and 2nd Dim corresponds to the batch
+    ricattiConvergences = torch.zeros((batchSize, simLength), dtype=torch.float)
+
     if(cuda):
         v.cuda()
         w.cuda()
@@ -185,6 +194,12 @@ def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1))
 
             # Store F matrices
             all_F[:, :, i*batchSize + j] = F
+
+            # Computing the Riccati equation for the AR process
+            ricattiConvergences[j,i] = sciAlg.solve_discrete_are(torch.t(F).numpy(),
+                                             torch.t(H).numpy(),Q.numpy(), R.numpy())[0,0]
+
+            # ricattiConvergences(j, i)
 
             # Loop for generating the sequence of data for each batch element #
             for m in range(0, sequenceLength + 1):
@@ -249,6 +264,7 @@ def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1))
     logContent[u'allF'] = all_F.numpy()
     logContent[u'predAndCurState'] = x.numpy()
     logContent[u'allTrueStateValues'] = all_xs.numpy()
+    logContent[u'riccatiConvergences'] = ricattiConvergences.numpy()
     matSave(storageFilePath,dataFile,logContent)
 
     # Return data
