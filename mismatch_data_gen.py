@@ -43,7 +43,7 @@ def ARCoeffecientGeneration(arCoeffMeans,arCoeffecientNoiseVar, seed=-1):
         arCoeffsMatrix[0,1] = arCoeffMeans[1] + arCoeffNoise[1]
 
         # Compute EigenValues of F
-        eigValsEvaluated = torch.abs(torch.eig(arCoeffsMatrix, eigenvectors=False).eigenvalues) > 1
+        eigValsEvaluated = torch.abs(torch.eig(arCoeffsMatrix, eigenvectors=False)[0][0]) > 1
         # Determine if any of them have a greater magnitude than 1
         if (not eigValsEvaluated.any()):
             goodCoeffs=True
