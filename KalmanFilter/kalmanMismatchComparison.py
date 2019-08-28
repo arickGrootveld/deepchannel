@@ -1,5 +1,7 @@
 import sys
 sys.path.append('..')
+# TODO: Remove this before pushing
+sys.path.append('/home/aspect/deepchannel')
 
 import numpy as np
 import argparse
@@ -22,7 +24,7 @@ parser.add_argument('--filePath', type=str, default='None',
 
 # AR Coefficients that the Kalman filter is given
 # TODO: Throw an exception if the length of the ARCoeffs list is not 2
-parser.add_argument('--ARCoeffs', nargs='+', default=[0.4465,-0.3694],
+parser.add_argument('--ARCoeffs', nargs='+', default=[0.5,-0.4],
                      help='AR Coefficients that Kalman Filter will use (default=[0.4465,-0.3694])')
 # TODO: As of right now this is not synced up with the data generated, so you need to manually
 # TODO: update this in both places if you want to generate fresh data with different AR params
@@ -43,7 +45,7 @@ if args.filePath == 'None':
     defaultDataGenValues[u'coefVariance'] = 0
     defaultDataGenValues[u'dataLength'] = 20
     defaultDataGenValues[u'seed'] = 10
-    defaultDataGenValues[u'cuda'] = True
+    defaultDataGenValues[u'cuda'] = False
 
     dataGenParameters = [defaultDataGenValues['simLength'],
                      defaultDataGenValues['AR_n'],

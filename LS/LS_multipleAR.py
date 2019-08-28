@@ -49,9 +49,6 @@ print('loaded from file: ', args.filePathTrain)
 #  predications/observations             measurements       filter taps
 #           (M x 1)             =          (M x N)      *     (N x 1)
 
-
-
-
 # N - length of the history/filter taps
 N = measuredStateData.shape[1] # sequenceLength
 # M - length of observation vector/number of LS equations
@@ -68,36 +65,27 @@ measuredStateDataComplex = measuredStateData[0,:, :] + (measuredStateData[1,:, :
 measuredStateDataComplex = np.squeeze(measuredStateDataComplex)
 
 # Turn real state values into complex form from separated real and imaginary components
-ARValuesComplex = ARValues[:, 0, :, :] + (ARValues[:, 1, :, :]*1j)
+ARValuesComplex = ARValues[0, :, :] + (ARValues[1, :, :]*1j)
 ARValuesComplex = np.squeeze(ARValuesComplex)
 
 ######################################################################################
 ############################## LEAST SQUARES COMPUTATIONS ############################
 
-# Iterate through the series
-for i in range(0, ARValuesComplex.shape[2]):
 
-    # Iterate through the batch
-    for j in range (0, ARValuesComplex.shape[0]):
-
-        # Constructing the observation matrix
-        z[i*ARValuesComplex.shape[0]+j, :] = np.flipud(measuredStateDataComplex[j, 0:N, i])
-
-        # Construct the estimation and prediction real states for MSE calculation and training
-        x_est[i*ARValuesComplex.shape[0]+j, :] = ARValuesComplex[j, ARValuesComplex.shape[1]-2, i]
-        x_pred[i * ARValuesComplex.shape[0] + j, :] = ARValuesComplex[j, ARValuesComplex.shape[1]-1, i]
-
+z[:,:] = np.transpose(np.flipud(measuredStateDataComplex[0:N,:]))
+x_est[:,0] = ARValuesComplex[N-1, :]
+x_pred[:,0] = ARValuesComplex[N, :]
 
 # Singular matrix problem fix
-z = z[:, 0:19]
+z = z[:, 0:-1]
 
-intermediate = np.linalg.pinv(z)
+z_psuedoInverse = np.linalg.pinv(z)
 
 # a - estimate coefficients
-a_ls = np.matmul(intermediate, x_est)
+a_ls = np.matmul(z_psuedoInverse, x_est)
 
 # b - prediction coefficients
-b_ls = np.matmul(intermediate, x_pred)
+b_ls = np.matmul(z_psuedoInverse, x_pred)
 
 
 
@@ -111,40 +99,41 @@ if(not path.exists(args.filePathTest)):
 
 # Load relevant training data
 matData = hdf5s.loadmat(args.filePathTest)
-ARValues = matData['allTrueStateValues']
-measuredStateData = matData['measuredData']
-trueStateData = matData['predAndCurState']
+ARValues = matData['systemStates']
+measuredStateData = matData['observedStates']
+trueStateData = matData['finalStateValues']
 print('loaded from file: ', args.filePathTest)
 
+# Redefining only M here, because N should stay constant across the test and training set
+M = measuredStateData.shape[2] # seriesLength
 
+# Pre-allocating the vector that will store the estimations/predictions
+x_est = np.zeros((M,1), dtype=complex)
+x_pred = np.zeros((M,1), dtype=complex)
 
 # Turn observations into complex form from separated real and imaginary components
-measuredStateDataComplex = measuredStateData[:,0,:] + (measuredStateData[:,1,:]*1j)
+measuredStateDataComplex = measuredStateData[0,:, :] + (measuredStateData[1,:, :]*1j)
 measuredStateDataComplex = np.squeeze(measuredStateDataComplex)
 
-ARValues = ARValues[:, 0, :, :, :]
-ARValuesComplex = ARValues[:, 0, :, :] + (ARValues[:, 1, :, :]*1j)
+# Turn real state values into complex form from separated real and imaginary components
+ARValuesComplex = ARValues[0, :, :] + (ARValues[1, :, :]*1j)
 ARValuesComplex = np.squeeze(ARValuesComplex)
 
 # Pre-allocating the matrix that will store the measured data
 z = np.zeros((M, N), dtype=complex)
 
 # Iterate through the series
-for i in range(0, ARValuesComplex.shape[2]):
+for i in range(0, ARValuesComplex.shape[1]):
+    # Constructing the observation matrix
+    z[i, :] = np.flipud(measuredStateDataComplex[0:N, i])
 
-    # Iterate through the batch
-    for j in range (0, ARValuesComplex.shape[0]):
-
-        # Constructing the observation matrix
-        z[i*ARValuesComplex.shape[0]+j, :] = np.flipud(measuredStateDataComplex[j, 0:N, i])
-
-        # Construct the estimation and prediction real states for MSE calculation and training
-        x_est[i*ARValuesComplex.shape[0]+j, :] = ARValuesComplex[j, ARValuesComplex.shape[1]-2, i]
-        x_pred[i * ARValuesComplex.shape[0] + j, :] = ARValuesComplex[j, ARValuesComplex.shape[1]-1, i]
+    # Construct the estimation and prediction real states for MSE calculation and training
+    x_est[i, :] = ARValuesComplex[N-1, i]
+    x_pred[i, :] = ARValuesComplex[N, i]
 
 
 # Singular matrix problem fix
-z = z[:, 0:19]
+z = z[:, 0:-1]
 
 # Calculate MSE of estimation
 f = abs((x_est - np.matmul(z, a_ls))) ** 2
@@ -159,7 +148,7 @@ MSEP = np.mean(f)
 
 print("MSEE Avg: ")
 print(MSEE)
-print("MSPE Avg: ")
+print("MSEP Avg: ")
 print(MSEP)
 
 MSEVals = {}
