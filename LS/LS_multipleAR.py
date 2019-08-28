@@ -77,7 +77,11 @@ x_est[:,0] = ARValuesComplex[N-1, :]
 x_pred[:,0] = ARValuesComplex[N, :]
 
 # Singular matrix problem fix
+<<<<<<< HEAD
 z = z[:, 0:-1]
+=======
+z = z[:, 0:9]
+>>>>>>> master
 
 z_psuedoInverse = np.linalg.pinv(z)
 
@@ -133,7 +137,11 @@ for i in range(0, ARValuesComplex.shape[1]):
 
 
 # Singular matrix problem fix
+<<<<<<< HEAD
 z = z[:, 0:-1]
+=======
+z = z[:, 0:9]
+>>>>>>> master
 
 # Calculate MSE of estimation
 f = abs((x_est - np.matmul(z, a_ls))) ** 2

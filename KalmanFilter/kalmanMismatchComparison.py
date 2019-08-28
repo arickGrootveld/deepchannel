@@ -24,7 +24,11 @@ parser.add_argument('--filePath', type=str, default='None',
 
 # AR Coefficients that the Kalman filter is given
 # TODO: Throw an exception if the length of the ARCoeffs list is not 2
+<<<<<<< HEAD
 parser.add_argument('--ARCoeffs', nargs='+', default=[0.5,-0.4],
+=======
+parser.add_argument('--ARCoeffs', nargs='+', default=[0.3645,-0.3405],
+>>>>>>> master
                      help='AR Coefficients that Kalman Filter will use (default=[0.4465,-0.3694])')
 # TODO: As of right now this is not synced up with the data generated, so you need to manually
 # TODO: update this in both places if you want to generate fresh data with different AR params
