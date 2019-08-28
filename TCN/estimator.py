@@ -258,6 +258,12 @@ optimizer = getattr(optim, args.optim)(model.parameters(), lr=lr)
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~~~~~~~~~~~~~~~~~~~ TRAINING ~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 
+#TODO implement early stopping
+
+
+#TODO implement stopping with factor of 10 difference between test and training data
+
+
 def train(epoch):
 
     # Initialize training model and parameters
@@ -317,7 +323,8 @@ def evaluate(ep):
 
     # Pre-allocating space for the tensor that will contain the MSEs of each batch from our training set
     testPredMSEs = torch.empty(measuredStateTEST.size(2))
-    testEstMSEs = torch.empty(measuredState.size(2))
+    testEstMSEs = torch.empty(measuredStateTEST.size(2))
+
     # Training loop - run until we only have one batch size of data left
     for i in range(0, (measuredStateTEST.size(2))):
 
@@ -368,12 +375,20 @@ def evaluate(ep):
     return test_loss.item()
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
+### ~~~~~~~~~~~~~~~~~~~~~~~~~ TEST ~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
+
+
+### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~ LOOP ~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 
 # Letting the model know when the last epoch happens so we can record the MSEs of the individual samples
 for ep in range(1, epochs+1):
     train(ep)
     tloss = evaluate(ep)
+
+
+
+
 
 print("check check")
 
