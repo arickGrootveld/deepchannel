@@ -397,7 +397,7 @@ end = time.time()
 simRunTime=(end-start)
 print('this simulation took:', simRunTime, 'seconds to run')
 
-fileContent[u'finalEpochsErrors'] = sequenceErrors
+fileContent[u'finalEpochsErrors'] = sequenceErrors.numpy()
 fileContent[u'trainingLength(seconds)'] = simRunTime
 hdf5s.savemat(logName, fileContent)
 
