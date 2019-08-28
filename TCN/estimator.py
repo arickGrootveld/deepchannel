@@ -10,11 +10,13 @@ import torch.optim as optim
 import torch.nn.functional as F
 import os
 from os import path
+import numpy as np
 
 import sys
 sys.path.append("..") # Adds higher directory to python modules path.
 from model import TCN
 from mismatch_data_gen import ARDatagenMismatch
+from utilities import convertToBatched
 
 # Timer for logging how long the training takes to execute
 import time
@@ -192,8 +194,12 @@ trainFile = args.trainDataFile
 evalFile = args.evalDataFile
 testFile = args.testDataFile
 
+# Calculating the number of batches that will need to be created given the simulation length and the batch size
+trainSeriesLength = int(simu_len/batch_size)
 
-### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
+# Doing the same calculation as above for the test data set
+testSeriesLength = int(testDataLen/batch_size)
+
 ### ~~~~~~~~~~~~~~~ LOAD DATA/GENERATE MODEL ~~~~~~~~~~~~~~~~ ###
 # Here we have the option of loading from a saved .mat file or just calling the data generation
 # function explicitly
@@ -203,20 +209,22 @@ AR_n = 2
 
 # ~~~~~~~~~~~~~~~~~~ LOAD TRAINING SET
 if(trainFile == 'None'):
-
     # Generate AR process training data set - both measured and real states
-    trueState, measuredState = ARDatagenMismatch([simu_len, AR_n, AR_var, batch_size, seq_length], seed, args.cuda)
-
-    # Logging the train data
-    fileContent[u'trainDataActual'] = trueState
-    fileContent[u'trainDataMeas'] = measuredState
-
-# loading the data from the file
+    trainStateData, trainStateInfo = ARDatagenMismatch([simu_len, AR_n, AR_var, seq_length], seed, args.cuda)
+    # Convert the data from normal formatting to batches
+    trueState, measuredState = convertToBatched(trainStateData[2], trainStateData[1], batch_size)
 else:
     # Grab the data from the .mat file
     trainDataDict = hdf5s.loadmat(trainFile)
-    measuredState = trainDataDict['measuredData']
-    trueState = trainDataDict['predAndCurState']
+
+    # Convert the loaded data into batches for the TCN to run with
+    trueState, measuredState = convertToBatched(trainDataDict['finalStateValues'], trainDataDict['observedStates'],
+                                                batch_size)
+
+    #  #  #  #  #  #
+    # measuredState = trainDataDict['measuredData']
+    # trueState = trainDataDict['predAndCurState']
+    #  #  #  #  #  #
 
 # Convert numpy arrays to tensors
 trueState = torch.from_numpy(trueState)
@@ -228,16 +236,17 @@ if(evalFile == 'None'):
     # Generate AR process evaluation data set - both measured and real states
     trueStateEVAL, measuredStateEVAL = ARDatagenMismatch([evalDataLen, AR_n, AR_var, batch_size, seq_length], seed+2, args.cuda)
 
-    # Logging the evaluation data
-    fileContent[u'evalDataActual'] = trueStateEVAL
-    fileContent[u'evalDataMeas'] = measuredStateEVAL
+    evalStateData, evalStateInfo = ARDatagenMismatch([simu_len, AR_n, AR_var, seq_length], seed + 2, args.cuda)
+    # Convert the data from normal formatting to batches
+    trueStateEVAL, measuredStateEVAL = convertToBatched(evalStateData[2], evalStateData[1], batch_size)
 
 # loading the data from the file
 else:
     # Grab the data from the .mat file
     evalDataDict = hdf5s.loadmat(evalFile)
-    measuredStateEVAL = evalDataDict['measuredData']
-    trueStateEVAL = evalDataDict['predAndCurState']
+    trueStateEVAL, measuredStateEVAL = convertToBatched(evalDataDict['finalStateValues'],
+                                                        evalDataDict['observedStates'],
+                                                        batch_size)
 
 # Convert numpy arrays to tensors
 trueStateEVAL = torch.from_numpy(trueStateEVAL)
@@ -246,15 +255,15 @@ measuredStateEVAL = torch.from_numpy(measuredStateEVAL)
 # ~~~~~~~~~~~~~~~~~~ LOAD TEST SET
 if(testFile == 'None'):
     # Generate AR process testing data set - both measured and real state
-    trueStateTEST, measuredStateTEST = ARDatagenMismatch([testDataLen, AR_n, AR_var, batch_size, seq_length], seed+1, args.cuda)
+    testStateData, testStateInfo = ARDatagenMismatch([simu_len, AR_n, AR_var, seq_length], seed+1, args.cuda)
+    # Convert the data from normal formatting to batches
+    trueStateTEST, measuredStateTEST = convertToBatched(testStateData[2], testStateData[1], batch_size)
 
-    # Logging the eval data
-    fileContent[u'testDataActual'] = trueStateTEST
-    fileContent[u'testDataMeas'] = measuredStateTEST
 else:
+
     testDataDict = hdf5s.loadmat(testFile)
-    measuredStateTEST = testDataDict['measuredData']
-    trueStateTEST = testDataDict['predAndCurState']
+    trueStateTEST, measuredStateTEST = convertToBatched(testDataDict['finalStateValues'], testDataDict['observedStates'],
+                                                batch_size)
 
 # Convert numpy arrays to tensors
 trueStateTEST = torch.from_numpy(trueStateTEST)
@@ -312,7 +321,7 @@ def train(epoch):
  ################################
 
     # Training loop - run until we process every series of data
-    for i in range(0, measuredState.size(3)):
+    for i in range(0, trainSeriesLength):
 
         # Grab the current series
         x = measuredState[:, :, :, i]
@@ -415,12 +424,12 @@ def test():
     TotalAvgTrueMSE = 0
     n = 0
 
-    # Pre-allocating space for the tensor that will contain the MSEs of each batch from our test set
-    testPredMSEs = torch.empty(measuredStateTEST.size(3))
-    testEstMSEs = torch.empty(measuredStateTEST.size(3))
+    # Pre-allocating space for the tensor that will contain the MSEs of each batch from our training set
+    testPredMSEs = torch.empty(testSeriesLength)
+    testEstMSEs = torch.empty(testSeriesLength)
 
     # Training loop - run until we only have one batch size of data left
-    for i in range(0, (measuredStateTEST.size(3))):
+    for i in range(0, (testSeriesLength)):
 
         # Grab the current series
         x_test = measuredStateTEST[:, :, :, i]
