@@ -83,7 +83,7 @@ for i in range(0, ARValuesComplex.shape[2]):
 
 
 # Singular matrix problem fix
-z = z[:, 0:19]
+z = z[:, 0:9]
 
 intermediate = np.linalg.pinv(z)
 
@@ -138,7 +138,7 @@ for i in range(0, ARValuesComplex.shape[2]):
 
 
 # Singular matrix problem fix
-z = z[:, 0:19]
+z = z[:, 0:9]
 
 # Calculate MSE of estimation
 f = abs((x_est - np.matmul(z, a_ls))) ** 2
