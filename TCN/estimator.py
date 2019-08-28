@@ -89,19 +89,19 @@ parser.add_argument('--seed', type=int, default=1111,
                     help='random seed (default: 1111)')
 
 # Data Generation Length
-parser.add_argument('--simu_len', type=float, default=1e5,
-                    help='amount of data generated for training (default: 1e3)')
+parser.add_argument('--simu_len', type=float, default=1e2,
+                    help='amount of data generated for training (default: 1e2)')
 
 # Length of data used for Evaluation of models effectiveness
-parser.add_argument('--test_len', type=float, default=1e5,
-                    help='amount of data generated for testing (default: 1e3)')
+parser.add_argument('--test_len', type=float, default=1e2,
+                    help='amount of data generated for testing (default: 1e2)')
 
 # Load data to train with from data file
 parser.add_argument('--trainDataFile', type=str, default='None',
                     help='file path to load training data from, if None then it will generate its own data '
-                         '(default=\'None\') \r\n{if a data file is loaded from, the --simLength, --batch_size, '
-                         '--seq_len, --AR_var, and --seed parameters \r\nwill do nothing, because these values are used for data '
-                         'generation. \r\nThe same applies to the --trainDataFile argument}')
+                         '(default=\'None\'){if a data file is loaded from, the --simLength, --batch_size, '
+                         '--seq_len, --AR_var, and --seed parameters will do nothing, because these values are used for data '
+                         'generation. The same applies to the --testDataFile argument} \r\n')
 
 # Load data to test models with from data file
 parser.add_argument('--testDataFile', type=str, default='None',
@@ -186,14 +186,13 @@ trainSeriesLength = int(simu_len/batch_size)
 
 # Doing the same calculation as above for the test data set
 testSeriesLength = int(testDataLen/batch_size)
-### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
+
 ### ~~~~~~~~~~~~~~~ LOAD DATA/GENERATE MODEL ~~~~~~~~~~~~~~~~ ###
 # Here we have the option of loading from a saved .mat file or just calling the data generation
 # function explicitly
 
 # AR data generation parameters
 AR_n = 2
-
 
 # ~~~~~~~~~~~~~~~~~~ LOAD TRAINING SET
 if(trainFile == 'None'):
@@ -223,7 +222,7 @@ else:
     trainDataDict = hdf5s.loadmat(trainFile)
 
     # Convert the loaded data into batches for the TCN to run with
-    trueState, measuredState = convertToBatched(trainDataDict['finalStateValues'], trainDataDict['observedStateValues'],
+    trueState, measuredState = convertToBatched(trainDataDict['finalStateValues'], trainDataDict['observedStates'],
                                                 batch_size)
 
     #  #  #  #  #  #
@@ -253,7 +252,7 @@ else:
 
 
     testDataDict = hdf5s.loadmat(testFile)
-    trueStateTEST, measuredStateTEST = convertToBatched(testDataDict['finalStateValues'], testDataDict['observedStateValues'],
+    trueStateTEST, measuredStateTEST = convertToBatched(testDataDict['finalStateValues'], testDataDict['observedStates'],
                                                 batch_size)
 
     #  #  #  #  #  #
@@ -264,6 +263,17 @@ else:
 # Convert numpy arrays to tensors
 trueStateTEST = torch.from_numpy(trueStateTEST)
 measuredStateTEST = torch.from_numpy(measuredStateTEST)
+
+
+### Grabbing the test size so we can preallocate the MSE tensor ###
+testSize = trueState.shape
+# Number of sequences per batch of test data
+numSequences = testSize[0]
+# Number of batches per series of test data
+numBatches = testSize[2]
+# Pre-allocating space for the MSE's of the final batch
+sequenceErrors = torch.empty((numSequences, numBatches), dtype=torch.float)
+
 
 # Generate the model
 model = TCN(input_channels, n_classes, channel_sizes, kernel_size=kernel_size, dropout=dropout)
@@ -288,6 +298,12 @@ optimizer = getattr(optim, args.optim)(model.parameters(), lr=lr)
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~~~~~~~~~~~~~~~~~~~ TRAINING ~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 
+#TODO implement early stopping
+
+
+#TODO implement stopping with factor of 10 difference between test and training data
+
+
 def train(epoch):
 
     # Initialize training model and parameters
@@ -297,7 +313,7 @@ def train(epoch):
  ################################
 
     # Training loop - run until we process every series of data
-    for i in range(0, measuredState.size(3)):
+    for i in range(0, trainSeriesLength):
 
         # Grab the current series
         x = measuredState[:, :, :, i]
@@ -338,18 +354,18 @@ def train(epoch):
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~~~~~~~~~~~~~~~~~~ EVALUATION ~~~~~~~~~~~~~~~~~~~~~~~~ ###
 
-def evaluate():
+def evaluate(ep):
 
     # Total MSE
     TotalAvgPredMSE = 0
     TotalAvgTrueMSE = 0
     n = 0
-
     # Pre-allocating space for the tensor that will contain the MSEs of each batch from our training set
-    testPredMSEs = torch.empty(measuredStateTEST.size(2))
-    testEstMSEs = torch.empty(measuredState.size(2))
+    testPredMSEs = torch.empty(testSeriesLength)
+    testEstMSEs = torch.empty(testSeriesLength)
+
     # Training loop - run until we only have one batch size of data left
-    for i in range(0, (measuredStateTEST.size(2))):
+    for i in range(0, (testSeriesLength)):
 
         # Grab the current series
         x_test = measuredStateTEST[:, :, :, i]
@@ -372,6 +388,10 @@ def evaluate():
             testPredMSEs[i] = PredMSE
             TotalAvgPredMSE+=PredMSE
             TotalAvgTrueMSE+=TrueMSE
+
+            # Save the MSE's of each sequence when we hit the last epoch
+            if(ep == epochs):
+                sequenceErrors[:,i] = (output[:, 1] - y_test[:, 1]) ** 2 + (output[:, 3] - y_test[:, 3]) ** 2
         n+=1
 
     TotalAvgPredMSE = TotalAvgPredMSE / n
@@ -394,11 +414,20 @@ def evaluate():
     return test_loss.item()
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
+### ~~~~~~~~~~~~~~~~~~~~~~~~~ TEST ~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
+
+
+### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~ LOOP ~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 
+# Letting the model know when the last epoch happens so we can record the MSEs of the individual samples
 for ep in range(1, epochs+1):
     train(ep)
-    tloss = evaluate()
+    tloss = evaluate(ep)
+
+
+
+
 
 print("check check")
 
@@ -407,7 +436,7 @@ end = time.time()
 simRunTime=(end-start)
 print('this simulation took:', simRunTime, 'seconds to run')
 
-
+fileContent[u'finalEpochsErrors'] = sequenceErrors.numpy()
 fileContent[u'trainingLength(seconds)'] = simRunTime
 hdf5s.savemat(logName, fileContent)
 

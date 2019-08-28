@@ -2,13 +2,20 @@
 
 from utilities import matSave
 import torch
+from scipy import linalg as sciAlg
 
 # ARCoeffecientGeneration: Function that returns a matrix that works as an AR processes F matrix
 #   Inputs:  (arCoeffMeans, arCoefficientNoiseVar)
 #       arCoeffMeans (array) - mean values of the AR coefficients to be generated
-#           arCoeffMeans[0] (float) - first AR coefficient
-#           arCoeffMeans[1] (float) - second AR coefficient
-#       arCoefficientNoiseVar (float) - variance of the AR coefficients to be generated
+#           arCoeffMeans[0] (float) - first AR coefficient mean
+#           arCoeffMeans[1] (float) - second AR coefficient mean
+#       arCoefficientNoiseStd (float) - standard deviation of the AR coefficients to be generate
+#       seed (float) {default=-1} - the seed for the random number generation of the seed. If
+#                                   this value is below 0, it will not use any seed.
+#                                   !!! WARNING: passing the same seed to this function while
+#                                                iteratively creating AR parameters (say in a
+#                                                for loop) will create the same AR Parameters
+#                                                each time !!!
 #   Outputs: (arCoeffMatrix)
 #       arCoeffMatrix (tensor [2 x 2]) - the F matrix of an AR process (Bar-Shalom's notation)
 #                                                                   
@@ -28,13 +35,15 @@ def ARCoeffecientGeneration(arCoeffMeans,arCoeffecientNoiseVar, seed=-1):
         # less than 1.
         # We do this because the system would explode to infinity if the eigenvalues 
         # were greater than 1.
-        arCoeffNoise[0] = torch.randn(1) * arCoeffecientNoiseVar
-        arCoeffNoise[1] = torch.randn(1) * arCoeffecientNoiseVar
+
+        arCoeffNoise[0] = torch.randn(1) * torch.sqrt(torch.tensor(arCoeffecientNoiseVar, dtype=torch.float))
+        arCoeffNoise[1] = torch.randn(1) * torch.sqrt(torch.tensor(arCoeffecientNoiseVar, dtype=torch.float))
+
         arCoeffsMatrix[0,0] = arCoeffMeans[0] + arCoeffNoise[0]
         arCoeffsMatrix[0,1] = arCoeffMeans[1] + arCoeffNoise[1]
 
         # Compute EigenValues of F
-        eigValsEvaluated = torch.abs(torch.eig(arCoeffsMatrix, eigenvectors=False).eigenvalues) > 1
+        eigValsEvaluated = torch.abs(torch.eig(arCoeffsMatrix, eigenvectors=False)[0][0]) > 1
         # Determine if any of them have a greater magnitude than 1
         if (not eigValsEvaluated.any()):
             goodCoeffs=True
@@ -115,7 +124,7 @@ def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1))
 
     # Gain matrix on the previous values
     # TODO: Make the AR coefficient means be a parameter you can pass to the function
-    arCoeffMeans = torch.tensor([0.5, 0.4])
+    arCoeffMeans = torch.tensor([0.5, -0.4])
 
     # Noise covariance matrix / noise mean
     Q = torch.tensor([[0.1, 0], [0, 0]])
@@ -123,6 +132,9 @@ def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1))
 
     # Observation covariance matrix/ noise mean
     R = torch.tensor([0.1])
+
+    # Matrix mapping real states into observation domain (required for Riccati Equation)
+    H = torch.tensor([[1,0]])
 
     # Pre-allocating the matrix that will store the true values of the predicted and current state
     x = torch.zeros((2, sequenceLength + 1, simLength), dtype=torch.float)
@@ -154,6 +166,18 @@ def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1))
     # Matrix format is
     final_states = torch.zeros((4, simLength), dtype=torch.float)
 
+    # Pre-allocating for the F matrix storage, for use in the Kalman Filter code.
+    # The Kalman filter needs to know the AR parameters for each batch AR process to
+    # compute the best MSE we can possibly achieve - this allows us to compare the
+    # neural network MSE values to the best possible MSE values we can achieve
+    all_F = torch.zeros((AR_n, AR_n, simLength), dtype=torch.float)
+
+
+    # Pre-allocating for the Ricatti convergences of each of the processes
+    # These values are what the Riccati equation for each of the processes given the F matrices would converge to
+    # The format is: 1st Dim corresponds to the sequence, and 2nd Dim corresponds to the batch
+    riccatiConvergences = torch.zeros((simLength), dtype=torch.float)
+
     if(cuda):
         v.cuda()
         w.cuda()
@@ -177,6 +201,14 @@ def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1))
     for i in range(0,simLength):
         # Compute new AR Coefficients for each sequence
         F = ARCoeffecientGeneration(arCoeffMeans, AR_coeffecient_noise_var)
+
+        # Store F matrices
+        all_F[:, :, i] = F
+
+        # Computing the Riccati equation for the AR process
+        riccatiConvergences[i] = sciAlg.solve_discrete_are(torch.t(F).numpy(),
+                                         torch.t(H).numpy(),Q.numpy(), R.numpy())[0,0]
+
         ## Loop for generating a sequence of data
         for n in range(0,sequenceLength + 1):
             # Generate system noise vector
@@ -236,6 +268,8 @@ def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1))
     logContent[u'parameters'] = params
     logContent[u'seed'] = seed
     logContent[u'cuda'] = cuda
+    logContent[u'riccatiConvergences'] = riccatiConvergences.numpy()
+    logContent[u'allF'] = all_F.numpy()
     filename = matSave(storageFilePath,dataFile,logContent)
 
     data=(x.numpy(), z.numpy(), final_states.numpy())
@@ -243,6 +277,8 @@ def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1))
     info = {}
     info[u'filename'] = filename
     info[u'seed'] = seed
+    info[u'allF'] = all_F.numpy()
+    info[u'riccatiConvergences'] = riccatiConvergences.numpy()
 
     # Return data
     return(data, info)

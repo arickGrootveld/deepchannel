@@ -1,18 +1,27 @@
 clc
 clear
-cd ..
-dir1 = pwd;
-load(strcat(dir1,'\ARMismatchPredictor\data\data1.mat'));
-load(strcat(dir1,'\ARProcessPredictor\logs\log1.mat'));
+load('./ARMismatchPredictor/data/data1.mat');
+% load('./ARProcessPredictor/logs/log1.mat');
 N = 30;
 M = 50;
+
+[batchSize, ~, seqLength, seriesLength] = size(measuredData);
+
+measuredConvertedData = zeros(batchSize*seriesLength, seqLength);
+
+for i=1:seriesLength
+    for m=1:batchSize
+        measuredConvertedData(m+((i-1)*batchSize), :) = ... 
+            measuredData(m,1,:,i) + measuredData(m,2,:,i)*1j;
+    end
+end
 
 state = 1;
 Xhat = squeeze(predAndCurState(1,state,:));
 Y1 = squeeze(trainDataMeas(1:size(Xhat,1), state));
 
 
-% Y1 = Y(:, state);
+
 Xhat1 = Xhat(1:M, state);
 Ymat = zeros(M, N+1);
 
