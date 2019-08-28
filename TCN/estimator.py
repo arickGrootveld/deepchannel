@@ -75,8 +75,8 @@ parser.add_argument('--lr', type=float, default=2e-4,
                     help='initial learning rate (default: 2e-4)')
 
 # Optimizer
-parser.add_argument('--optim', type=str, default='Adam',
-                    help='optimizer to use (default: Adam)')
+parser.add_argument('--optim', type=str, default='RMSprop',
+                    help='optimizer to use (default: RMSprop)')
 
 # Hidden units per layer
 parser.add_argument('--nhid', type=int, default=5,
@@ -90,8 +90,12 @@ parser.add_argument('--seed', type=int, default=1111,
 parser.add_argument('--simu_len', type=float, default=1e2,
                     help='amount of data generated for training (default: 1e2)')
 
-# Length of data used for Evaluation of models effectiveness
+# Length of data used for test of models effectiveness
 parser.add_argument('--test_len', type=float, default=1e2,
+                    help='amount of data generated for testing (default: 1e2)')
+
+# Length of data used for eval of models effectiveness
+parser.add_argument('--eval_len', type=float, default=1e2,
                     help='amount of data generated for testing (default: 1e2)')
 
 # Load data to train with from data file
@@ -99,11 +103,17 @@ parser.add_argument('--trainDataFile', type=str, default='None',
                     help='file path to load training data from, if None then it will generate its own data '
                          '(default=\'None\'){if a data file is loaded from, the --simLength, --batch_size, '
                          '--seq_len, --AR_var, and --seed parameters will do nothing, because these values are used for data '
-                         'generation. The same applies to the --testDataFile argument} \r\n')
+                         'generation. The same applies to the --testDataFile argument and --evalDataFile argument} \r\n')
+
+# Load data to evaluate models with from data file
+parser.add_argument('--evalDataFile', type=str, default='None',
+                    help='file path to load eval data from, if None then it will generate its own data (default=\'None\')')
 
 # Load data to test models with from data file
 parser.add_argument('--testDataFile', type=str, default='None',
                     help='file path to load test data from, if None then it will generate its own data (default=\'None\')')
+
+
 
 parser.add_argument('--AR_var', type=float, default=0.1,
                     help='variance of the AR parameters in the data generation (default=0.1)')
@@ -172,11 +182,14 @@ dropout = args.dropout
 lr = args.lr
 simu_len = int(args.simu_len)
 seed = args.seed
+
+evalDataLen = int(args.eval_len)
 testDataLen = int(args.test_len)
 cuda_device = args.cuda_device
 AR_var = args.AR_var
 
 trainFile = args.trainDataFile
+evalFile = args.evalDataFile
 testFile = args.testDataFile
 
 
@@ -188,7 +201,6 @@ testFile = args.testDataFile
 # AR data generation parameters
 AR_n = 2
 
-
 # ~~~~~~~~~~~~~~~~~~ LOAD TRAINING SET
 if(trainFile == 'None'):
 
@@ -198,6 +210,7 @@ if(trainFile == 'None'):
     # Logging the train data
     fileContent[u'trainDataActual'] = trueState
     fileContent[u'trainDataMeas'] = measuredState
+
 # loading the data from the file
 else:
     # Grab the data from the .mat file
@@ -209,12 +222,35 @@ else:
 trueState = torch.from_numpy(trueState)
 measuredState = torch.from_numpy(measuredState)
 
+# ~~~~~~~~~~~~~~~~~~ LOAD EVALUATION SET
+if(evalFile == 'None'):
+
+    # Generate AR process evaluation data set - both measured and real states
+    trueStateEVAL, measuredStateEVAL = ARDatagenMismatch([evalDataLen, AR_n, AR_var, batch_size, seq_length], seed+2, args.cuda)
+
+    # Logging the evaluation data
+    fileContent[u'evalDataActual'] = trueStateEVAL
+    fileContent[u'evalDataMeas'] = measuredStateEVAL
+
+# loading the data from the file
+else:
+    # Grab the data from the .mat file
+    evalDataDict = hdf5s.loadmat(evalFile)
+    measuredStateEVAL = evalDataDict['measuredData']
+    trueStateEVAL = evalDataDict['predAndCurState']
+
+# Convert numpy arrays to tensors
+trueStateEVAL = torch.from_numpy(trueStateEVAL)
+measuredStateEVAL = torch.from_numpy(measuredStateEVAL)
+
+# ~~~~~~~~~~~~~~~~~~ LOAD TEST SET
 if(testFile == 'None'):
     # Generate AR process testing data set - both measured and real state
-    trueStateTEST, measuredStateTEST = ARDatagenMismatch([simu_len, AR_n, AR_var, batch_size, seq_length], seed+1, args.cuda)
+    trueStateTEST, measuredStateTEST = ARDatagenMismatch([testDataLen, AR_n, AR_var, batch_size, seq_length], seed+1, args.cuda)
+
     # Logging the eval data
-    fileContent[u'evalDataActual'] = trueStateTEST
-    fileContent[u'evalDataMeas'] = measuredStateTEST
+    fileContent[u'testDataActual'] = trueStateTEST
+    fileContent[u'testDataMeas'] = measuredStateTEST
 else:
     testDataDict = hdf5s.loadmat(testFile)
     measuredStateTEST = testDataDict['measuredData']
@@ -224,19 +260,19 @@ else:
 trueStateTEST = torch.from_numpy(trueStateTEST)
 measuredStateTEST = torch.from_numpy(measuredStateTEST)
 
-
 ### Grabbing the test size so we can preallocate the MSE tensor ###
 testSize = trueState.shape
 # Number of sequences per batch of test data
 numSequences = testSize[0]
 # Number of batches per series of test data
 numBatches = testSize[2]
-# Pre-allocating space for the MSE's of the final batch
-sequenceErrors = torch.empty((numSequences, numBatches), dtype=torch.float)
 
+# Pre-allocating space for the MSE's of the test set
+sequenceErrors = torch.empty((numSequences, numBatches), dtype=torch.float)
 
 # Generate the model
 model = TCN(input_channels, n_classes, channel_sizes, kernel_size=kernel_size, dropout=dropout)
+modelBEST = model
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~~~~~~~~~~~~~~ LOAD DATA INTO CUDA ~~~~~~~~~~~~~~~~~~~ ###
@@ -244,8 +280,17 @@ model = TCN(input_channels, n_classes, channel_sizes, kernel_size=kernel_size, d
 if args.cuda:
     torch.cuda.set_device(cuda_device)
     model.cuda()
+    modelBEST.cuda()
+
+    # Test set
     trueState = trueState.cuda()
     measuredState = measuredState.cuda()
+
+    # Evaluation set
+    trueStateEVAL = trueStateEVAL.cuda()
+    measuredStateEVAL = measuredStateEVAL.cuda()
+
+    # Test set
     trueStateTEST = trueStateTEST.cuda()
     measuredStateTEST = measuredStateTEST.cuda()
 
@@ -285,7 +330,7 @@ def train(epoch):
         # Forward/backpass
         optimizer.zero_grad()
         output = model(x)
-        loss = F.mse_loss(output, y)
+        loss = F.mse_loss(output, y, reduction="sum")
         loss.backward()
 
         # Gradient clipping option
@@ -309,24 +354,79 @@ def train(epoch):
             print('TrueMSE: ', TrueMSE)
             total_loss = 0
 
-
-
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~~~~~~~~~~~~~~~~~~ EVALUATION ~~~~~~~~~~~~~~~~~~~~~~~~ ###
 
-def evaluate(ep):
+def evaluate():
+
+    # Total MSE
+    TotalAvgPredMSE = 0
+    TotalAvgTrueMSE = 0
+    n = 0
+    totalLoss=0
+
+    # Pre-allocating space for the tensor that will contain the MSEs of each batch from our test set
+    evalPredMSEs = torch.empty(measuredStateEVAL.size(3))
+    evalEstMSEs = torch.empty(measuredStateEVAL.size(3))
+
+    # Training loop - run until we only have one batch size of data left
+    for i in range(0, (measuredStateEVAL.size(3))):
+
+        # Grab the current series
+        x_eval = measuredStateEVAL[:, :, :, i]
+        y_eval = trueStateEVAL[:, :, i]
+
+        x_eval = x_eval.float()
+        y_eval = y_eval.float()
+
+        # Model eval setting
+        model.eval()
+        with torch.no_grad():
+
+            # Compute output and loss
+            output = model(x_eval)
+            eval_loss = F.mse_loss(output, y_eval, reduction="sum")
+
+            PredMSE = torch.sum((output[:, 1] - y_eval[:, 1]) ** 2 + (output[:, 3] - y_eval[:, 3]) ** 2) / output.size(0)
+            TrueMSE = torch.sum((output[:, 0] - y_eval[:, 0]) ** 2 + (output[:, 2] - y_eval[:, 2]) ** 2) / output.size(0)
+            evalEstMSEs[i] = TrueMSE
+            evalPredMSEs[i] = PredMSE
+            TotalAvgPredMSE+=PredMSE
+            TotalAvgTrueMSE+=TrueMSE
+            totalLoss = totalLoss + eval_loss.item()
+
+
+        n+=1
+
+    totalLoss = totalLoss / n
+    TotalAvgPredMSE = TotalAvgPredMSE / n
+    TotalAvgTrueMSE = TotalAvgTrueMSE / n
+
+    predVariance = torch.sum((evalPredMSEs[:]-TotalAvgPredMSE)**2)/evalPredMSEs.size(0)
+    estVariance = torch.sum((evalEstMSEs[:]-TotalAvgTrueMSE)**2)/evalEstMSEs.size(0)
+
+    print('TotalAvgPredMSE: ', TotalAvgPredMSE.item())
+    print('TotalAvgTrueMSE: ', TotalAvgTrueMSE.item())
+
+    return totalLoss
+
+
+### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
+### ~~~~~~~~~~~~~~~~~~~~~~~~ TEST ~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
+
+def test():
 
     # Total MSE
     TotalAvgPredMSE = 0
     TotalAvgTrueMSE = 0
     n = 0
 
-    # Pre-allocating space for the tensor that will contain the MSEs of each batch from our training set
-    testPredMSEs = torch.empty(measuredStateTEST.size(2))
-    testEstMSEs = torch.empty(measuredStateTEST.size(2))
+    # Pre-allocating space for the tensor that will contain the MSEs of each batch from our test set
+    testPredMSEs = torch.empty(measuredStateTEST.size(3))
+    testEstMSEs = torch.empty(measuredStateTEST.size(3))
 
     # Training loop - run until we only have one batch size of data left
-    for i in range(0, (measuredStateTEST.size(2))):
+    for i in range(0, (measuredStateTEST.size(3))):
 
         # Grab the current series
         x_test = measuredStateTEST[:, :, :, i]
@@ -335,13 +435,13 @@ def evaluate(ep):
         x_test = x_test.float()
         y_test = y_test.float()
 
-        # Model evaluation
-        model.eval()
+        # Model test
+        modelBEST.eval()
         with torch.no_grad():
 
             # Compute output and loss
-            output = model(x_test)
-            test_loss = F.mse_loss(output, y_test)
+            output = modelBEST(x_test)
+            test_loss = F.mse_loss(output, y_test, reduction="sum")
 
             PredMSE = torch.sum((output[:, 1] - y_test[:, 1]) ** 2 + (output[:, 3] - y_test[:, 3]) ** 2) / output.size(0)
             TrueMSE = torch.sum((output[:, 0] - y_test[:, 0]) ** 2 + (output[:, 2] - y_test[:, 2]) ** 2) / output.size(0)
@@ -350,9 +450,9 @@ def evaluate(ep):
             TotalAvgPredMSE+=PredMSE
             TotalAvgTrueMSE+=TrueMSE
 
-            # Save the MSE's of each sequence when we hit the last epoch
-            if(ep == epochs):
-                sequenceErrors[:,i] = (output[:, 1] - y_test[:, 1]) ** 2 + (output[:, 3] - y_test[:, 3]) ** 2
+            # # Save the MSE's of each sequence when we test
+            # if(ep == epochs):
+            sequenceErrors[:,i] = (output[:, 1] - y_test[:, 1]) ** 2 + (output[:, 3] - y_test[:, 3]) ** 2
         n+=1
 
     TotalAvgPredMSE = TotalAvgPredMSE / n
@@ -374,21 +474,37 @@ def evaluate(ep):
 
     return test_loss.item()
 
-### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
-### ~~~~~~~~~~~~~~~~~~~~~~~~~ TEST ~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
-
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~ LOOP ~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 
+bestloss = 0
+
 # Letting the model know when the last epoch happens so we can record the MSEs of the individual samples
 for ep in range(1, epochs+1):
     train(ep)
-    tloss = evaluate(ep)
+    tloss = evaluate()
 
+    # Run through all epochs, find the best model and save it for testing
+    if(ep == 1):
+        bestloss = tloss
+    else:
+        if(tloss <= bestloss):
+            bestloss = tloss
+            modelBEST = model
+            print("better loss")
+        else:
+            print("worse loss")
 
+    print(tloss)
 
+    # Exit training if the evaluation set performance gets worse
+    # if(1):
+    #     print("early stopping -- evaluation set performance decreasing")
+    #     break
 
+# Test once we are done training the model (using early stopping strategy)
+tloss = test()
 
 print("check check")
 
