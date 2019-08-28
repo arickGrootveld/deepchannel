@@ -303,12 +303,6 @@ optimizer = getattr(optim, args.optim)(model.parameters(), lr=lr)
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~~~~~~~~~~~~~~~~~~~ TRAINING ~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 
-#TODO implement early stopping
-
-
-#TODO implement stopping with factor of 10 difference between test and training data
-
-
 def train(epoch):
 
     # Initialize training model and parameters
