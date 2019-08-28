@@ -498,11 +498,6 @@ for ep in range(1, epochs+1):
 
     print(tloss)
 
-    # Exit training if the evaluation set performance gets worse
-    # if(1):
-    #     print("early stopping -- evaluation set performance decreasing")
-    #     break
-
 # Test once we are done training the model (using early stopping strategy)
 tloss = test()
 
