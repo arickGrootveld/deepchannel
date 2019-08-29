@@ -16,7 +16,8 @@ import sys
 sys.path.append("..") # Adds higher directory to python modules path.
 from model import TCN
 from mismatch_data_gen import ARDatagenMismatch
-from utilities import convertToBatched
+from utilities import convertToBatched, matSave
+from LeastSquares.LSFunction import LSTesting, LSTraining
 
 # Timer for logging how long the training takes to execute
 import time
@@ -92,9 +93,12 @@ parser.add_argument('--seed', type=int, default=1111,
 parser.add_argument('--simu_len', type=float, default=1e2,
                     help='amount of data generated for training (default: 1e2)')
 
-# Length of data used for test of models effectiveness
-parser.add_argument('--test_len', type=float, default=1e2,
-                    help='amount of data generated for testing (default: 1e2)')
+# Amount of sequences used for each set of AR Coefficients tested against
+parser.add_argument('--test_set_depth', type=float, default=1e2,
+                    help='number of sequences generated per pair of AR Coefficients used for testing (default: 1e2)')
+# Number of sets of AR Coefficients generated for testing
+parser.add_argument('--test_set_len', type=float, default=10,
+                    help='Number of different AR Coefficients that will be used for testing (default=10)')
 
 # Length of data used for eval of models effectiveness
 parser.add_argument('--eval_len', type=float, default=1e2,
@@ -111,7 +115,8 @@ parser.add_argument('--trainDataFile', type=str, default='None',
 parser.add_argument('--evalDataFile', type=str, default='None',
                     help='file path to load eval data from, if None then it will generate its own data (default=\'None\')')
 
-# Load data to test models with from data file
+## TODO: Figure out how to load test data
+# # Load data to test models with from data file
 parser.add_argument('--testDataFile', type=str, default='None',
                     help='file path to load test data from, if None then it will generate its own data (default=\'None\')')
 
@@ -186,12 +191,13 @@ trainDataLen = int(args.simu_len)
 seed = args.seed
 
 evalDataLen = int(args.eval_len)
-testDataLen = int(args.test_len)
+testDataLen = int(args.test_set_depth)
 cuda_device = args.cuda_device
 AR_var = args.AR_var
 
 trainFile = args.trainDataFile
 evalFile = args.evalDataFile
+## TODO: Figure out how load data for test
 testFile = args.testDataFile
 
 # Calculating the number of batches that will need to be created given the simulation length and the batch size
@@ -216,6 +222,9 @@ if(trainFile == 'None'):
     trueStateTRAIN, measuredStateTRAIN = convertToBatched(trainStateData[2], trainStateData[1], batch_size)
     fileContent[u'trainDataFile'] = trainStateInfo['filename']
 
+    # TODO: Improve the format at some point in the future, but for now we are just grabbing the trainingData to train
+    # TODO: the LS
+    LSTrainData = trainStateData
 else:
     # Grab the data from the .mat file
     trainDataDict = hdf5s.loadmat(trainFile)
@@ -224,6 +233,10 @@ else:
                                                           batch_size)
     fileContent[u'trainDataFile'] = trainFile
 
+    # TODO: Improve the format at some point in the future, but for now we are just grabbing the trainingData to train
+    # TODO: the LS
+    LSTrainData = [trainDataDict['systemStates'], trainDataDict['observedStated']]
+
 # Convert numpy arrays to tensors
 trueStateTRAIN = torch.from_numpy(trueStateTRAIN)
 measuredStateTRAIN = torch.from_numpy(measuredStateTRAIN)
@@ -231,7 +244,7 @@ measuredStateTRAIN = torch.from_numpy(measuredStateTRAIN)
 # ~~~~~~~~~~~~~~~~~~ LOAD EVALUATION SET
 if(evalFile == 'None'):
     # Generate AR process evaluation data set - both measured and real states
-    evalStateData, evalStateInfo = ARDatagenMismatch([evalDataLen, AR_n, AR_var, seq_length], seed + 2, args.cuda)
+    evalStateData, evalStateInfo = ARDatagenMismatch([evalDataLen, AR_n, AR_var, seq_length], seed + 1, args.cuda)
     # Convert the data from normal formatting to batches
     trueStateEVAL, measuredStateEVAL = convertToBatched(evalStateData[2], evalStateData[1], batch_size)
     fileContent[u'evalDataFile'] = evalStateInfo['filename']
@@ -247,33 +260,61 @@ else:
 trueStateEVAL = torch.from_numpy(trueStateEVAL)
 measuredStateEVAL = torch.from_numpy(measuredStateEVAL)
 
-# ~~~~~~~~~~~~~~~~~~ LOAD TEST SET
-if(testFile == 'None'):
-    # Generate AR process testing data set - both measured and real state
-    testStateData, testStateInfo = ARDatagenMismatch([trainDataLen, AR_n, AR_var, seq_length], seed + 1, args.cuda)
-    # Convert the data from normal formatting to batches
-    trueStateTEST, measuredStateTEST = convertToBatched(testStateData[2], testStateData[1], batch_size)
-    fileContent[u'testDataFile'] = testStateInfo['filename']
-else:
 
-    testDataDict = hdf5s.loadmat(testFile)
-    trueStateTEST, measuredStateTEST = convertToBatched(testDataDict['finalStateValues'], testDataDict['observedStates'],
-                                                batch_size)
-    fileContent[u'testDataFile'] = testFile
-# Convert numpy arrays to tensors
+## TODO: Refactor how we generate our test
+testSetLen = int(args.test_set_len)
+# trueStateDataTEST Dimensionality: comprised of sets of data based on the number of AR
+#                                   coefficients that are to be generated in the 1st
+#                                   dimension, then of batch elements in the 2nd
+#                                   dimension, real and imaginary portions of the true state
+#                                   in the 3rd dimension, and by batches in the 4th dimension
+trueStateTEST = np.empty((testSetLen, batch_size, 4, testSeriesLength), dtype=float)
+
+# measuredStateTEST Dimensionality: comprised of sets of data based on the number of AR
+#                                   coefficients used for testing in the 1st dimension,
+#                                   batch elements in the 2nd dimension, real and complex
+#                                   values in the 3rd dimension, sequence elements in the
+#                                   4th dimension, and by batches in the 5th dimension
+
+measuredStateTEST = np.empty((testSetLen, batch_size, 2, seq_length, testSeriesLength), dtype=float)
+
+# TODO: Format this better at some point, but for now just append to a list
+LSandKFTestData  = []
+
+testDataInfo = []
+# Loop for generating the data set for each pair AR Coefficients to test against
+if(testFile == 'None'):
+    for k in range(0,testSetLen):
+
+        # Generating the data with no variance between sequences (which is what the False in the array is for)
+        # because we want to generate data with a single set of AR Coefficients
+        subsetTestStateData, subsetTestDataInfo = ARDatagenMismatch([testDataLen, AR_n, AR_var, seq_length, False], seed + 2 + k, args.cuda)
+        trueStateTEST[k,:,:,:], measuredStateTEST[k,:,:,:,:] = convertToBatched(subsetTestStateData[2], subsetTestStateData[1], batch_size)
+
+        LSandKFTestData.append(subsetTestStateData)
+
+        subsetInfoHolder = {}
+        # Grabbing the first riccatiConvergence because they should all be the same for both the estimate and prediction
+        subsetInfoHolder[u'riccatiConvergencePred'] = subsetTestDataInfo['riccatiConvergences'][0,0]
+        subsetInfoHolder[u'riccatiConvergenceEst'] = subsetTestDataInfo['riccatiConvergences'][1,0]
+        # Grabbing the first set of AR Coefficients from the F matrix because they should all be the same
+        subsetInfoHolder[u'ARCoefficients'] = subsetTestDataInfo['allF'][0,:,0]
+        # Grabbing the file path of the data file
+        subsetInfoHolder[u'dataFilePath'] = subsetTestDataInfo['filename']
+        testDataInfo.append(subsetInfoHolder)
+    testDataToBeSaved = {}
+    testDataToBeSaved[u'trueStateTEST'] = trueStateTEST
+    testDataToBeSaved[u'measuredStateTEST'] = measuredStateTEST
+    matSave('data', 'testData', testDataToBeSaved)
+else:
+    # TODO: Refactor how we load our test set
+    print('this has not been implemented yet')
+
 trueStateTEST = torch.from_numpy(trueStateTEST)
 measuredStateTEST = torch.from_numpy(measuredStateTEST)
 
-### Grabbing the test size so we can preallocate the MSE tensor ###
-testSize = trueStateTEST.shape
-# Number of sequences per batch of test data
-numSequences = testSize[0]
-# Number of batches per series of test data
-numBatches = testSize[2]
+## TODO: Refactor how we load our test set
 
-# Pre-allocating space for the MSE's of the test set
-sequenceErrorsPred = torch.empty((numSequences, numBatches), dtype=torch.float)
-sequenceErrorsEst = torch.empty((numSequences, numBatches), dtype=torch.float)
 
 # Generate the model
 model = TCN(input_channels, n_classes, channel_sizes, kernel_size=kernel_size, dropout=dropout)
@@ -415,63 +456,80 @@ def evaluate():
 ### ~~~~~~~~~~~~~~~~~~~~~~~~ TEST ~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 
 def test():
+# TODO: Reformat the test function to work with each set of data
+    # Training the Least Squares so we can evaluate its performance on the same dataset
+    LSCoefficients = LSTraining(LSTrainData)
+    # Looping through each of the sets of data with different AR Coefficients
+    for r in range(0, testSetLen):
+        # Total MSE
+        TotalAvgPredMSE = 0
+        TotalAvgTrueMSE = 0
+        n = 0
+        # Pre-allocating space for the tensor that will contain the MSEs of
+        # each batch from our training set
+        testPredMSEs = torch.empty(testSeriesLength)
+        testEstMSEs = torch.empty(testSeriesLength)
+        # Training loop - run until we only have one batch size of data left
+        for i in range(0, testSeriesLength):
 
-    # Total MSE
-    TotalAvgPredMSE = 0
-    TotalAvgTrueMSE = 0
-    n = 0
+            # Grab the current series
+            x_test = measuredStateTEST[r, :, :, :, i]
+            y_test = trueStateTEST[r, :, :, i]
 
-    # Pre-allocating space for the tensor that will contain the MSEs of each batch from our training set
-    testPredMSEs = torch.empty(testSeriesLength)
-    testEstMSEs = torch.empty(testSeriesLength)
+            x_test = x_test.float()
+            y_test = y_test.float()
 
-    # Training loop - run until we only have one batch size of data left
-    for i in range(0, (testSeriesLength)):
+            # Model test
+            modelBEST.eval()
+            with torch.no_grad():
 
-        # Grab the current series
-        x_test = measuredStateTEST[:, :, :, i]
-        y_test = trueStateTEST[:, :, i]
+                # Compute output and loss
+                output = modelBEST(x_test)
+                test_loss = F.mse_loss(output, y_test, reduction="sum")
 
-        x_test = x_test.float()
-        y_test = y_test.float()
+                PredMSE = torch.sum((output[:, 1] - y_test[:, 1]) ** 2 + (output[:, 3] - y_test[:, 3]) ** 2) / output.size(0)
+                TrueMSE = torch.sum((output[:, 0] - y_test[:, 0]) ** 2 + (output[:, 2] - y_test[:, 2]) ** 2) / output.size(0)
+                TotalAvgPredMSE+=PredMSE
+                TotalAvgTrueMSE+=TrueMSE
+                testPredMSEs[i] = PredMSE
+                testEstMSEs[i] = TrueMSE
 
-        # Model test
-        modelBEST.eval()
-        with torch.no_grad():
+            n+=1
 
-            # Compute output and loss
-            output = modelBEST(x_test)
-            test_loss = F.mse_loss(output, y_test, reduction="sum")
+        TotalAvgPredMSE = TotalAvgPredMSE / n
+        TotalAvgTrueMSE = TotalAvgTrueMSE / n
 
-            PredMSE = torch.sum((output[:, 1] - y_test[:, 1]) ** 2 + (output[:, 3] - y_test[:, 3]) ** 2) / output.size(0)
-            TrueMSE = torch.sum((output[:, 0] - y_test[:, 0]) ** 2 + (output[:, 2] - y_test[:, 2]) ** 2) / output.size(0)
-            testEstMSEs[i] = TrueMSE
-            testPredMSEs[i] = PredMSE
-            TotalAvgPredMSE+=PredMSE
-            TotalAvgTrueMSE+=TrueMSE
+        predVariance = torch.sum((testPredMSEs[:]-TotalAvgPredMSE)**2)/testPredMSEs.size(0)
+        estVariance = torch.sum((testEstMSEs[:]-TotalAvgTrueMSE)**2)/testEstMSEs.size(0)
 
-            # # Save the MSE's of each sequence when we test
-            # if(ep == epochs):
-            sequenceErrorsPred[:, i] = (output[:, 1] - y_test[:, 1]) ** 2 + (output[:, 3] - y_test[:, 3]) ** 2
-            sequenceErrorsEst[:,i] = (output[:, 0] - y_test[:, 0]) ** 2 + (output[:, 2] - y_test[:, 2]) ** 2
-        n+=1
+        # Logging
+        testDataInfo[r][u'predictionVariance'] = predVariance.item()
+        testDataInfo[r][u'estimationVariance'] = estVariance.item()
+        testDataInfo[r][u'estimationMSE'] = TotalAvgTrueMSE.item()
+        testDataInfo[r][u'predictionMSE'] = TotalAvgPredMSE.item()
 
-    TotalAvgPredMSE = TotalAvgPredMSE / n
-    TotalAvgTrueMSE = TotalAvgTrueMSE / n
+        print('TCN Performance:')
+        print("TotalAvgPredMSE for test set number {}: ".format(r+1), TotalAvgPredMSE.item())
+        print("TotalAvgTrueMSEfor test set number {}: ".format(r+1), TotalAvgTrueMSE.item())
+        print("Variance of Prediction for test set number {}: ".format(r+1), predVariance.item())
+        print("Variance of Estimate for test set number {}: ".format(r+1), estVariance.item())
 
-    predVariance = torch.sum((testPredMSEs[:]-TotalAvgPredMSE)**2)/testPredMSEs.size(0)
-    estVariance = torch.sum((testEstMSEs[:]-TotalAvgTrueMSE)**2)/testEstMSEs.size(0)
+        # Computing the LS performance on this data set
+        LS_MSEE, LS_MSEP = LSTesting(LSCoefficients, LSandKFTestData[r])
 
-    # Logging
-    fileContent[u'TotalAvgPredMSE'] = repr(TotalAvgPredMSE.item())
-    fileContent[u'TotalAvgTrueMSE'] = repr(TotalAvgTrueMSE.item())
+        print('LS Performance')
+        print("MSE of LS predictor for set number {}: ".format(r+1), LS_MSEP)
+        print("MSE of LS estimator for set number {}: ".format(r+1), LS_MSEE)
 
-    fileContent[u'estimatedVariance'] = estVariance.item()
-    fileContent[u'predictedVariance'] = predVariance.item()
-    print('TotalAvgPredMSE: ', TotalAvgPredMSE.item())
-    print('TotalAvgTrueMSE: ', TotalAvgTrueMSE.item())
-    print('Variance of Prediction: ', predVariance.item())
-    print('Variance of Estimate: ', estVariance.item())
+        testDataInfo[r][u'LS_PredMSE'] = LS_MSEP
+        testDataInfo[r][u'LS_EstMSE'] = LS_MSEE
+
+        # Computing Kalman performance
+
+
+        # Printing a newline to make it easier to tell test sets apart
+        print(' ')
+
 
     return test_loss.item()
 
@@ -509,8 +567,8 @@ end = time.time()
 simRunTime=(end-start)
 print('this simulation took:', simRunTime, 'seconds to run')
 
-fileContent[u'testErrorsPred'] = sequenceErrorsPred.numpy()
-fileContent[u'testErrorsEst'] = sequenceErrorsEst.numpy()
+fileContent['testInfo'] = testDataInfo
+
 fileContent[u'trainingLength(seconds)'] = simRunTime
 fileContent[u'runType'] = 'TCN'
 print('log data saved to: ', logName)

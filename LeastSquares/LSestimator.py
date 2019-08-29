@@ -1,4 +1,3 @@
-from numpy.linalg import inv
 import numpy as np
 import time
 import argparse
@@ -8,7 +7,6 @@ from utilities import matSave
 
 #####################################################################################
 ######################### Least Squares Channel Estimation ##########################
-
 # Start timing
 start = time.time()
 
