@@ -214,7 +214,7 @@ if(trainFile == 'None'):
     trainStateData, trainStateInfo = ARDatagenMismatch([trainDataLen, AR_n, AR_var, seq_length], seed, args.cuda)
     # Convert the data from normal formatting to batches
     trueStateTRAIN, measuredStateTRAIN = convertToBatched(trainStateData[2], trainStateData[1], batch_size)
-    fileContent[u'trainDataFile'] = trainStateData['filename']
+    fileContent[u'trainDataFile'] = trainStateInfo['filename']
 
 else:
     # Grab the data from the .mat file
