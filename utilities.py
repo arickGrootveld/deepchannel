@@ -42,3 +42,4 @@ def convertToBatched(systemDataToBeConverted, observedDataToBeFormatted, batchSi
         measuredState[:, :, :, i] = np.swapaxes(
             np.transpose(observedDataToBeFormatted[:, :, i * batchSize:(1 + i) * batchSize]), 1, 2)
     return(trueState, measuredState)
+

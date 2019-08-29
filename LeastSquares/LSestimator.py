@@ -71,17 +71,14 @@ ARValuesComplex = np.squeeze(ARValuesComplex)
 ######################################################################################
 ############################## LEAST SQUARES COMPUTATIONS ############################
 
-
+# Construct matrices for MSE training
 z[:,:] = np.transpose(np.flipud(measuredStateDataComplex[0:N,:]))
 x_est[:,0] = ARValuesComplex[N-1, :]
 x_pred[:,0] = ARValuesComplex[N, :]
 
-# Singular matrix problem fix
-<<<<<<< HEAD
+# Removing the first elements of the data (last row after flipping) because it
+# is all zeros and that causes problems with matrix inverses
 z = z[:, 0:-1]
-=======
-z = z[:, 0:9]
->>>>>>> master
 
 z_psuedoInverse = np.linalg.pinv(z)
 
@@ -95,7 +92,6 @@ b_ls = np.matmul(z_psuedoInverse, x_pred)
 
 ##############################################################################################
 ################################ LEAST SQUARES TESTING SCRIPT ################################
-
 
 # Throw error if filepath could not be found
 if(not path.exists(args.filePathTest)):
@@ -131,17 +127,12 @@ for i in range(0, ARValuesComplex.shape[1]):
     # Constructing the observation matrix
     z[i, :] = np.flipud(measuredStateDataComplex[0:N, i])
 
-    # Construct the estimation and prediction real states for MSE calculation and training
+    # Construct the estimation and prediction real states for MSE calculation
     x_est[i, :] = ARValuesComplex[N-1, i]
     x_pred[i, :] = ARValuesComplex[N, i]
 
-
 # Singular matrix problem fix
-<<<<<<< HEAD
 z = z[:, 0:-1]
-=======
-z = z[:, 0:9]
->>>>>>> master
 
 # Calculate MSE of estimation
 f = abs((x_est - np.matmul(z, a_ls))) ** 2
@@ -153,18 +144,19 @@ MSEP = np.mean(f)
 
 ########################################################
 # Log and Print Results
-
 print("MSEE Avg: ")
 print(MSEE)
 print("MSEP Avg: ")
 print(MSEP)
 
-MSEVals = {}
-MSEVals[u'M'] = M
-MSEVals[u'N'] = N
-MSEVals[u'MSE_est'] = MSEE
-MSEVals[u'MSE_pred'] = MSEP
+logData = {}
+logData[u'M'] = M
+logData[u'N'] = N
+logData[u'MSE_est'] = MSEE
+logData[u'MSE_pred'] = MSEP
+logData[u'runType'] = 'LS'
+logData[u'dataFilePath'] = args.filePathTest
 
-matSave("logs", "lsMultiple", MSEVals)
+matSave("logs", "lsMultiple", logData)
 
 

@@ -1,7 +1,5 @@
 import sys
 sys.path.append('..')
-# TODO: Remove this before pushing
-sys.path.append('/home/aspect/deepchannel')
 
 import numpy as np
 import argparse
@@ -23,17 +21,19 @@ parser.add_argument('--filePath', type=str, default='None',
                     help='path to .mat file to load data from (default: generate data to test against')
 
 # AR Coefficients that the Kalman filter is given
-# TODO: Throw an exception if the length of the ARCoeffs list is not 2
-<<<<<<< HEAD
-parser.add_argument('--ARCoeffs', nargs='+', default=[0.5,-0.4],
-=======
 parser.add_argument('--ARCoeffs', nargs='+', default=[0.3645,-0.3405],
->>>>>>> master
-                     help='AR Coefficients that Kalman Filter will use (default=[0.4465,-0.3694])')
+                     help='AR Coefficients that Kalman Filter will use (default=[0.3645,-0.3405])')
 # TODO: As of right now this is not synced up with the data generated, so you need to manually
 # TODO: update this in both places if you want to generate fresh data with different AR params
 args = parser.parse_args()
 ARCoeffs = []
+
+# Because the code is built for an AR 2 process at this time it will throw an error if you specify too many
+# AR coefficients
+if len(args.ARCoeffs) != 2:
+    raise Exception('At this time you can only pass 2 AR coefficients because this code is only'
+                    'compatible with an AR 2 process')
+
 for coeffs in args.ARCoeffs:
     ARCoeffs.append(float(coeffs))
 AR_n = len(ARCoeffs)
@@ -312,11 +312,11 @@ logData[u'kalmanEstimates'] =  x_correction
 logData[u'kalmanPredMMSE'] = minPredMSE
 logData[u'kalmanEstMMSE'] = minMSE
 logData[u'kalmanGains'] =  kalmanGain
+logData[u'runType'] = 'KF'
 
 if not args.filePath == 'None':
     logData[u'dataFileName'] = args.filePath
-
 else:
-    logData[u'defaultDataGenValues'] = defaultDataGenValues
+    logData[u'dataFileName'] = stateInfo.filename
 
 matSave('logs', 'KFLog', logData)

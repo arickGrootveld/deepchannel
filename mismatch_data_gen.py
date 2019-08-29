@@ -3,6 +3,7 @@
 from utilities import matSave
 import torch
 from scipy import linalg as sciAlg
+import numpy as np
 
 # ARCoeffecientGeneration: Function that returns a matrix that works as an AR processes F matrix
 #   Inputs:  (arCoeffMeans, arCoefficientNoiseVar)
@@ -66,6 +67,14 @@ def ARCoeffecientGeneration(arCoeffMeans,arCoeffecientNoiseVar, seed=-1):
 #           params[2] (float) - AR_coefficient_noise_var: variance in the AR coefficient from
 #                                                         their mean
 #           params[3] (int) - sequenceLength: length of the sequence of data to generate
+#           params[4] (Bool) {default=True} - interSequenceVar: If this is False then this function will
+#                                             generate a single set of random AR
+#                                             Coefficients (based on the mean and
+#                                             variance) and use those for the all
+#                                             sequences of data, if set to True it
+#                                             will generate a new set of AR
+#                                             Coefficients for each sequence it
+#                                             generates
 #       seed (int) {default=a random number} - the seed of the random number generator
 #                                              for this AR process
 #       cuda (Bool) {default=False} - whether to use the GPU and cuda for data generation or not
@@ -119,6 +128,11 @@ def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1))
     AR_n = params[1]
     AR_coeffecient_noise_var = params[2]
     sequenceLength = params[3]
+    if(len(params) <= 4):
+        interSequenceVar = True
+    else:
+        interSequenceVar = params[4]
+
     torch.manual_seed(seed)
 
 
@@ -175,9 +189,13 @@ def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1))
 
     # Pre-allocating for the Ricatti convergences of each of the processes
     # These values are what the Riccati equation for each of the processes given the F matrices would converge to
-    # The format is: 1st Dim corresponds to the sequence, and 2nd Dim corresponds to the batch
-    riccatiConvergences = torch.zeros((simLength), dtype=torch.float)
+    # The format is: 1st Dim corresponds to the prediction and estimate, and 2nd Dim corresponds to the batch
+    riccatiConvergences = torch.zeros((2,simLength), dtype=torch.float)
 
+    # If we do not want interSequenceVar, then we generate a single set of ARCoefficients
+    # and keep those throughout the data generation process
+    if not interSequenceVar:
+        F = ARCoeffecientGeneration(arCoeffMeans, AR_coeffecient_noise_var)
     if(cuda):
         v.cuda()
         w.cuda()
@@ -199,15 +217,27 @@ def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1))
 
     ### Loop for generating all the batches of data (a series) ###
     for i in range(0,simLength):
-        # Compute new AR Coefficients for each sequence
-        F = ARCoeffecientGeneration(arCoeffMeans, AR_coeffecient_noise_var)
+        # If we do want inter sequence variation then we generate a new set of coefficients each time
+        if interSequenceVar:
+            # Compute new AR Coefficients for each sequence
+            F = ARCoeffecientGeneration(arCoeffMeans, AR_coeffecient_noise_var)
 
         # Store F matrices
         all_F[:, :, i] = F
 
-        # Computing the Riccati equation for the AR process
-        riccatiConvergences[i] = sciAlg.solve_discrete_are(torch.t(F).numpy(),
-                                         torch.t(H).numpy(),Q.numpy(), R.numpy())[0,0]
+        # Computing the Riccati equation for the AR process prediction
+        riccatiPred = sciAlg.solve_discrete_are(torch.t(F).numpy(),
+                                         torch.t(H).numpy(),Q.numpy(), R.numpy()).numpy()
+        # Computing the Riccati Equation for the Kalman Gain to be used for the riccati convergence of the estimate
+        kRicConIntermediate = np.add(np.matmul(np.matmul(H,riccatiPred), np.transpose(H)),R)
+        riccatiKalGain = np.matmul(np.matmul(riccatiPred, np.transpose(H)), np.linalg.inv(kRicConIntermediate))
+
+        # Computing the Riccati Equation for the AR process Estimate
+        riccatiEst = riccatiPred - (np.matmul(np.matmul(riccatiKalGain, H), riccatiPred)).numpy()
+
+        riccatiConvergences[0,i] = riccatiPred[0,0]
+        riccatiConvergences[1,i] = riccatiEst[0,0]
+
 
         ## Loop for generating a sequence of data
         for n in range(0,sequenceLength + 1):
@@ -256,7 +286,6 @@ def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1))
                 final_states[1,i] = x_complex[0,0]
                 final_states[2,i] = x_complex[1,1]
                 final_states[3,i] = x_complex[0,1]
-
 
     ##### Storing the data #####
     storageFilePath = './data'

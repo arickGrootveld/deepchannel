@@ -228,8 +228,6 @@ else:
 trueStateTRAIN = torch.from_numpy(trueStateTRAIN)
 measuredStateTRAIN = torch.from_numpy(measuredStateTRAIN)
 
-# fileContent[u'']
-
 # ~~~~~~~~~~~~~~~~~~ LOAD EVALUATION SET
 if(evalFile == 'None'):
     # Generate AR process evaluation data set - both measured and real states
@@ -274,7 +272,8 @@ numSequences = testSize[0]
 numBatches = testSize[2]
 
 # Pre-allocating space for the MSE's of the test set
-sequenceErrors = torch.empty((numSequences, numBatches), dtype=torch.float)
+sequenceErrorsPred = torch.empty((numSequences, numBatches), dtype=torch.float)
+sequenceErrorsEst = torch.empty((numSequences, numBatches), dtype=torch.float)
 
 # Generate the model
 model = TCN(input_channels, n_classes, channel_sizes, kernel_size=kernel_size, dropout=dropout)
@@ -453,7 +452,8 @@ def test():
 
             # # Save the MSE's of each sequence when we test
             # if(ep == epochs):
-            sequenceErrors[:,i] = (output[:, 1] - y_test[:, 1]) ** 2 + (output[:, 3] - y_test[:, 3]) ** 2
+            sequenceErrorsPred[:, i] = (output[:, 1] - y_test[:, 1]) ** 2 + (output[:, 3] - y_test[:, 3]) ** 2
+            sequenceErrorsEst[:,i] = (output[:, 0] - y_test[:, 0]) ** 2 + (output[:, 2] - y_test[:, 2]) ** 2
         n+=1
 
     TotalAvgPredMSE = TotalAvgPredMSE / n
@@ -509,8 +509,10 @@ end = time.time()
 simRunTime=(end-start)
 print('this simulation took:', simRunTime, 'seconds to run')
 
-fileContent[u'testErrors'] = sequenceErrors.numpy()
+fileContent[u'testErrorsPred'] = sequenceErrorsPred.numpy()
+fileContent[u'testErrorsEst'] = sequenceErrorsEst.numpy()
 fileContent[u'trainingLength(seconds)'] = simRunTime
+fileContent[u'runType'] = 'TCN'
 print('log data saved to: ', logName)
 hdf5s.savemat(logName, fileContent)
 
