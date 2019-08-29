@@ -77,8 +77,8 @@ parser.add_argument('--lr', type=float, default=2e-4,
                     help='initial learning rate (default: 2e-4)')
 
 # Optimizer
-parser.add_argument('--optim', type=str, default='RMSprop',
-                    help='optimizer to use (default: RMSprop)')
+parser.add_argument('--optim', type=str, default='Adam',
+                    help='optimizer to use (default: Adam)')
 
 # Hidden units per layer
 parser.add_argument('--nhid', type=int, default=5,
@@ -117,7 +117,7 @@ parser.add_argument('--testDataFile', type=str, default='None',
 
 
 
-parser.add_argument('--AR_var', type=float, default=0.1,
+parser.add_argument('--AR_var', type=float, default=0.2,
                     help='variance of the AR parameters in the data generation (default=0.1)')
 
 
@@ -182,7 +182,7 @@ channel_sizes = [args.nhid]*args.levels
 kernel_size = args.ksize
 dropout = args.dropout
 lr = args.lr
-simu_len = int(args.simu_len)
+trainDataLen = int(args.simu_len)
 seed = args.seed
 
 evalDataLen = int(args.eval_len)
@@ -195,11 +195,12 @@ evalFile = args.evalDataFile
 testFile = args.testDataFile
 
 # Calculating the number of batches that will need to be created given the simulation length and the batch size
-trainSeriesLength = int(simu_len/batch_size)
+trainSeriesLength = int(trainDataLen / batch_size)
 
 # Doing the same calculation as above for the test data set
 testSeriesLength = int(testDataLen/batch_size)
 
+evaluationSeriesLength = int(evalDataLen / batch_size)
 ### ~~~~~~~~~~~~~~~ LOAD DATA/GENERATE MODEL ~~~~~~~~~~~~~~~~ ###
 # Here we have the option of loading from a saved .mat file or just calling the data generation
 # function explicitly
@@ -210,36 +211,32 @@ AR_n = 2
 # ~~~~~~~~~~~~~~~~~~ LOAD TRAINING SET
 if(trainFile == 'None'):
     # Generate AR process training data set - both measured and real states
-    trainStateData, trainStateInfo = ARDatagenMismatch([simu_len, AR_n, AR_var, seq_length], seed, args.cuda)
+    trainStateData, trainStateInfo = ARDatagenMismatch([trainDataLen, AR_n, AR_var, seq_length], seed, args.cuda)
     # Convert the data from normal formatting to batches
-    trueState, measuredState = convertToBatched(trainStateData[2], trainStateData[1], batch_size)
+    trueStateTRAIN, measuredStateTRAIN = convertToBatched(trainStateData[2], trainStateData[1], batch_size)
+    fileContent[u'trainDataFile'] = trainStateData['filename']
+
 else:
     # Grab the data from the .mat file
     trainDataDict = hdf5s.loadmat(trainFile)
-
     # Convert the loaded data into batches for the TCN to run with
-    trueState, measuredState = convertToBatched(trainDataDict['finalStateValues'], trainDataDict['observedStates'],
-                                                batch_size)
-
-    #  #  #  #  #  #
-    # measuredState = trainDataDict['measuredData']
-    # trueState = trainDataDict['predAndCurState']
-    #  #  #  #  #  #
+    trueStateTRAIN, measuredStateTRAIN = convertToBatched(trainDataDict['finalStateValues'], trainDataDict['observedStates'],
+                                                          batch_size)
+    fileContent[u'trainDataFile'] = trainFile
 
 # Convert numpy arrays to tensors
-trueState = torch.from_numpy(trueState)
-measuredState = torch.from_numpy(measuredState)
+trueStateTRAIN = torch.from_numpy(trueStateTRAIN)
+measuredStateTRAIN = torch.from_numpy(measuredStateTRAIN)
+
+# fileContent[u'']
 
 # ~~~~~~~~~~~~~~~~~~ LOAD EVALUATION SET
 if(evalFile == 'None'):
-
     # Generate AR process evaluation data set - both measured and real states
-    trueStateEVAL, measuredStateEVAL = ARDatagenMismatch([evalDataLen, AR_n, AR_var, batch_size, seq_length], seed+2, args.cuda)
-
-    evalStateData, evalStateInfo = ARDatagenMismatch([simu_len, AR_n, AR_var, seq_length], seed + 2, args.cuda)
+    evalStateData, evalStateInfo = ARDatagenMismatch([evalDataLen, AR_n, AR_var, seq_length], seed + 2, args.cuda)
     # Convert the data from normal formatting to batches
     trueStateEVAL, measuredStateEVAL = convertToBatched(evalStateData[2], evalStateData[1], batch_size)
-
+    fileContent[u'evalDataFile'] = evalStateInfo['filename']
 # loading the data from the file
 else:
     # Grab the data from the .mat file
@@ -247,7 +244,7 @@ else:
     trueStateEVAL, measuredStateEVAL = convertToBatched(evalDataDict['finalStateValues'],
                                                         evalDataDict['observedStates'],
                                                         batch_size)
-
+    fileContent[u'evalDataFile'] = evalFile
 # Convert numpy arrays to tensors
 trueStateEVAL = torch.from_numpy(trueStateEVAL)
 measuredStateEVAL = torch.from_numpy(measuredStateEVAL)
@@ -255,22 +252,22 @@ measuredStateEVAL = torch.from_numpy(measuredStateEVAL)
 # ~~~~~~~~~~~~~~~~~~ LOAD TEST SET
 if(testFile == 'None'):
     # Generate AR process testing data set - both measured and real state
-    testStateData, testStateInfo = ARDatagenMismatch([simu_len, AR_n, AR_var, seq_length], seed+1, args.cuda)
+    testStateData, testStateInfo = ARDatagenMismatch([trainDataLen, AR_n, AR_var, seq_length], seed + 1, args.cuda)
     # Convert the data from normal formatting to batches
     trueStateTEST, measuredStateTEST = convertToBatched(testStateData[2], testStateData[1], batch_size)
-
+    fileContent[u'testDataFile'] = testStateInfo['filename']
 else:
 
     testDataDict = hdf5s.loadmat(testFile)
     trueStateTEST, measuredStateTEST = convertToBatched(testDataDict['finalStateValues'], testDataDict['observedStates'],
                                                 batch_size)
-
+    fileContent[u'testDataFile'] = testFile
 # Convert numpy arrays to tensors
 trueStateTEST = torch.from_numpy(trueStateTEST)
 measuredStateTEST = torch.from_numpy(measuredStateTEST)
 
 ### Grabbing the test size so we can preallocate the MSE tensor ###
-testSize = trueState.shape
+testSize = trueStateTEST.shape
 # Number of sequences per batch of test data
 numSequences = testSize[0]
 # Number of batches per series of test data
@@ -281,6 +278,7 @@ sequenceErrors = torch.empty((numSequences, numBatches), dtype=torch.float)
 
 # Generate the model
 model = TCN(input_channels, n_classes, channel_sizes, kernel_size=kernel_size, dropout=dropout)
+# Creating a backup of the model that we can use for early stopping
 modelBEST = model
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
@@ -292,8 +290,8 @@ if args.cuda:
     modelBEST.cuda()
 
     # Test set
-    trueState = trueState.cuda()
-    measuredState = measuredState.cuda()
+    trueStateTRAIN = trueStateTRAIN.cuda()
+    measuredStateTRAIN = measuredStateTRAIN.cuda()
 
     # Evaluation set
     trueStateEVAL = trueStateEVAL.cuda()
@@ -324,8 +322,8 @@ def train(epoch):
     for i in range(0, trainSeriesLength):
 
         # Grab the current series
-        x = measuredState[:, :, :, i]
-        y = trueState[:, :, i]
+        x = measuredStateTRAIN[:, :, :, i]
+        y = trueStateTRAIN[:, :, i]
 
         x = x.float()
         y = y.float()
@@ -350,7 +348,7 @@ def train(epoch):
             processed = i
 
             print('Train Epoch: {:2d} [{:6d}/{:6d} ({:.0f}%)]\tLearning rate: {:.4f}\tLoss: {:.6f}'.format(
-                epoch, processed, measuredState.size(3), 100.*processed/measuredState.size(3), lr, cur_loss))
+                epoch, processed, measuredStateTRAIN.size(3), 100. * processed / measuredStateTRAIN.size(3), lr, cur_loss))
             PredMSE = torch.sum((output[:, 1] - y[:, 1]) ** 2 + (output[:, 3] - y[:, 3]) ** 2) / output.size(0)
             TrueMSE = torch.sum((output[:, 0] - y[:, 0]) ** 2 + (output[:, 2] - y[:, 2]) ** 2) / output.size(0)
             print('PredMSE: ', PredMSE)
@@ -396,12 +394,12 @@ def evaluate():
             evalPredMSEs[i] = PredMSE
             TotalAvgPredMSE+=PredMSE
             TotalAvgTrueMSE+=TrueMSE
-            totalLoss = totalLoss + eval_loss.item()
+            totalLoss +=  eval_loss.item()
 
 
         n+=1
 
-    totalLoss = totalLoss / n
+    totalLoss = totalLoss / (n * batch_size)
     TotalAvgPredMSE = TotalAvgPredMSE / n
     TotalAvgTrueMSE = TotalAvgTrueMSE / n
 
@@ -511,7 +509,8 @@ end = time.time()
 simRunTime=(end-start)
 print('this simulation took:', simRunTime, 'seconds to run')
 
-fileContent[u'finalEpochsErrors'] = sequenceErrors.numpy()
+fileContent[u'testErrors'] = sequenceErrors.numpy()
 fileContent[u'trainingLength(seconds)'] = simRunTime
+print('log data saved to: ', logName)
 hdf5s.savemat(logName, fileContent)
 
