@@ -18,6 +18,7 @@ from model import TCN
 from mismatch_data_gen import ARDatagenMismatch
 from utilities import convertToBatched, matSave
 from LeastSquares.LSFunction import LSTesting, LSTraining
+from KalmanFilter.KFFunction import KFTesting
 
 # Timer for logging how long the training takes to execute
 import time
@@ -435,8 +436,6 @@ def evaluate():
             TotalAvgPredMSE+=PredMSE
             TotalAvgTrueMSE+=TrueMSE
             totalLoss +=  eval_loss.item()
-
-
         n+=1
 
     totalLoss = totalLoss / (n * batch_size)
@@ -525,7 +524,14 @@ def test():
         testDataInfo[r][u'LS_EstMSE'] = LS_MSEE
 
         # Computing Kalman performance
+        KF_MSEE, KF_MSEP = KFTesting(LSandKFTestData[r],[0.5,-0.4])
 
+        print('KF Performance')
+        print("MSE of KF predictor for set number {}: ".format(r+1), KF_MSEP)
+        print("MSE of KF estimator for set number {}: ".format(r+1), KF_MSEE)
+
+        testDataInfo[r][u'KF_PredMSE'] = KF_MSEP
+        testDataInfo[r][u'KF_EstMSE'] = KF_MSEE
 
         # Printing a newline to make it easier to tell test sets apart
         print(' ')
