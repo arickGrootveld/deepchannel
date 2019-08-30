@@ -116,13 +116,11 @@ parser.add_argument('--trainDataFile', type=str, default='None',
 parser.add_argument('--evalDataFile', type=str, default='None',
                     help='file path to load eval data from, if None then it will generate its own data (default=\'None\')')
 
-## TODO: Figure out how to load test data
-# # Load data to test models with from data file
+# Load data to test TCN, LS, and KF
 parser.add_argument('--testDataFile', type=str, default='None',
                     help='file path to load test data from, if None then it will generate its own data (default=\'None\')')
 
-
-
+# Variance of the random variables that compuse the AR Coefficients
 parser.add_argument('--AR_var', type=float, default=0.2,
                     help='variance of the AR parameters in the data generation (default=0.1)')
 
@@ -198,7 +196,6 @@ AR_var = args.AR_var
 
 trainFile = args.trainDataFile
 evalFile = args.evalDataFile
-## TODO: Figure out how load data for test
 testFile = args.testDataFile
 
 # Calculating the number of batches that will need to be created given the simulation length and the batch size
@@ -300,6 +297,7 @@ if(testFile == 'None'):
         subsetTestStateData, subsetTestDataInfo = ARDatagenMismatch([testDataLen, AR_n, AR_var, seq_length, False], seed + 2 + k, args.cuda)
         trueStateTEST[k,:,:,:], measuredStateTEST[k,:,:,:,:] = convertToBatched(subsetTestStateData[2], subsetTestStateData[1], batch_size)
 
+        # Storing the data that the Least Squares and Kalman Filter will be using
         LSandKFTestData.append(subsetTestStateData)
 
         subsetInfoHolder = {}
@@ -323,6 +321,11 @@ else:
     trueStateTEST = testDataToBeLoaded['trueStateTEST']
     measuredStateTEST = testDataToBeLoaded['measuredStateTEST']
     testDataInfo = testDataToBeLoaded['testDataInfo']
+
+    # overriding parameters from command line, because we are loading from file
+    testSetLen = trueStateTEST.shape[0]
+    testSeriesLength = trueStateTEST.shape[3]
+
     print('test data loaded from: {}'.format(testFile))
     fileContent[u'testDataFile'] = testFile
 
@@ -357,7 +360,7 @@ if args.cuda:
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~~~~~~~~~~~~~~~~~~~ OPTIMIZER ~~~~~~~~~~~~~~~~~~~~~~~~ ###
 
-# Create the ADAM optimizer
+# Create the optimizer
 optimizer = getattr(optim, args.optim)(model.parameters(), lr=lr)
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
@@ -413,7 +416,7 @@ def train(epoch):
 
 def evaluate():
 
-    # Total MSE
+    # MSE over the entire series of data
     TotalAvgPredMSE = 0
     TotalAvgTrueMSE = 0
     n = 0
@@ -467,7 +470,6 @@ def evaluate():
 ### ~~~~~~~~~~~~~~~~~~~~~~~~ TEST ~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 
 def test():
-# TODO: Reformat the test function to work with each set of data
     # Training the Least Squares so we can evaluate its performance on the same dataset
     LSCoefficients = LSTraining(LSTrainData)
     # Looping through each of the sets of data with different AR Coefficients
