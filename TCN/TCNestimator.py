@@ -285,11 +285,13 @@ trueStateTEST = np.empty((testSetLen, batch_size, 4, testSeriesLength), dtype=fl
 
 measuredStateTEST = np.empty((testSetLen, batch_size, 2, seq_length, testSeriesLength), dtype=float)
 
-LSandKFTestData  = []
 
-testDataInfo = []
+
+
 # Loop for generating the data set for each pair AR Coefficients to test against
 if(testFile == 'None'):
+    LSandKFTestData = []
+    testDataInfo = []
     for k in range(0,testSetLen):
 
         # Generating the data with no variance between sequences (which is what the False in the array is for)
@@ -310,17 +312,21 @@ if(testFile == 'None'):
         subsetInfoHolder[u'dataFilePath'] = subsetTestDataInfo['filename']
         subsetInfoHolder[u'seed'] = subsetTestDataInfo['seed']
         testDataInfo.append(subsetInfoHolder)
+    # Saving relevant data so it can be recovered and reused
     testDataToBeSaved = {}
     testDataToBeSaved[u'trueStateTEST'] = trueStateTEST
     testDataToBeSaved[u'measuredStateTEST'] = measuredStateTEST
     testDataToBeSaved[u'testDataInfo'] = testDataInfo
+    testDataToBeSaved[u'LSandKFTestData'] = LSandKFTestData
     testFile = matSave('data', 'testData', testDataToBeSaved)
     fileContent[u'testDataFile'] = testFile
+# Loading all data from a file
 else:
     testDataToBeLoaded = hdf5s.loadmat(testFile)
     trueStateTEST = testDataToBeLoaded['trueStateTEST']
     measuredStateTEST = testDataToBeLoaded['measuredStateTEST']
     testDataInfo = testDataToBeLoaded['testDataInfo']
+    LSandKFTestData = testDataToBeLoaded['LSandKFTestData']
 
     # overriding parameters from command line, because we are loading from file
     testSetLen = trueStateTEST.shape[0]
