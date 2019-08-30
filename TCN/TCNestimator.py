@@ -222,6 +222,7 @@ if(trainFile == 'None'):
     # Convert the data from normal formatting to batches
     trueStateTRAIN, measuredStateTRAIN = convertToBatched(trainStateData[2], trainStateData[1], batch_size)
     fileContent[u'trainDataFile'] = trainStateInfo['filename']
+    fileContent[u'trainDataSize'] = trueStateTRAIN.shape
 
     # TODO: Improve the format at some point in the future, but for now we are just grabbing the trainingData to train
     # TODO: the LS
@@ -233,10 +234,11 @@ else:
     trueStateTRAIN, measuredStateTRAIN = convertToBatched(trainDataDict['finalStateValues'], trainDataDict['observedStates'],
                                                           batch_size)
     fileContent[u'trainDataFile'] = trainFile
+    fileContent[u'trainDataSize'] = trueStateTRAIN.shape
 
     # TODO: Improve the format at some point in the future, but for now we are just grabbing the trainingData to train
     # TODO: the LS
-    LSTrainData = [trainDataDict['systemStates'], trainDataDict['observedStated']]
+    LSTrainData = [trainDataDict['systemStates'], trainDataDict['observedStates']]
 
 # Convert numpy arrays to tensors
 trueStateTRAIN = torch.from_numpy(trueStateTRAIN)
@@ -249,6 +251,7 @@ if(evalFile == 'None'):
     # Convert the data from normal formatting to batches
     trueStateEVAL, measuredStateEVAL = convertToBatched(evalStateData[2], evalStateData[1], batch_size)
     fileContent[u'evalDataFile'] = evalStateInfo['filename']
+    fileContent[u'evalDataSize'] = trueStateEVAL.shape
 # loading the data from the file
 else:
     # Grab the data from the .mat file
@@ -257,12 +260,18 @@ else:
                                                         evalDataDict['observedStates'],
                                                         batch_size)
     fileContent[u'evalDataFile'] = evalFile
+    fileContent[u'evalDataSize'] = trueStateEVAL.shape
 # Convert numpy arrays to tensors
 trueStateEVAL = torch.from_numpy(trueStateEVAL)
 measuredStateEVAL = torch.from_numpy(measuredStateEVAL)
 
 
-## TODO: Refactor how we generate our test
+# ~~~~~~~~~~~~~~~~~~ LOAD TEST SET
+# Have to do things slightly different here compared to Eval and Train, because we want to
+# test against a bunch of different sequences of the same AR Process (same coefficients)
+# so we can't just generate a single set of data. We simply generate several sequences
+# from the same AR process, and then format everything so it makes sense
+
 testSetLen = int(args.test_set_len)
 # trueStateDataTEST Dimensionality: comprised of sets of data based on the number of AR
 #                                   coefficients that are to be generated in the 1st
@@ -279,7 +288,6 @@ trueStateTEST = np.empty((testSetLen, batch_size, 4, testSeriesLength), dtype=fl
 
 measuredStateTEST = np.empty((testSetLen, batch_size, 2, seq_length, testSeriesLength), dtype=float)
 
-# TODO: Format this better at some point, but for now just append to a list
 LSandKFTestData  = []
 
 testDataInfo = []
@@ -302,20 +310,24 @@ if(testFile == 'None'):
         subsetInfoHolder[u'ARCoefficients'] = subsetTestDataInfo['allF'][0,:,0]
         # Grabbing the file path of the data file
         subsetInfoHolder[u'dataFilePath'] = subsetTestDataInfo['filename']
+        subsetInfoHolder[u'seed'] = subsetTestDataInfo['seed']
         testDataInfo.append(subsetInfoHolder)
     testDataToBeSaved = {}
     testDataToBeSaved[u'trueStateTEST'] = trueStateTEST
     testDataToBeSaved[u'measuredStateTEST'] = measuredStateTEST
-    matSave('data', 'testData', testDataToBeSaved)
+    testDataToBeSaved[u'testDataInfo'] = testDataInfo
+    testFile = matSave('data', 'testData', testDataToBeSaved)
+    fileContent[u'testDataFile'] = testFile
 else:
-    # TODO: Refactor how we load our test set
-    print('this has not been implemented yet')
+    testDataToBeLoaded = hdf5s.loadmat(testFile)
+    trueStateTEST = testDataToBeLoaded['trueStateTEST']
+    measuredStateTEST = testDataToBeLoaded['measuredStateTEST']
+    testDataInfo = testDataToBeLoaded['testDataInfo']
+    print('test data loaded from: {}'.format(testFile))
+    fileContent[u'testDataFile'] = testFile
 
 trueStateTEST = torch.from_numpy(trueStateTEST)
 measuredStateTEST = torch.from_numpy(measuredStateTEST)
-
-## TODO: Refactor how we load our test set
-
 
 # Generate the model
 model = TCN(input_channels, n_classes, channel_sizes, kernel_size=kernel_size, dropout=dropout)
@@ -510,8 +522,9 @@ def test():
         print('TCN Performance:')
         print("TotalAvgPredMSE for test set number {}: ".format(r+1), TotalAvgPredMSE.item())
         print("TotalAvgTrueMSEfor test set number {}: ".format(r+1), TotalAvgTrueMSE.item())
-        print("Variance of Prediction for test set number {}: ".format(r+1), predVariance.item())
-        print("Variance of Estimate for test set number {}: ".format(r+1), estVariance.item())
+        # Commenting out printing the variances, since they serve no purpose as of now
+        # print("Variance of Prediction for test set number {}: ".format(r+1), predVariance.item())
+        # print("Variance of Estimate for test set number {}: ".format(r+1), estVariance.item())
 
         # Computing the LS performance on this data set
         LS_MSEE, LS_MSEP = LSTesting(LSCoefficients, LSandKFTestData[r])
@@ -532,6 +545,10 @@ def test():
 
         testDataInfo[r][u'KF_PredMSE'] = KF_MSEP
         testDataInfo[r][u'KF_EstMSE'] = KF_MSEE
+
+        print('Riccati Convergence MSE')
+        print("MSE Riccati Prediction for set number {}: ".format(r+1), testDataInfo[r]['riccatiConvergencePred'])
+        print("MSE Riccati Estimation for set number {}: ".format(r+1), testDataInfo[r]['riccatiConvergenceEst'])
 
         # Printing a newline to make it easier to tell test sets apart
         print(' ')

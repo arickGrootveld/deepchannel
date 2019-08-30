@@ -2,8 +2,6 @@ import numpy as np
 
 def KFTesting(testData, ARCoeffs):
 
-    print('WELCOME HOME')
-
     # Preset Parameters, because we are on a strict timeline
     measuredStateData = testData[1]
     trueStateData = testData[2]
