@@ -124,6 +124,13 @@ parser.add_argument('--testDataFile', type=str, default='None',
 parser.add_argument('--AR_var', type=float, default=0.2,
                     help='variance of the AR parameters in the data generation (default=0.1)')
 
+# Location to load the model from
+parser.add_argument('--model_path', type=str, default='None',
+                    help='The location to load the model parameters from. If set to None, will generate new model'
+                         'from training and evaluation data, otherwise it will skip the training and evaluation loops'
+                         'and simply test the model loaded (default=\'None\')')
+# If model is loaded from a path, will skip over the training and evaluation loops and go straight to testing. This will
+# ignore all data generation specified for train and eval, and will only generate/load data for the testing process.
 
 # Parse out the input arguments
 args = parser.parse_args()
@@ -147,7 +154,6 @@ if not (path.exists('./logs')):
         os.mkdir('./logs', 0o755)
 
 # Creating a new log file
-logStart='/logs'
 while(fileSpaceFound==False):
     logNumber+=1
     logName='./logs/log'+str(logNumber)+'.mat'
@@ -188,6 +194,7 @@ dropout = args.dropout
 lr = args.lr
 trainDataLen = int(args.simu_len)
 seed = args.seed
+optimMethod = args.optim
 
 evalDataLen = int(args.eval_len)
 testDataLen = int(args.test_set_depth)
@@ -205,6 +212,13 @@ trainSeriesLength = int(trainDataLen / batch_size)
 testSeriesLength = int(testDataLen/batch_size)
 
 evaluationSeriesLength = int(evalDataLen / batch_size)
+
+# Determining whether this run is for testing only, or if it is for training a model to be tested
+testSession = False
+if(args.model_path != 'None'):
+    testSession = True
+    modelContext = torch.load(args.model_path)
+modelPath = args.model_path
 ### ~~~~~~~~~~~~~~~ LOAD DATA/GENERATE MODEL ~~~~~~~~~~~~~~~~ ###
 # Here we have the option of loading from a saved .mat file or just calling the data generation
 # function explicitly
@@ -213,54 +227,55 @@ evaluationSeriesLength = int(evalDataLen / batch_size)
 AR_n = 2
 
 # ~~~~~~~~~~~~~~~~~~ LOAD TRAINING SET
-if(trainFile == 'None'):
-    # Generate AR process training data set - both measured and real states
-    trainStateData, trainStateInfo = ARDatagenMismatch([trainDataLen, AR_n, AR_var, seq_length], seed, args.cuda)
-    # Convert the data from normal formatting to batches
-    trueStateTRAIN, measuredStateTRAIN = convertToBatched(trainStateData[2], trainStateData[1], batch_size)
-    fileContent[u'trainDataFile'] = trainStateInfo['filename']
-    fileContent[u'trainDataSize'] = trueStateTRAIN.shape
+if not testSession:
+    if(trainFile == 'None'):
+        # Generate AR process training data set - both measured and real states
+        trainStateData, trainStateInfo = ARDatagenMismatch([trainDataLen, AR_n, AR_var, seq_length], seed, args.cuda)
+        # Convert the data from normal formatting to batches
+        trueStateTRAIN, measuredStateTRAIN = convertToBatched(trainStateData[2], trainStateData[1], batch_size)
+        fileContent[u'trainDataFile'] = trainStateInfo['filename']
+        fileContent[u'trainDataSize'] = trueStateTRAIN.shape
 
-    # TODO: Improve the format at some point in the future, but for now we are just grabbing the trainingData to train
-    # TODO: the LS
-    LSTrainData = trainStateData
-else:
-    # Grab the data from the .mat file
-    trainDataDict = hdf5s.loadmat(trainFile)
-    # Convert the loaded data into batches for the TCN to run with
-    trueStateTRAIN, measuredStateTRAIN = convertToBatched(trainDataDict['finalStateValues'], trainDataDict['observedStates'],
-                                                          batch_size)
-    fileContent[u'trainDataFile'] = trainFile
-    fileContent[u'trainDataSize'] = trueStateTRAIN.shape
+        # TODO: Improve the format at some point in the future, but for now we are just grabbing the trainingData to train
+        # TODO: the LS
+        LSTrainData = trainStateData
+    else:
+        # Grab the data from the .mat file
+        trainDataDict = hdf5s.loadmat(trainFile)
+        # Convert the loaded data into batches for the TCN to run with
+        trueStateTRAIN, measuredStateTRAIN = convertToBatched(trainDataDict['finalStateValues'], trainDataDict['observedStates'],
+                                                              batch_size)
+        fileContent[u'trainDataFile'] = trainFile
+        fileContent[u'trainDataSize'] = trueStateTRAIN.shape
 
-    # TODO: Improve the format at some point in the future, but for now we are just grabbing the trainingData to train
-    # TODO: the LS
-    LSTrainData = [trainDataDict['systemStates'], trainDataDict['observedStates']]
+        # TODO: Improve the format at some point in the future, but for now we are just grabbing the trainingData to train
+        # TODO: the LS
+        LSTrainData = [trainDataDict['systemStates'], trainDataDict['observedStates']]
 
-# Convert numpy arrays to tensors
-trueStateTRAIN = torch.from_numpy(trueStateTRAIN)
-measuredStateTRAIN = torch.from_numpy(measuredStateTRAIN)
+    # Convert numpy arrays to tensors
+    trueStateTRAIN = torch.from_numpy(trueStateTRAIN)
+    measuredStateTRAIN = torch.from_numpy(measuredStateTRAIN)
 
-# ~~~~~~~~~~~~~~~~~~ LOAD EVALUATION SET
-if(evalFile == 'None'):
-    # Generate AR process evaluation data set - both measured and real states
-    evalStateData, evalStateInfo = ARDatagenMismatch([evalDataLen, AR_n, AR_var, seq_length], seed + 1, args.cuda)
-    # Convert the data from normal formatting to batches
-    trueStateEVAL, measuredStateEVAL = convertToBatched(evalStateData[2], evalStateData[1], batch_size)
-    fileContent[u'evalDataFile'] = evalStateInfo['filename']
-    fileContent[u'evalDataSize'] = trueStateEVAL.shape
-# loading the data from the file
-else:
-    # Grab the data from the .mat file
-    evalDataDict = hdf5s.loadmat(evalFile)
-    trueStateEVAL, measuredStateEVAL = convertToBatched(evalDataDict['finalStateValues'],
-                                                        evalDataDict['observedStates'],
-                                                        batch_size)
-    fileContent[u'evalDataFile'] = evalFile
-    fileContent[u'evalDataSize'] = trueStateEVAL.shape
-# Convert numpy arrays to tensors
-trueStateEVAL = torch.from_numpy(trueStateEVAL)
-measuredStateEVAL = torch.from_numpy(measuredStateEVAL)
+    # ~~~~~~~~~~~~~~~~~~ LOAD EVALUATION SET
+    if(evalFile == 'None'):
+        # Generate AR process evaluation data set - both measured and real states
+        evalStateData, evalStateInfo = ARDatagenMismatch([evalDataLen, AR_n, AR_var, seq_length], seed + 1, args.cuda)
+        # Convert the data from normal formatting to batches
+        trueStateEVAL, measuredStateEVAL = convertToBatched(evalStateData[2], evalStateData[1], batch_size)
+        fileContent[u'evalDataFile'] = evalStateInfo['filename']
+        fileContent[u'evalDataSize'] = trueStateEVAL.shape
+    # loading the data from the file
+    else:
+        # Grab the data from the .mat file
+        evalDataDict = hdf5s.loadmat(evalFile)
+        trueStateEVAL, measuredStateEVAL = convertToBatched(evalDataDict['finalStateValues'],
+                                                            evalDataDict['observedStates'],
+                                                            batch_size)
+        fileContent[u'evalDataFile'] = evalFile
+        fileContent[u'evalDataSize'] = trueStateEVAL.shape
+    # Convert numpy arrays to tensors
+    trueStateEVAL = torch.from_numpy(trueStateEVAL)
+    measuredStateEVAL = torch.from_numpy(measuredStateEVAL)
 
 
 # ~~~~~~~~~~~~~~~~~~ LOAD TEST SET
@@ -338,26 +353,45 @@ else:
 trueStateTEST = torch.from_numpy(trueStateTEST)
 measuredStateTEST = torch.from_numpy(measuredStateTEST)
 
+### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
+### ~~~~~~~~~~~~~~~~~ INITIALIZING THE MODEL ~~~~~~~~~~~~~~~~ ###
+if not testSession:
+    # Saving the model parameters so we can use them to load the model properly later
+    modelParameters = {
+        'input_channels': input_channels,
+        'n_classes': n_classes,
+        'channel_sizes': channel_sizes,
+        'kernel_size': kernel_size,
+        'dropout': dropout
+    }
+else:
+    input_channels = modelContext['model_parameters']['input_channels']
+    n_classes = modelContext['model_parameters']['n_classes']
+    channel_sizes = modelContext['model_parameters']['channel_sizes']
+    kernel_size = modelContext['model_parameters']['kernel_size']
+    dropout = modelContext['model_parameters']['dropout']
 # Generate the model
 model = TCN(input_channels, n_classes, channel_sizes, kernel_size=kernel_size, dropout=dropout)
 # Creating a backup of the model that we can use for early stopping
 modelBEST = model
-
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~~~~~~~~~~~~~~ LOAD DATA INTO CUDA ~~~~~~~~~~~~~~~~~~~ ###
 
 if args.cuda:
+
     torch.cuda.set_device(cuda_device)
     model.cuda()
     modelBEST.cuda()
+    # If we are not just testing then load everything into cuda
+    if not testSession:
 
-    # Test set
-    trueStateTRAIN = trueStateTRAIN.cuda()
-    measuredStateTRAIN = measuredStateTRAIN.cuda()
+        # Train set
+        trueStateTRAIN = trueStateTRAIN.cuda()
+        measuredStateTRAIN = measuredStateTRAIN.cuda()
 
-    # Evaluation set
-    trueStateEVAL = trueStateEVAL.cuda()
-    measuredStateEVAL = measuredStateEVAL.cuda()
+        # Evaluation set
+        trueStateEVAL = trueStateEVAL.cuda()
+        measuredStateEVAL = measuredStateEVAL.cuda()
 
     # Test set
     trueStateTEST = trueStateTEST.cuda()
@@ -365,9 +399,19 @@ if args.cuda:
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~~~~~~~~~~~~~~~~~~~ OPTIMIZER ~~~~~~~~~~~~~~~~~~~~~~~~ ###
+if not testSession:
+    # Create the optimizer
+    optimizerParameters = {
+        'optim': optimMethod,
+        'lr': lr
+    }
+else:
+    # Loading the optimizer parameters to use
+    optimMethod = modelContext['optimizer_parameters']['optim']
+    lr = modelContext['optimizer_parameters']['lr']
 
-# Create the optimizer
-optimizer = getattr(optim, args.optim)(model.parameters(), lr=lr)
+# Initializing the optimizer
+optimizer = getattr(optim, optimMethod)(model.parameters(), lr=lr)
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~~~~~~~~~~~~~~~~~~~ TRAINING ~~~~~~~~~~~~~~~~~~~~~~~~~ ###
@@ -476,8 +520,6 @@ def evaluate():
 ### ~~~~~~~~~~~~~~~~~~~~~~~~ TEST ~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 
 def test():
-    # Training the Least Squares so we can evaluate its performance on the same dataset
-    LSCoefficients = LSTraining(LSTrainData)
     # Looping through each of the sets of data with different AR Coefficients
     for r in range(0, testSetLen):
         # Total MSE
@@ -563,32 +605,75 @@ def test():
 
 
     return test_loss.item()
-
-
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~ LOOP ~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 
-bestloss = 0
+if not testSession:
+    # Determine where to save model checkpoints and final model parameters
+    fileSpaceFound = False
+    modelNumber = 0
 
-# Letting the model know when the last epoch happens so we can record the MSEs of the individual samples
-for ep in range(1, epochs+1):
-    train(ep)
-    tloss = evaluate()
+    # Create the directory to save models to, if non-existent
+    if not (path.exists('./models')):
+        os.mkdir('./models', 0o755)
 
-    # Run through all epochs, find the best model and save it for testing
-    if(ep == 1):
-        bestloss = tloss
-    else:
-        if(tloss <= bestloss):
+    # Saving model to a new file
+    while (fileSpaceFound == False):
+        modelNumber += 1
+        modelPath = './models/model' + str(modelNumber) + '.pth'
+        if not (path.exists(modelPath)):
+            print('model parameters will be saved to: ', modelPath)
+            fileSpaceFound = True
+
+    # Initializing model context dict to be saved with model
+    modelContext = {
+        'epoch': 0,
+        'model_state_dict': model.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+        'model_parameters': modelParameters,
+        'optimizer_parameters': optimizerParameters,
+        'LSCoefficients': {}
+    }
+    # Letting the model know when the last epoch happens so we can record the MSEs of the individual samples
+    for ep in range(1, epochs+1):
+        train(ep)
+        tloss = evaluate()
+
+        # Run through all epochs, find the best model and save it for testing
+        if(ep == 1):
             bestloss = tloss
-            modelBEST = model
-            print("better loss")
+            modelContext['model_state_dict'] = model.state_dict()
+            modelContext['optimizer_state_dict'] = optimizer.state_dict()
+            modelContext['epoch'] = ep
+            torch.save(modelContext, modelPath)
         else:
-            print("worse loss")
+            if(tloss <= bestloss):
+                bestloss = tloss
+                modelBEST = model
+                modelContext['model_state_dict'] = model.state_dict()
+                modelContext['optimizer_state_dict'] = optimizer.state_dict()
+                modelContext['epoch'] = ep
+                torch.save(modelContext, modelPath)
+                print("better loss")
+            else:
+                print("worse loss")
+        print(tloss)
+    # Training the Least Squares so we can evaluate its performance on the same dataset
+    LSCoefficients = LSTraining(LSTrainData)
+    # Saving the LS Coefficients so we do not need to train it again
+    modelContext['LSCoefficients'] = LSCoefficients
+    torch.save(modelContext, modelPath)
+else:
+    # If we are just loading and testing a model, then we set the path properly to be saved
+    modelPath = args.model_path
+    modelBEST.load_state_dict(modelContext['model_state_dict'])
+    optimizer.load_state_dict(modelContext['optimizer_state_dict'])
 
-    print(tloss)
+    # Loading the LS Coefficients
+    LSCoefficients = modelContext['LSCoefficients']
 
-# Test once we are done training the model (using early stopping strategy)
+
+# Test once we are done training the model
 tloss = test()
 
 print("check check")
@@ -598,10 +683,12 @@ end = time.time()
 simRunTime=(end-start)
 print('this simulation took:', simRunTime, 'seconds to run')
 
-fileContent['testInfo'] = testDataInfo
-
+fileContent[u'testInfo'] = testDataInfo
+fileContent[u'modelPath'] = modelPath
 fileContent[u'trainingLength(seconds)'] = simRunTime
 fileContent[u'runType'] = 'TCN'
-print('log data saved to: ', logName)
-hdf5s.savemat(logName, fileContent)
 
+print('log data saved to: ', logName)
+print('model parameters saved to: ', modelPath)
+
+hdf5s.savemat(logName, fileContent)
