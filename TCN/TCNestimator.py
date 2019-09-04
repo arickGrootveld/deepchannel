@@ -207,11 +207,10 @@ testFile = args.testDataFile
 
 # Calculating the number of batches that will need to be created given the simulation length and the batch size
 trainSeriesLength = int(trainDataLen / batch_size)
-
+evaluationSeriesLength = int(evalDataLen / batch_size)
 # Doing the same calculation as above for the test data set
 testSeriesLength = int(testDataLen/batch_size)
-
-evaluationSeriesLength = int(evalDataLen / batch_size)
+# The appropriate seriesLength variables get overwritten if we load data from files
 
 # Determining whether this run is for testing only, or if it is for training a model to be tested
 testSession = False
@@ -235,7 +234,6 @@ if not testSession:
         trueStateTRAIN, measuredStateTRAIN = convertToBatched(trainStateData[2], trainStateData[1], batch_size)
         fileContent[u'trainDataFile'] = trainStateInfo['filename']
         fileContent[u'trainDataSize'] = trueStateTRAIN.shape
-
         # TODO: Improve the format at some point in the future, but for now we are just grabbing the trainingData to train
         # TODO: the LS
         LSTrainData = trainStateData
@@ -251,6 +249,10 @@ if not testSession:
         # TODO: Improve the format at some point in the future, but for now we are just grabbing the trainingData to train
         # TODO: the LS
         LSTrainData = [trainDataDict['systemStates'], trainDataDict['observedStates']]
+
+        # Setting the number of batches of train data to be what is supplied in the file
+        trainSeriesLength = trueStateTRAIN.shape[2]
+        trainDataLen = trainSeriesLength * trueStateTRAIN.shape[0]
 
     # Convert numpy arrays to tensors
     trueStateTRAIN = torch.from_numpy(trueStateTRAIN)
@@ -273,6 +275,9 @@ if not testSession:
                                                             batch_size)
         fileContent[u'evalDataFile'] = evalFile
         fileContent[u'evalDataSize'] = trueStateEVAL.shape
+
+        evalSeriesLength = trueStateEVAL.shape[2]
+        evalDataLen = evalSeriesLength * trueStateEVAL.shape[0]
     # Convert numpy arrays to tensors
     trueStateEVAL = torch.from_numpy(trueStateEVAL)
     measuredStateEVAL = torch.from_numpy(measuredStateEVAL)
