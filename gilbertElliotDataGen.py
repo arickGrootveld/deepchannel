@@ -1,6 +1,6 @@
 import numpy as np
 from scipy import linalg as sciAlg
-from utilities import matSave
+from utilities import matSave, convertToBatched
 
 # GilEllDataGen: Function that generates a sequence of data from an AR Process who's coefficients are subject to
 #                a Gilbert-Elliot model. This means that the data will be generated from two sets of AR Coefficients,
@@ -218,14 +218,17 @@ def GilEllDataGen(params, seed=-1):
 #                               Will throw an error if the you try to specify that the number of rows should be greater
 #                               than the length of sequence data fed into the function
 #   Outputs: (toeplitzObservationStates, toeplitzTrueStates)
-#       toeplitzObservationStates (np.matrix, float) - A (2 x numColumns x N) toeplitz matrix created from the observation states of the
-#                                                      sequence (also converts complex numbers to real and imaginary
-#                                                      components
-#
-#       toeplitzTrueStates (np.matrix, float) - A (4 x N) matrix that contains the complex numbers representing the
-#                                                    current and next true states of each row of the
-#                                                    toeplitzObservationStates (also converts complex numbers to real
-#                                                    and imaginary components)
+#       toeplitzStates (tuple) - tuple containing the true states, observation states and finalTrueStates of the data
+#          toeplitzAllTrueStates (np.matrix, float) - A (2 x numColumns+1 x N) toeplitz matrix created from the system
+#                                                     states that can be used to train the LS algorithm
+#          toeplitzObservationStates (np.matrix, float) - A (2 x numColumns x N) toeplitz matrix created from
+#                                                         the observation states of the sequence (also converts
+#                                                         complex numbers to real and imaginary components
+#          toeplitzFinalTrueStates (np.matrix, float) - A (4 x N) matrix that contains the complex numbers representing the
+#                                                       current and next true states of each row of the
+#                                                       toeplitzObservationStates (also converts complex numbers to real
+#                                                       and imaginary components)
+
 #
 # Notes: * N is used in the above documentation, which is the number of rows of both the toeplitzObservationStates and
 #          toeplitzTrueStates matrices, and is calculated from: N = sequenceLength - matrixRowLength + 1
@@ -245,6 +248,7 @@ def toeplitzData(sequenceData, numColumns):
 
     toeplitzObservationStates = np.empty((2, numColumns, numRows), dtype=float)
     toeplitzFinalTrueStates = np.empty((4, numRows), dtype=float)
+    toeplitzAllTrueStates = np.empty((2, numColumns + 1, numRows), dtype=float)
 
     # Creating the toeplitz matrices
     for i in range(0, numRows):
@@ -254,7 +258,10 @@ def toeplitzData(sequenceData, numColumns):
         toeplitzFinalTrueStates[0:2,i] = np.real(x[0,i + numColumns:i+numColumns+2])
         # Grabbing the imaginary estimated and predicted true state values
         toeplitzFinalTrueStates[2:4,i] = np.imag(x[0,i+numColumns:i+numColumns+2])
-    return(toeplitzObservationStates, toeplitzFinalTrueStates)
+        # Grabbing all the system state values real and imaginary components
+        toeplitzAllTrueStates[0, :, i] = np.real(x[0,i:i+numColumns+1])
+        toeplitzAllTrueStates[1,:,i] = np.imag(x[0,i:i+numColumns+1])
+    return((toeplitzAllTrueStates, toeplitzObservationStates, toeplitzFinalTrueStates))
 
 
 # GilEllTrainingDataGen: Function that generates training data with from the good and bad coefficients supplied to it.
@@ -299,8 +306,6 @@ def GilEllTrainingDataGen(sequenceLength=10, numSequences=100, goodCoefficients=
         allTrueStates[0, :, i+numSequences-1] = np.real(sequenceData[0][0, 0:sequenceLength + 1])
         allTrueStates[1, :, i+numSequences-1] = np.imag(sequenceData[0][0, 0:sequenceLength + 1])
 
-    # TODO: Shuffle the data and then verify it works
-    # TODO: Finish up this function and test it against the TCN Estimator
     # Creating a set of random indexes so that the data can be shuffled randomly, but we can still have the indexes of
     # the observations line up with the indexes of the finalTrueStates
     shuffleIndexes =  np.random.shuffle(np.arange(finalTrueStates.shape[1]))
@@ -341,18 +346,163 @@ def GilEllTrainingDataGen(sequenceLength=10, numSequences=100, goodCoefficients=
 
     return(data, info)
 
+def GilElTestDataGen(sequenceLength=10, numSequences=100, goodCoefficients=[0.5, -0.4], testSetLen=1,
+                          badCoefficients=[1.414, -0.99968], goodTransProb=0.999, badTransProb=0.999, QVar=0.1,
+                          RVar=0.1, randSeed=int(np.abs(np.floor(100*np.random.randn(1)))), batch_size=20, **kwargs):
+    LSandKFTestData = []
+    testDataInfo = []
+
+    numBatchedSequences = int(numSequences/batch_size)
+    # trueStateDataTEST Dimensionality: comprised of sets of data based on the number of AR
+    #                                   coefficients that are to be generated in the 1st
+    #                                   dimension, then of batch elements in the 2nd
+    #                                   dimension, real and imaginary portions of the true state
+    #                                   in the 3rd dimension, and by batches in the 4th dimension
+    trueStateTEST = np.empty((testSetLen, batch_size, 4, numBatchedSequences), dtype=float)
+
+    # measuredStateTEST Dimensionality: comprised of sets of data based on the number of AR
+    #                                   coefficients used for testing in the 1st dimension,
+    #                                   batch elements in the 2nd dimension, real and complex
+    #                                   values in the 3rd dimension, sequence elements in the
+    #                                   4th dimension, and by batches in the 5th dimension
+
+    measuredStateTEST = np.empty((testSetLen, batch_size, 2, sequenceLength, numBatchedSequences), dtype=float)
+
+    for k in range(0, testSetLen):
+        # Generating the data with no variance between sequences (which is what the False in the array is for)
+        # because we want to generate data with a single set of AR Coefficients
+        subsetTestStateData, subsetTestDataInfo = GilElDataGenWrapper(sequenceLength=sequenceLength, numSequences=numSequences,
+                                                                      badCoefficients=badCoefficients, goodCoefficients=goodCoefficients,
+                                                                      goodTransProb=goodTransProb, badTransProb=badTransProb,
+                                                                      RVar=RVar, QVar=QVar, randSeed=randSeed)
+        trueStateTEST[k, :, :, :], measuredStateTEST[k, :, :, :, :] = convertToBatched(subsetTestStateData[2],
+                                                                                       subsetTestStateData[1],
+                                                                                       batch_size)
+        # Storing the data that the Least Squares and Kalman Filter will be using
+        LSandKFTestData.append(subsetTestStateData)
+
+        subsetInfoHolder = {}
+        # Grabbing the first riccatiConvergence because they should all be the same for both the estimate and prediction
+        subsetInfoHolder[u'riccatiConvergencePredGoodState'] = subsetTestDataInfo['riccatiConvergences'][0, 0]
+        subsetInfoHolder[u'riccatiConvergenceEstGoodState'] = subsetTestDataInfo['riccatiConvergences'][0, 1]
+        subsetInfoHolder[u'riccatiConvergencePredBadState'] = subsetTestDataInfo['riccatiConvergences'][1,0]
+        subsetInfoHolder[u'riccatiConvergenceEstBadState'] = subsetTestDataInfo['riccatiConvergences'][1,1]
+
+        # This is just for old formatting purposes
+        # TODO: Figure out a better way to do this, potentially showing both the good and bad state when the network
+        # TODO: loads data from a GE Data file
+        subsetInfoHolder[u'riccatiConvergencePred'] = subsetInfoHolder['riccatiConvergencePredGoodState']
+        subsetInfoHolder[u'riccatiConvergenceEst'] = subsetInfoHolder['riccatiConvergenceEstGoodState']
+
+        # Grabbing the first set of AR Coefficients from the F matrix because they should all be the same
+        subsetInfoHolder[u'ARCoefficients'] = [goodCoefficients, badCoefficients]
+        # Grabbing the file path of the data file
+        subsetInfoHolder[u'dataFilePath'] = subsetTestDataInfo['filename']
+        subsetInfoHolder[u'seed'] = subsetTestDataInfo['seed']
+        testDataInfo.append(subsetInfoHolder)
+    # Saving relevant data so it can be recovered and reused
+    testDataToBeSaved = {}
+    testDataToBeSaved[u'trueStateTEST'] = trueStateTEST
+    testDataToBeSaved[u'measuredStateTEST'] = measuredStateTEST
+    testDataToBeSaved[u'testDataInfo'] = testDataInfo
+    testDataToBeSaved[u'LSandKFTestData'] = LSandKFTestData
+    testFile = matSave('data', 'GETestData', testDataToBeSaved)
+    return(testDataToBeSaved)
+
+
+def GilElDataGenWrapper(sequenceLength=10, numSequences=100, goodCoefficients=[0.5, -0.4],
+                          badCoefficients=[1.414, -0.99968], goodTransProb=0.999, badTransProb=0.999, QVar=0.1,
+                          RVar=0.1, randSeed=int(np.abs(np.floor(100*np.random.randn(1)))), **kwargs):
+    # Generating a much longer sequence that will have the exact length to cause the toeplitz matrix that it will become
+    # to have the exact sequence length and number of sequences that we expect
+    longSequenceLength = numSequences + sequenceLength - 1
+
+    # Generating the long sequence of data using the passed params and the calculated length. Want it to start in
+    # a random state because this is how we intend to test our system
+    longSequence = GilEllDataGen(([goodTransProb, badTransProb], [goodCoefficients, badCoefficients],
+                                  longSequenceLength, [QVar, RVar], 'random'), randSeed)
+    data = toeplitzData(longSequence, sequenceLength)
+
+    riccatiConvergences = longSequence[2]
+
+    ##### Storing the data #####
+    storageFilePath = './data'
+    dataFile = 'GEData'
+    logContent = {}
+    logContent[u'observedStates'] = data[1]
+    logContent[u'systemStates'] = data[0]
+    logContent[u'finalStateValues'] = data[2]
+    logContent[u'seed'] = randSeed
+    logContent[u'riccatiConvergences'] = riccatiConvergences
+    logContent[u'parameters'] = {
+        "goodCoeffs": goodCoefficients,
+        "badCoeffs": badCoefficients,
+        "sequenceLength": sequenceLength,
+        "numSequences": numSequences,
+        "Rvar": RVar,
+        "QVar": QVar,
+        "goodTransProb": goodTransProb,
+        "badTransProb": badTransProb
+    }
+
+    filename = matSave(storageFilePath, dataFile, logContent)
+
+    info = {}
+    info[u'filename'] = filename
+    info[u'riccatiConvergences'] = riccatiConvergences
+    info[u'seed'] = randSeed
+    return(data, info)
+
+
 if __name__ == "__main__":
     import argparse
-    default_q = 0.999
-    default_p = 0.999
-    default_F_p = (0.5, -0.4)
-    default_F_q = (1.414, -0.999698)
-    default_sequence_length = 100
-    default_Covariances = (0.1, 0.1)
-    defaultParams = [(default_p, default_q), (default_F_p, default_F_q), default_sequence_length,
-                     default_Covariances]
-    test = GilEllDataGen(defaultParams)
-    toepObs, toepTrue = toeplitzData(test, 3)
+    import time
 
-    test2 = GilEllTrainingDataGen(sequenceLength=10, numSequences=10)
-    print('this worked')
+    # Command Line argument parsing if this file is called directly
+    parser = argparse.ArgumentParser(description='GEDataGeneration - Generating Data from a Gilbert-Elliot channel model')
+
+    # Sequence Length
+    parser.add_argument('--seq_len', type=float, default=20,
+                        help='the length of the data sequences (default: 20)')
+
+    # Number of Sequence Samples
+    parser.add_argument('--simu_len', type=float, default=100,
+                        help='number of sequences of data to generate (default: 100)')
+
+    parser.add_argument('--seed', type=int, default=100,
+                        help='seed that sets the RNG state of the data generation process (default: 100)')
+
+    parser.add_argument('--testDataGen', action='store_true',
+                        help='specifies whether it should generate a test data set or not (default: False)')
+
+    args = parser.parse_args()
+
+    # Setting the args to their appropriate variables
+    simuLen = int(args.simu_len)
+    sequenceLen = int(args.seq_len)
+    seed = args.seed
+    testGeneration = args.testDataGen
+
+    # default_q = 0.999
+    # default_p = 0.999
+    # default_F_p = (0.5, -0.4)
+    # default_F_q = (1.414, -0.999698)
+    # default_sequence_length = 100
+    # default_Covariances = (0.1, 0.1)
+    # defaultParams = [(default_p, default_q), (default_F_p, default_F_q), default_sequence_length,
+    #                  default_Covariances]
+    # test = GilEllDataGen(defaultParams)
+    # toepObs, toepTrue = toeplitzData(test, 3)
+    #
+    # test2 = GilEllTrainingDataGen(sequenceLength=10, numSequences=10)
+
+    start = time.time()
+    if not testGeneration:
+        data = GilElDataGenWrapper(numSequences=simuLen, sequenceLength=sequenceLen, randSeed=seed)
+    else:
+        data = GilElTestDataGen(numSequences=simuLen, sequenceLength=sequenceLen, randSeed=seed)
+
+    end = time.time()
+
+    runTime = end - start
+    print('it took {} seconds for this process to run'.format(runTime))
