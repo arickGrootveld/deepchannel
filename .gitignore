@@ -11,3 +11,4 @@ ARMismatchPredictor/ar_mismatch_test.py
 **.idea
 **/__pycache__
 **.mat
+**.pth
