@@ -1,5 +1,6 @@
 import numpy as np
 from scipy import linalg as sciAlg
+from utilities import matSave
 
 # GilEllDataGen: Function that generates a sequence of data from an AR Process who's coefficients are subject to
 #                a Gilbert-Elliot model. This means that the data will be generated from two sets of AR Coefficients,
@@ -263,7 +264,7 @@ def toeplitzData(sequenceData, numColumns):
 #                        training set that can be used to train the TCN and LS
 def GilEllTrainingDataGen(sequenceLength=10, numSequences=100, goodCoefficients=[0.5, -0.4],
                           badCoefficients=[1.414, -0.99968], goodTransProb=0.999, badTransProb=0.999, QVar=0.1,
-                          RVar=0.1, **kwargs):
+                          RVar=0.1, randSeed=int(np.abs(np.floor(100*np.random.randn(1)))), **kwargs):
     # TODO: Convert this from creating its own data format to the toeplitzified data
     finalTrueStates = np.zeros((4, numSequences*2), dtype=float)
     observationStates = np.zeros((2, sequenceLength, numSequences*2), dtype=float)
@@ -273,7 +274,7 @@ def GilEllTrainingDataGen(sequenceLength=10, numSequences=100, goodCoefficients=
     for i in range(0, numSequences):
         # Generate a set of data that is only using the good coefficients
         sequenceData = GilEllDataGen([(1, 0), (goodCoefficients, badCoefficients),
-                                      sequenceLength, (QVar, RVar), 'good'])
+                                      sequenceLength, (QVar, RVar), 'good'], seed=randSeed+i)
         # first half of observationsStates and finalTrueStates is from the good state data
         observationStates[0,:,i] = np.real(sequenceData[1][0,0:sequenceLength])
         observationStates[1,:,i] = np.imag(sequenceData[1][0,0:sequenceLength])
@@ -287,7 +288,7 @@ def GilEllTrainingDataGen(sequenceLength=10, numSequences=100, goodCoefficients=
 
         # Generate a set of data that is only using the bad coefficients
         sequenceData = GilEllDataGen(((0,1), (goodCoefficients, badCoefficients),
-                                     sequenceLength, (QVar, RVar), 'bad'))
+                                     sequenceLength, (QVar, RVar), 'bad'), seed=randSeed+i+numSequences)
         # second half of observationsStates and finalTrueStates is from the bad state data
         observationStates[0,:,i+numSequences-1] = np.real(sequenceData[1][0,0:sequenceLength])
         observationStates[1,:,i+numSequences-1] = np.imag(sequenceData[1][0,0:sequenceLength])
@@ -308,33 +309,37 @@ def GilEllTrainingDataGen(sequenceLength=10, numSequences=100, goodCoefficients=
     observationStates = np.squeeze(observationStates[:,:,shuffleIndexes])
     allTrueStates = np.squeeze(allTrueStates[:,:,shuffleIndexes])
 
+    # Recovering the Riccati Convergences
+    riccatiConvergences = sequenceData[2]
+
     ##### Storing the data #####
     storageFilePath = './data'
-    dataFile = 'GLData'
+    dataFile = 'GEData'
     logContent = {}
-    logContent[u'observedStates'] = observationStates.numpy()
-    logContent[u'systemStates'] = allTrueStates.numpy()
-    logContent[u'finalStateValues'] = finalTrueStates.numpy()
+    logContent[u'observedStates'] = observationStates
+    logContent[u'systemStates'] = allTrueStates
+    logContent[u'finalStateValues'] = finalTrueStates
+    logContent[u'seed'] = randSeed
+    logContent[u'riccatiConvergences'] = riccatiConvergences
     logContent[u'parameters'] = {
+        "goodCoeffs": goodCoefficients,
+        "badCoeffs": badCoefficients,
         "sequenceLength": sequenceLength,
         "numSequences": numSequences,
-        "goodCoefficients": goodCoefficients,
-        "badCoefficients": badCoefficients,
+        "Rvar": RVar,
+        "QVar": QVar,
         "goodTransProb": goodTransProb,
-        "badTransProb": badTransProb,
-
+        "badTransProb": badTransProb
     }
-    logContent[u'seed'] = seed
-    logContent[u'cuda'] = cuda
-    logContent[u'riccatiConvergences'] = riccatiConvergences.numpy()
-    logContent[u'allF'] = all_F.numpy()
     filename = matSave(storageFilePath, dataFile, logContent)
 
     data = (allTrueStates, observationStates, finalTrueStates)
     info = {}
-    info[u'filename'] =
+    info[u'filename'] = filename
+    info[u'riccatiConvergences'] = riccatiConvergences
+    info[u'seed'] =  randSeed
 
-    print(sequenceLength)
+    return(data, info)
 
 if __name__ == "__main__":
     import argparse
