@@ -101,13 +101,12 @@ minPredMSE = np.zeros((AR_n, AR_n, sequenceLength,
 minMSE = np.zeros((AR_n, AR_n, sequenceLength,
                    seriesLength))
 
+
+
 # Initializing the correction value to be the expected value of the starting state
 x_correction[:,0,0] = np.array([0,0])
 # Initializing the MSE to be the variance in the starting value of the sequence
-## This is just making the first matrix corresponding to the MMSE of each sequence be an identity ##
-## matrix ##
-minMSE[0,0,0,:] = 1
-minMSE[1,1,0,:] = 1
+minMSE[:,:,0,0] = np.array([[0,0], [0,0]])
 
 
 ## Kalman Filter parameters to be used
@@ -318,6 +317,6 @@ logData[u'runType'] = 'KF'
 if not args.filePath == 'None':
     logData[u'dataFileName'] = args.filePath
 else:
-    logData[u'dataFileName'] = stateInfo['filename']
+    logData[u'dataFileName'] = stateInfo.filename
 
 matSave('logs', 'KFLog', logData)

@@ -1,6 +1,3 @@
-import sys
-sys.path.append('..')
-
 import numpy as np
 import time
 import argparse
@@ -93,6 +90,10 @@ b_ls = np.matmul(z_psuedoInverse, x_pred)
 
 ##############################################################################################
 ################################ LEAST SQUARES TESTING SCRIPT ################################
+
+# Throw error if filepath could not be found
+if(not path.exists(args.filePathTest)):
+    raise Exception('file path: "{}" could not be found'.format(args.filePathTest))
 
 # Load relevant training data
 matData = hdf5s.loadmat(args.filePathTest)
