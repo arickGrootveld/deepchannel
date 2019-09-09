@@ -233,7 +233,7 @@ def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1))
         riccatiKalGain = np.matmul(np.matmul(riccatiPred, np.transpose(H)), np.linalg.inv(kRicConIntermediate))
 
         # Computing the Riccati Equation for the AR process Estimate
-        riccatiEst = riccatiPred - (np.matmul(np.matmul(riccatiKalGain, H), riccatiPred)).numpy()
+        riccatiEst = riccatiPred - (np.matmul(np.matmul(riccatiKalGain, H), riccatiPred))
 
         # Grabbing the Riccati solution to the prediction
         riccatiConvergences[0,i] = riccatiPred[0,0]
