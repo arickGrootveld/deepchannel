@@ -240,6 +240,7 @@ if not testSession:
     else:
         # Grab the data from the .mat file
         trainDataDict = hdf5s.loadmat(trainFile)
+        print('train data loaded from: {}'.format(trainFile))
         # Convert the loaded data into batches for the TCN to run with
         trueStateTRAIN, measuredStateTRAIN = convertToBatched(trainDataDict['finalStateValues'], trainDataDict['observedStates'],
                                                               batch_size)
@@ -270,6 +271,7 @@ if not testSession:
     else:
         # Grab the data from the .mat file
         evalDataDict = hdf5s.loadmat(evalFile)
+        print('eval data loaded from: {}'.format(evalFile))
         trueStateEVAL, measuredStateEVAL = convertToBatched(evalDataDict['finalStateValues'],
                                                             evalDataDict['observedStates'],
                                                             batch_size)
@@ -639,6 +641,10 @@ if not testSession:
         'optimizer_parameters': optimizerParameters,
         'LSCoefficients': {}
     }
+    # Training the Least Squares so we can evaluate its performance on the same dataset
+    LSCoefficients = LSTraining(LSTrainData)
+    # Saving the LS Coefficients so we do not need to train it again
+    modelContext['LSCoefficients'] = LSCoefficients
     # Letting the model know when the last epoch happens so we can record the MSEs of the individual samples
     for ep in range(1, epochs+1):
         train(ep)
@@ -651,6 +657,7 @@ if not testSession:
             modelContext['optimizer_state_dict'] = optimizer.state_dict()
             modelContext['epoch'] = ep
             torch.save(modelContext, modelPath)
+            print('model saved at {}'.format(modelPath))
         else:
             if(tloss <= bestloss):
                 bestloss = tloss
@@ -659,14 +666,12 @@ if not testSession:
                 modelContext['optimizer_state_dict'] = optimizer.state_dict()
                 modelContext['epoch'] = ep
                 torch.save(modelContext, modelPath)
+                print('model saved at {}'.format(modelPath))
                 print("better loss")
             else:
                 print("worse loss")
         print(tloss)
-    # Training the Least Squares so we can evaluate its performance on the same dataset
-    LSCoefficients = LSTraining(LSTrainData)
-    # Saving the LS Coefficients so we do not need to train it again
-    modelContext['LSCoefficients'] = LSCoefficients
+
     torch.save(modelContext, modelPath)
 else:
     # If we are just loading and testing a model, then we set the path properly to be saved
