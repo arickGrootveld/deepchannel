@@ -465,7 +465,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--transProbs', nargs='+', default=['0.001', '0.001'],
                         help='probabilities of transitioning from the good to bad and from bad to good '
-                             'states (respectfully) of the Markov Chain (default: [0.999, 0.999])')
+                             'states (respectfully) of the Markov Chain (default: [0.001, 0.001])')
 
     args = parser.parse_args()
 
