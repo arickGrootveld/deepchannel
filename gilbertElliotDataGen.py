@@ -63,7 +63,7 @@ def GilEllDataGen(params, seed=-1):
 
     # TODO Error checking: verify that p and q are between 1 and 0
     p,q = params[0]
-    transitionProbabiltyArray = ((p, 1-p), (q, 1-q))
+    transitionProbabiltyArray = ((1-p, p), (1-q, q))
     transitionStateArray = [['good', 'bad'], ['bad', 'good']]
 
     goodCoeffs = np.array(params[1][0])
@@ -264,93 +264,18 @@ def toeplitzData(sequenceData, numColumns):
     return((toeplitzAllTrueStates, toeplitzObservationStates, toeplitzFinalTrueStates))
 
 
-# GilEllTrainingDataGen: Function that generates training data with from the good and bad coefficients supplied to it.
-#                        It will generate 2 times as many sequences of data as the number of sequences specified,
-#                        because it will generate two sets of sequences, one from the good coefficients and one from
-#                        the bad coefficients, and then randomly shuffle the two sets of sequences together, creating a
-#                        training set that can be used to train the TCN and LS
-def GilEllTrainingDataGen(sequenceLength=10, numSequences=100, goodCoefficients=[0.2, 0.1],
-                          badCoefficients=[1.414, -0.99968], goodTransProb=0.999, badTransProb=0.999, QVar=0.1,
-                          RVar=0.1, randSeed=int(np.abs(np.floor(100*np.random.randn(1)))), **kwargs):
-    # TODO: Convert this from creating its own data format to the toeplitzified data
-    finalTrueStates = np.zeros((4, numSequences*2), dtype=float)
-    observationStates = np.zeros((2, sequenceLength, numSequences*2), dtype=float)
-    # All system states smashed into one vector
-    allTrueStates = np.zeros((2, sequenceLength + 1, numSequences*2), dtype=float)
 
-    for i in range(0, numSequences):
-        # Generate a set of data that is only using the good coefficients
-        sequenceData = GilEllDataGen([(1, 0), (goodCoefficients, badCoefficients),
-                                      sequenceLength, (QVar, RVar), 'good'], seed=randSeed+i)
-        # first half of observationsStates and finalTrueStates is from the good state data
-        observationStates[0,:,i] = np.real(sequenceData[1][0,0:sequenceLength])
-        observationStates[1,:,i] = np.imag(sequenceData[1][0,0:sequenceLength])
-
-        finalTrueStates[0:2, i] = np.real(sequenceData[0][0,sequenceLength-1:sequenceLength+1])
-        finalTrueStates[2:4, i] = np.imag(sequenceData[0][0,sequenceLength-1:sequenceLength+1])
-
-        allTrueStates[0,:,i] = np.real(sequenceData[0][0,0:sequenceLength+1])
-        allTrueStates[1,:,i] = np.imag(sequenceData[0][0,0:sequenceLength+1])
-
-
-        # Generate a set of data that is only using the bad coefficients
-        sequenceData = GilEllDataGen(((0,1), (goodCoefficients, badCoefficients),
-                                     sequenceLength, (QVar, RVar), 'bad'), seed=randSeed+i+numSequences)
-        # second half of observationsStates and finalTrueStates is from the bad state data
-        observationStates[0,:,i+numSequences-1] = np.real(sequenceData[1][0,0:sequenceLength])
-        observationStates[1,:,i+numSequences-1] = np.imag(sequenceData[1][0,0:sequenceLength])
-
-        finalTrueStates[0:2, i+numSequences-1] = np.real(sequenceData[0][0, sequenceLength - 1:sequenceLength + 1])
-        finalTrueStates[2:4, i+numSequences-1] = np.imag(sequenceData[0][0, sequenceLength - 1:sequenceLength + 1])
-
-        allTrueStates[0, :, i+numSequences-1] = np.real(sequenceData[0][0, 0:sequenceLength + 1])
-        allTrueStates[1, :, i+numSequences-1] = np.imag(sequenceData[0][0, 0:sequenceLength + 1])
-
-    # Creating a set of random indexes so that the data can be shuffled randomly, but we can still have the indexes of
-    # the observations line up with the indexes of the finalTrueStates
-    shuffleIndexes =  np.random.shuffle(np.arange(finalTrueStates.shape[1]))
-    # Shuffling data
-    finalTrueStates = np.squeeze(finalTrueStates[:,shuffleIndexes])
-    observationStates = np.squeeze(observationStates[:,:,shuffleIndexes])
-    allTrueStates = np.squeeze(allTrueStates[:,:,shuffleIndexes])
-
-    # Recovering the Riccati Convergences
-    riccatiConvergences = sequenceData[2]
-
-    ##### Storing the data #####
-    storageFilePath = './data'
-    dataFile = 'GEData'
-    logContent = {}
-    logContent[u'observedStates'] = observationStates
-    logContent[u'systemStates'] = allTrueStates
-    logContent[u'finalStateValues'] = finalTrueStates
-    logContent[u'seed'] = randSeed
-    logContent[u'riccatiConvergences'] = riccatiConvergences
-    logContent[u'parameters'] = {
-        "goodCoeffs": goodCoefficients,
-        "badCoeffs": badCoefficients,
-        "sequenceLength": sequenceLength,
-        "numSequences": numSequences,
-        "Rvar": RVar,
-        "QVar": QVar,
-        "goodTransProb": goodTransProb,
-        "badTransProb": badTransProb
-    }
-    filename = matSave(storageFilePath, dataFile, logContent)
-
-    data = (allTrueStates, observationStates, finalTrueStates)
-    info = {}
-    info[u'filename'] = filename
-    info[u'riccatiConvergences'] = riccatiConvergences
-    info[u'seed'] =  randSeed
-
-    return(data, info)
-
-def GilElTestDataGen(sequenceLength=10, numSequences=100, goodCoefficients=[0.2, 0.1], testSetLen=1,
-                          badCoefficients=[1.414, -0.99968], goodTransProb=0.999, badTransProb=0.999, QVar=0.1,
+# GilElTestDataGen: Function that uses the GilElDatagenWrapper to generate a set of data that has everything required
+#                   for a test data set that can be fed right into the TCN
+def GilElTestDataGen(sequenceLength=10, numSequences=100, goodCoefficients=[0.2, 0.1],
+                          badCoefficients=[1.414, -0.99968], goodTransProb=0.001, badTransProb=0.001, QVar=0.1,
                           RVar=0.1, randSeed=int(np.abs(np.floor(100*np.random.randn(1)))), batch_size=20, **kwargs):
     LSandKFTestData = []
     testDataInfo = []
+
+    # For right now we will be hard coding this to be 3, because we want to generate a good set of coefficients,
+    # a bad set, and a set that is generated from both sets
+    testSetLen = 3
 
     numBatchedSequences = int(numSequences/batch_size)
     # trueStateDataTEST Dimensionality: comprised of sets of data based on the number of AR
@@ -369,37 +294,100 @@ def GilElTestDataGen(sequenceLength=10, numSequences=100, goodCoefficients=[0.2,
     measuredStateTEST = np.empty((testSetLen, batch_size, 2, sequenceLength, numBatchedSequences), dtype=float)
 
     for k in range(0, testSetLen):
-        # Generating the data with no variance between sequences (which is what the False in the array is for)
-        # because we want to generate data with a single set of AR Coefficients
-        subsetTestStateData, subsetTestDataInfo = GilElDataGenWrapper(sequenceLength=sequenceLength, numSequences=numSequences,
-                                                                      badCoefficients=badCoefficients, goodCoefficients=goodCoefficients,
-                                                                      goodTransProb=goodTransProb, badTransProb=badTransProb,
-                                                                      RVar=RVar, QVar=QVar, randSeed=randSeed)
-        trueStateTEST[k, :, :, :], measuredStateTEST[k, :, :, :, :] = convertToBatched(subsetTestStateData[2],
-                                                                                       subsetTestStateData[1],
-                                                                                       batch_size)
-        # Storing the data that the Least Squares and Kalman Filter will be using
-        LSandKFTestData.append(subsetTestStateData)
+        # Generate data from both the good and bad coefficients
+        if(k==0):
 
-        subsetInfoHolder = {}
-        # Grabbing the first riccatiConvergence because they should all be the same for both the estimate and prediction
-        subsetInfoHolder[u'riccatiConvergencePredGoodState'] = subsetTestDataInfo['riccatiConvergences'][0, 0]
-        subsetInfoHolder[u'riccatiConvergenceEstGoodState'] = subsetTestDataInfo['riccatiConvergences'][0, 1]
-        subsetInfoHolder[u'riccatiConvergencePredBadState'] = subsetTestDataInfo['riccatiConvergences'][1,0]
-        subsetInfoHolder[u'riccatiConvergenceEstBadState'] = subsetTestDataInfo['riccatiConvergences'][1,1]
+            # Generating the data with no variance between sequences (which is what the False in the array is for)
+            # because we want to generate data with a single set of AR Coefficients
+            subsetTestStateData, subsetTestDataInfo = GilElDataGenWrapper(sequenceLength=sequenceLength, numSequences=numSequences,
+                                                                          badCoefficients=badCoefficients, goodCoefficients=goodCoefficients,
+                                                                          goodTransProb=goodTransProb, badTransProb=badTransProb,
+                                                                          RVar=RVar, QVar=QVar, randSeed=randSeed)
+            trueStateTEST[k, :, :, :], measuredStateTEST[k, :, :, :, :] = convertToBatched(subsetTestStateData[2],
+                                                                                           subsetTestStateData[1],
+                                                                                           batch_size)
+            # Storing the data that the Least Squares and Kalman Filter will be using
+            LSandKFTestData.append(subsetTestStateData)
 
-        # This is just for old formatting purposes
-        # TODO: Figure out a better way to do this, potentially showing both the good and bad state when the network
-        # TODO: loads data from a GE Data file
-        subsetInfoHolder[u'riccatiConvergencePred'] = subsetInfoHolder['riccatiConvergencePredGoodState']
-        subsetInfoHolder[u'riccatiConvergenceEst'] = subsetInfoHolder['riccatiConvergenceEstGoodState']
+            subsetInfoHolder = {}
 
-        # Grabbing the first set of AR Coefficients from the F matrix because they should all be the same
-        subsetInfoHolder[u'ARCoefficients'] = [goodCoefficients, badCoefficients]
-        # Grabbing the file path of the data file
-        subsetInfoHolder[u'dataFilePath'] = subsetTestDataInfo['filename']
-        subsetInfoHolder[u'seed'] = subsetTestDataInfo['seed']
-        testDataInfo.append(subsetInfoHolder)
+            # Displaying the average Riccati Convergence of the data
+            subsetInfoHolder[u'riccatiConvergencePred'] = (subsetTestDataInfo['riccatiConvergences'][1,0] +
+                                                          subsetTestDataInfo['riccatiConvergences'][0,0])/2
+            subsetInfoHolder[u'riccatiConvergenceEst'] = (subsetTestDataInfo['riccatiConvergences'][1,1] +
+                                                          subsetTestDataInfo['riccatiConvergences'][0,1])/2
+
+            # Grabbing the first set of AR Coefficients from the F matrix because they should all be the same
+            subsetInfoHolder[u'ARCoefficients'] = [goodCoefficients, badCoefficients]
+            subsetInfoHolder['transitionProbabilities'] = [goodTransProb, badTransProb]
+            # Grabbing the file path of the data file
+            subsetInfoHolder[u'dataFilePath'] = subsetTestDataInfo['filename']
+            subsetInfoHolder[u'seed'] = subsetTestDataInfo['seed']
+            testDataInfo.append(subsetInfoHolder)
+        # Generate data from the good coefficients only
+        elif(k==1):
+            # Generating the data with no variance between sequences (which is what the False in the array is for)
+            # because we want to generate data with a single set of AR Coefficients
+            subsetTestStateData, subsetTestDataInfo = GilElDataGenWrapper(sequenceLength=sequenceLength,
+                                                                          numSequences=numSequences,
+                                                                          badCoefficients=badCoefficients,
+                                                                          goodCoefficients=goodCoefficients,
+                                                                          goodTransProb=0,
+                                                                          badTransProb=1,
+                                                                          RVar=RVar, QVar=QVar,
+                                                                          randSeed=randSeed,
+                                                                          startingState='good')
+            trueStateTEST[k, :, :, :], measuredStateTEST[k, :, :, :, :] = convertToBatched(subsetTestStateData[2],
+                                                                                           subsetTestStateData[1],
+                                                                                           batch_size)
+            # Storing the data that the Least Squares and Kalman Filter will be using
+            LSandKFTestData.append(subsetTestStateData)
+
+            subsetInfoHolder = {}
+
+            # Displaying the Riccati Convergences of the good states
+            subsetInfoHolder[u'riccatiConvergencePred'] = subsetTestDataInfo['riccatiConvergences'][0,0]
+            subsetInfoHolder[u'riccatiConvergenceEst'] = subsetTestDataInfo['riccatiConvergences'][0,1]
+
+            # Grabbing the first set of AR Coefficients from the F matrix because they should all be the same
+            subsetInfoHolder[u'ARCoefficients'] = [goodCoefficients, badCoefficients]
+            subsetInfoHolder['transitionProbabilities'] = [0, 1]
+            # Grabbing the file path of the data file
+            subsetInfoHolder[u'dataFilePath'] = subsetTestDataInfo['filename']
+            subsetInfoHolder[u'seed'] = subsetTestDataInfo['seed']
+            testDataInfo.append(subsetInfoHolder)
+        # Generate data from the bad coefficients
+        elif(k == 2):
+            # Generating the data with no variance between sequences (which is what the False in the array is for)
+            # because we want to generate data with a single set of AR Coefficients
+            subsetTestStateData, subsetTestDataInfo = GilElDataGenWrapper(sequenceLength=sequenceLength,
+                                                                          numSequences=numSequences,
+                                                                          badCoefficients=badCoefficients,
+                                                                          goodCoefficients=goodCoefficients,
+                                                                          goodTransProb=1,
+                                                                          badTransProb=0,
+                                                                          RVar=RVar, QVar=QVar,
+                                                                          randSeed=randSeed,
+                                                                          startingState='bad')
+            trueStateTEST[k, :, :, :], measuredStateTEST[k, :, :, :, :] = convertToBatched(subsetTestStateData[2],
+                                                                                           subsetTestStateData[1],
+                                                                                           batch_size)
+            # Storing the data that the Least Squares and Kalman Filter will be using
+            LSandKFTestData.append(subsetTestStateData)
+
+            subsetInfoHolder = {}
+
+            # Displaying the Riccati Convergence of the bad state coefficients
+            subsetInfoHolder[u'riccatiConvergencePred'] = subsetTestDataInfo['riccatiConvergences'][1,0]
+            subsetInfoHolder[u'riccatiConvergenceEst'] = subsetTestDataInfo['riccatiConvergences'][1,1]
+
+            # Grabbing the first set of AR Coefficients from the F matrix because they should all be the same
+            subsetInfoHolder[u'ARCoefficients'] = [goodCoefficients, badCoefficients]
+            subsetInfoHolder['transitionProbabilities'] = [1, 0]
+            # Grabbing the file path of the data file
+            subsetInfoHolder[u'dataFilePath'] = subsetTestDataInfo['filename']
+            subsetInfoHolder[u'seed'] = subsetTestDataInfo['seed']
+            testDataInfo.append(subsetInfoHolder)
     # Saving relevant data so it can be recovered and reused
     testDataToBeSaved = {}
     testDataToBeSaved[u'trueStateTEST'] = trueStateTEST
@@ -411,8 +399,8 @@ def GilElTestDataGen(sequenceLength=10, numSequences=100, goodCoefficients=[0.2,
 
 
 def GilElDataGenWrapper(sequenceLength=10, numSequences=100, goodCoefficients=[0.2, 0.1],
-                          badCoefficients=[1.414, -0.99968], goodTransProb=0.999, badTransProb=0.999, QVar=0.1,
-                          RVar=0.1, randSeed=int(np.abs(np.floor(100*np.random.randn(1)))), **kwargs):
+                          badCoefficients=[1.414, -0.99968], goodTransProb=0.001, badTransProb=0.001, QVar=0.1,
+                          RVar=0.1, randSeed=int(np.abs(np.floor(100*np.random.randn(1)))),startingState='random', **kwargs):
     # Generating a much longer sequence that will have the exact length to cause the toeplitz matrix that it will become
     # to have the exact sequence length and number of sequences that we expect
     longSequenceLength = numSequences + sequenceLength - 1
@@ -420,7 +408,7 @@ def GilElDataGenWrapper(sequenceLength=10, numSequences=100, goodCoefficients=[0
     # Generating the long sequence of data using the passed params and the calculated length. Want it to start in
     # a random state because this is how we intend to test our system
     longSequence = GilEllDataGen(([goodTransProb, badTransProb], [goodCoefficients, badCoefficients],
-                                  longSequenceLength, [QVar, RVar], 'random'), randSeed)
+                                  longSequenceLength, [QVar, RVar], startingState), randSeed)
     data = toeplitzData(longSequence, sequenceLength)
 
     riccatiConvergences = longSequence[2]
@@ -475,7 +463,7 @@ if __name__ == "__main__":
     parser.add_argument('--testDataGen', action='store_true',
                         help='specifies whether it should generate a test data set or not (default: False)')
 
-    parser.add_argument('--transProbs', nargs='+', default=['0.999', '0.999'],
+    parser.add_argument('--transProbs', nargs='+', default=['0.001', '0.001'],
                         help='probabilities of transitioning from the good to bad and from bad to good '
                              'states (respectfully) of the Markov Chain (default: [0.999, 0.999])')
 

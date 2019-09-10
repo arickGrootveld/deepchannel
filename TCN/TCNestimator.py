@@ -594,7 +594,7 @@ def test():
         testDataInfo[r][u'LS_EstMSE'] = LS_MSEE
 
         # Computing Kalman performance
-        KF_MSEE, KF_MSEP = KFTesting(LSandKFTestData[r],[0.5,-0.4])
+        KF_MSEE, KF_MSEP = KFTesting(LSandKFTestData[r],[0.2,0.1])
 
         print('KF Performance')
         print("MSE of KF predictor for set number {}: ".format(r+1), KF_MSEP)
