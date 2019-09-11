@@ -132,6 +132,11 @@ parser.add_argument('--model_path', type=str, default='None',
 # If model is loaded from a path, will skip over the training and evaluation loops and go straight to testing. This will
 # ignore all data generation specified for train and eval, and will only generate/load data for the testing process.
 
+# Coefficients used by the Kalman filter for the F matrix it assumes the Gauss Markov Process uses
+parser.add_argument('--KFCoeffs', nargs='+', default=[0.5, -0.4],
+                    help='Coefficients Passed to the Kalman Filter, will depend on the scenario you are looking at'
+                         '(default: [0.5, 0.4]')
+
 # Parse out the input arguments
 args = parser.parse_args()
 
@@ -204,6 +209,10 @@ AR_var = args.AR_var
 trainFile = args.trainDataFile
 evalFile = args.evalDataFile
 testFile = args.testDataFile
+
+KFARCoeffs = []
+for KFCoeff in args.KFCoeffs:
+    KFARCoeffs.append(float(KFCoeff))
 
 # Calculating the number of batches that will need to be created given the simulation length and the batch size
 trainSeriesLength = int(trainDataLen / batch_size)
@@ -594,7 +603,7 @@ def test():
         testDataInfo[r][u'LS_EstMSE'] = LS_MSEE
 
         # Computing Kalman performance
-        KF_MSEE, KF_MSEP = KFTesting(LSandKFTestData[r],[0.2,0.1])
+        KF_MSEE, KF_MSEP = KFTesting(LSandKFTestData[r],KFARCoeffs)
 
         print('KF Performance')
         print("MSE of KF predictor for set number {}: ".format(r+1), KF_MSEP)
