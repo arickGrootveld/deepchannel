@@ -121,8 +121,8 @@ parser.add_argument('--testDataFile', type=str, default='None',
                     help='file path to load test data from, if None then it will generate its own data (default=\'None\')')
 
 # Variance of the random variables that compuse the AR Coefficients
-parser.add_argument('--AR_var', type=float, default=0.2,
-                    help='variance of the AR parameters in the data generation (default=0.1)')
+parser.add_argument('--AR_var', type=float, default=0,
+                    help='variance of the AR parameters in the data generation (default=0)')
 
 # Location to load the model from
 parser.add_argument('--model_path', type=str, default='None',
@@ -131,6 +131,11 @@ parser.add_argument('--model_path', type=str, default='None',
                          'and simply test the model loaded (default=\'None\')')
 # If model is loaded from a path, will skip over the training and evaluation loops and go straight to testing. This will
 # ignore all data generation specified for train and eval, and will only generate/load data for the testing process.
+
+# Coefficients used by the Kalman filter for the F matrix it assumes the Gauss Markov Process uses
+parser.add_argument('--KFCoeffs', nargs='+', default=[0.5, -0.4],
+                    help='Coefficients Passed to the Kalman Filter, will depend on the scenario you are looking at'
+                         '(default: [0.5, 0.4]')
 
 # Parse out the input arguments
 args = parser.parse_args()
@@ -183,7 +188,7 @@ if torch.cuda.is_available():
 
 # Real and Imaginary components (input and output)
 input_channels = 2
-n_classes = 4
+n_classes = 2
 
 batch_size = args.batch_size
 seq_length = args.seq_len
@@ -204,6 +209,8 @@ AR_var = args.AR_var
 trainFile = args.trainDataFile
 evalFile = args.evalDataFile
 testFile = args.testDataFile
+
+KFARCoeffs = args.KFCoeffs
 
 # Calculating the number of batches that will need to be created given the simulation length and the batch size
 trainSeriesLength = int(trainDataLen / batch_size)
@@ -420,6 +427,9 @@ else:
 # Initializing the optimizer
 optimizer = getattr(optim, optimMethod)(model.parameters(), lr=lr)
 
+
+# Defining index that will only grab the predicted values
+predInds = [1,3]
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~~~~~~~~~~~~~~~~~~~ TRAINING ~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 
@@ -436,7 +446,7 @@ def train(epoch):
 
         # Grab the current series
         x = measuredStateTRAIN[:, :, :, i]
-        y = trueStateTRAIN[:, :, i]
+        y = trueStateTRAIN[:, predInds, i]
 
         x = x.float()
         y = y.float()
@@ -462,10 +472,10 @@ def train(epoch):
 
             print('Train Epoch: {:2d} [{:6d}/{:6d} ({:.0f}%)]\tLearning rate: {:.4f}\tLoss: {:.6f}'.format(
                 epoch, processed, measuredStateTRAIN.size(3), 100. * processed / measuredStateTRAIN.size(3), lr, cur_loss))
-            PredMSE = torch.sum((output[:, 1] - y[:, 1]) ** 2 + (output[:, 3] - y[:, 3]) ** 2) / output.size(0)
-            TrueMSE = torch.sum((output[:, 0] - y[:, 0]) ** 2 + (output[:, 2] - y[:, 2]) ** 2) / output.size(0)
+            PredMSE = torch.sum((output[:, 0] - y[:, 0]) ** 2 + (output[:, 1] - y[:, 1]) ** 2) / output.size(0)
+            # TrueMSE = torch.sum((output[:, 0] - y[:, 0]) ** 2 + (output[:, 2] - y[:, 2]) ** 2) / output.size(0)
             print('PredMSE: ', PredMSE)
-            print('TrueMSE: ', TrueMSE)
+            # print('TrueMSE: ', TrueMSE)
             total_loss = 0
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
@@ -475,20 +485,20 @@ def evaluate():
 
     # MSE over the entire series of data
     TotalAvgPredMSE = 0
-    TotalAvgTrueMSE = 0
+    # TotalAvgTrueMSE = 0
     n = 0
     totalLoss=0
 
     # Pre-allocating space for the tensor that will contain the MSEs of each batch from our test set
     evalPredMSEs = torch.empty(measuredStateEVAL.size(3))
-    evalEstMSEs = torch.empty(measuredStateEVAL.size(3))
+    # evalEstMSEs = torch.empty(measuredStateEVAL.size(3))
 
     # Training loop - run until we only have one batch size of data left
     for i in range(0, (measuredStateEVAL.size(3))):
 
         # Grab the current series
         x_eval = measuredStateEVAL[:, :, :, i]
-        y_eval = trueStateEVAL[:, :, i]
+        y_eval = trueStateEVAL[:, predInds, i]
 
         x_eval = x_eval.float()
         y_eval = y_eval.float()
@@ -501,24 +511,24 @@ def evaluate():
             output = model(x_eval)
             eval_loss = F.mse_loss(output, y_eval, reduction="sum")
 
-            PredMSE = torch.sum((output[:, 1] - y_eval[:, 1]) ** 2 + (output[:, 3] - y_eval[:, 3]) ** 2) / output.size(0)
-            TrueMSE = torch.sum((output[:, 0] - y_eval[:, 0]) ** 2 + (output[:, 2] - y_eval[:, 2]) ** 2) / output.size(0)
-            evalEstMSEs[i] = TrueMSE
+            PredMSE = torch.sum((output[:, 0] - y_eval[:, 0]) ** 2 + (output[:, 1] - y_eval[:, 1]) ** 2) / output.size(0)
+            # TrueMSE = torch.sum((output[:, 0] - y_eval[:, 0]) ** 2 + (output[:, 2] - y_eval[:, 2]) ** 2) / output.size(0)
+            # evalEstMSEs[i] = TrueMSE
             evalPredMSEs[i] = PredMSE
             TotalAvgPredMSE+=PredMSE
-            TotalAvgTrueMSE+=TrueMSE
+            # TotalAvgTrueMSE+=TrueMSE
             totalLoss +=  eval_loss.item()
         n+=1
 
     totalLoss = totalLoss / (n * batch_size)
     TotalAvgPredMSE = TotalAvgPredMSE / n
-    TotalAvgTrueMSE = TotalAvgTrueMSE / n
+    # TotalAvgTrueMSE = TotalAvgTrueMSE / n
 
     predVariance = torch.sum((evalPredMSEs[:]-TotalAvgPredMSE)**2)/evalPredMSEs.size(0)
-    estVariance = torch.sum((evalEstMSEs[:]-TotalAvgTrueMSE)**2)/evalEstMSEs.size(0)
+    # estVariance = torch.sum((evalEstMSEs[:]-TotalAvgTrueMSE)**2)/evalEstMSEs.size(0)
 
     print('TotalAvgPredMSE: ', TotalAvgPredMSE.item())
-    print('TotalAvgTrueMSE: ', TotalAvgTrueMSE.item())
+    # print('TotalAvgTrueMSE: ', TotalAvgTrueMSE.item())
 
     return totalLoss
 
@@ -531,18 +541,18 @@ def test():
     for r in range(0, testSetLen):
         # Total MSE
         TotalAvgPredMSE = 0
-        TotalAvgTrueMSE = 0
+        # TotalAvgTrueMSE = 0
         n = 0
         # Pre-allocating space for the tensor that will contain the MSEs of
         # each batch from our training set
         testPredMSEs = torch.empty(testSeriesLength)
-        testEstMSEs = torch.empty(testSeriesLength)
+        # testEstMSEs = torch.empty(testSeriesLength)
         # Training loop - run until we only have one batch size of data left
         for i in range(0, testSeriesLength):
 
             # Grab the current series
             x_test = measuredStateTEST[r, :, :, :, i]
-            y_test = trueStateTEST[r, :, :, i]
+            y_test = trueStateTEST[r, :, predInds, i]
 
             x_test = x_test.float()
             y_test = y_test.float()
@@ -555,30 +565,30 @@ def test():
                 output = modelBEST(x_test)
                 test_loss = F.mse_loss(output, y_test, reduction="sum")
 
-                PredMSE = torch.sum((output[:, 1] - y_test[:, 1]) ** 2 + (output[:, 3] - y_test[:, 3]) ** 2) / output.size(0)
-                TrueMSE = torch.sum((output[:, 0] - y_test[:, 0]) ** 2 + (output[:, 2] - y_test[:, 2]) ** 2) / output.size(0)
+                PredMSE = torch.sum(((output[:, 0] - y_test[:, 0]) ** 2) + (output[:, 1] - y_test[:, 1]) ** 2) / output.size(0)
+                # TrueMSE = torch.sum((output[:, 0] - y_test[:, 0]) ** 2 + (output[:, 2] - y_test[:, 2]) ** 2) / output.size(0)
                 TotalAvgPredMSE+=PredMSE
-                TotalAvgTrueMSE+=TrueMSE
+                # TotalAvgTrueMSE+=TrueMSE
                 testPredMSEs[i] = PredMSE
-                testEstMSEs[i] = TrueMSE
+                # testEstMSEs[i] = TrueMSE
 
             n+=1
 
         TotalAvgPredMSE = TotalAvgPredMSE / n
-        TotalAvgTrueMSE = TotalAvgTrueMSE / n
+        # TotalAvgTrueMSE = TotalAvgTrueMSE / n
 
         predVariance = torch.sum((testPredMSEs[:]-TotalAvgPredMSE)**2)/testPredMSEs.size(0)
-        estVariance = torch.sum((testEstMSEs[:]-TotalAvgTrueMSE)**2)/testEstMSEs.size(0)
+        # estVariance = torch.sum((testEstMSEs[:]-TotalAvgTrueMSE)**2)/testEstMSEs.size(0)
 
         # Logging
         testDataInfo[r][u'predictionVariance'] = predVariance.item()
-        testDataInfo[r][u'estimationVariance'] = estVariance.item()
-        testDataInfo[r][u'estimationMSE'] = TotalAvgTrueMSE.item()
+        # testDataInfo[r][u'estimationVariance'] = estVariance.item()
+        # testDataInfo[r][u'estimationMSE'] = TotalAvgTrueMSE.item()
         testDataInfo[r][u'predictionMSE'] = TotalAvgPredMSE.item()
 
         print('TCN Performance:')
         print("TotalAvgPredMSE for test set number {}: ".format(r+1), TotalAvgPredMSE.item())
-        print("TotalAvgTrueMSEfor test set number {}: ".format(r+1), TotalAvgTrueMSE.item())
+        # print("TotalAvgTrueMSEfor test set number {}: ".format(r+1), TotalAvgTrueMSE.item())
         # Commenting out printing the variances, since they serve no purpose as of now
         # print("Variance of Prediction for test set number {}: ".format(r+1), predVariance.item())
         # print("Variance of Estimate for test set number {}: ".format(r+1), estVariance.item())
@@ -594,7 +604,7 @@ def test():
         testDataInfo[r][u'LS_EstMSE'] = LS_MSEE
 
         # Computing Kalman performance
-        KF_MSEE, KF_MSEP = KFTesting(LSandKFTestData[r],[0.2,0.1])
+        KF_MSEE, KF_MSEP = KFTesting(LSandKFTestData[r],KFARCoeffs)
 
         print('KF Performance')
         print("MSE of KF predictor for set number {}: ".format(r+1), KF_MSEP)
