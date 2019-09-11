@@ -167,9 +167,11 @@ def GilEllDataGen(params, seed=-1):
             # Transition Calculation from good state
             if(MarkovState == 'good'):
                 MarkovState = np.random.choice(transitionStateArray[0], replace=True, p=transitionProbabiltyArray[0])
+                print(MarkovState)
             # Transition Calculation from bad state
             elif(MarkovState == 'bad'):
                 MarkovState = np.random.choice(transitionStateArray[1], replace=True, p=transitionProbabiltyArray[1])
+                print(MarkovState)
             # Throw an error if you are ever not in the good or bad state
             else:
                 raise Exception('This shouldn\'t be able to happen, something has gone awry, and you are outside the'
@@ -463,9 +465,9 @@ if __name__ == "__main__":
     parser.add_argument('--testDataGen', action='store_true',
                         help='specifies whether it should generate a test data set or not (default: False)')
 
-    parser.add_argument('--transProbs', nargs='+', default=['0.001', '0.001'],
+    parser.add_argument('--transProbs', nargs='+', default=['0.0005', '0.0005'],
                         help='probabilities of transitioning from the good to bad and from bad to good '
-                             'states (respectfully) of the Markov Chain (default: [0.001, 0.001])')
+                             'states (respectfully) of the Markov Chain (default: [0.0005, 0.0005])')
 
     args = parser.parse_args()
 
@@ -476,19 +478,7 @@ if __name__ == "__main__":
     testGeneration = args.testDataGen
     goodTransProb = float(args.transProbs[0])
     badTransProb = float(args.transProbs[1])
-
-    # default_q = 0.999
-    # default_p = 0.999
-    # default_F_p = (0.5, -0.4)
-    # default_F_q = (1.414, -0.999698)
-    # default_sequence_length = 100
-    # default_Covariances = (0.1, 0.1)
-    # defaultParams = [(default_p, default_q), (default_F_p, default_F_q), default_sequence_length,
-    #                  default_Covariances]
-    # test = GilEllDataGen(defaultParams)
-    # toepObs, toepTrue = toeplitzData(test, 3)
-    #
-    # test2 = GilEllTrainingDataGen(sequenceLength=10, numSequences=10)
+    print(args)
 
     start = time.time()
     if not testGeneration:
