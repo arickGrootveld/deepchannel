@@ -210,7 +210,9 @@ trainFile = args.trainDataFile
 evalFile = args.evalDataFile
 testFile = args.testDataFile
 
-KFARCoeffs = args.KFCoeffs
+KFARCoeffs = []
+for KFCoeff in args.KFCoeffs:
+    KFARCoeffs.append(float(KFCoeff))
 
 # Calculating the number of batches that will need to be created given the simulation length and the batch size
 trainSeriesLength = int(trainDataLen / batch_size)
