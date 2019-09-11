@@ -167,11 +167,9 @@ def GilEllDataGen(params, seed=-1):
             # Transition Calculation from good state
             if(MarkovState == 'good'):
                 MarkovState = np.random.choice(transitionStateArray[0], replace=True, p=transitionProbabiltyArray[0])
-                print(MarkovState)
             # Transition Calculation from bad state
             elif(MarkovState == 'bad'):
                 MarkovState = np.random.choice(transitionStateArray[1], replace=True, p=transitionProbabiltyArray[1])
-                print(MarkovState)
             # Throw an error if you are ever not in the good or bad state
             else:
                 raise Exception('This shouldn\'t be able to happen, something has gone awry, and you are outside the'
