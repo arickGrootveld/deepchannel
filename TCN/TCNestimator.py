@@ -440,6 +440,7 @@ def train(epoch):
     # Initialize training model and parameters
     model.train()
     total_loss = 0
+    trainLoss = 0
 
  ################################
 
@@ -465,6 +466,7 @@ def train(epoch):
 
         optimizer.step()
         total_loss += loss.item()
+        trainLoss +=loss.item()
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Display training results
@@ -479,6 +481,7 @@ def train(epoch):
             print('PredMSE: ', PredMSE)
             # print('TrueMSE: ', TrueMSE)
             total_loss = 0
+    print('total loss over the whole training set was {}'.format(trainLoss))
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~~~~~~~~~~~~~~~~~~ EVALUATION ~~~~~~~~~~~~~~~~~~~~~~~~ ###
