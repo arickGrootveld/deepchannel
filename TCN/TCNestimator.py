@@ -71,8 +71,8 @@ parser.add_argument('--seq_len', type=int, default=20,
                     help='sequence length (default: 20)')
 
 # Reporting interval
-parser.add_argument('--log-interval', type=int, default=200, metavar='N',
-                    help='report interval (default: 200')
+parser.add_argument('--log-interval', type=int, default=2000, metavar='N',
+                    help='report interval (default: 2000')
 
 # Learning rate
 parser.add_argument('--lr', type=float, default=2e-4,
