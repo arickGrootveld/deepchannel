@@ -253,6 +253,7 @@ if not testSession:
         # Convert the loaded data into batches for the TCN to run with
         trueStateTRAIN, measuredStateTRAIN = convertToBatched(trainDataDict['finalStateValues'], trainDataDict['observedStates'],
                                                               batch_size)
+
         fileContent[u'trainDataFile'] = trainFile
         fileContent[u'trainDataSize'] = trueStateTRAIN.shape
 
@@ -262,7 +263,7 @@ if not testSession:
 
         # Setting the number of batches of train data to be what is supplied in the file
         trainSeriesLength = trueStateTRAIN.shape[2]
-        trainDataLen = trainSeriesLength * trueStateTRAIN.shape[0]
+        trainDataLen = trainDataDict['finalStateValues'].shape[1]
 
     # Convert numpy arrays to tensors
     trueStateTRAIN = torch.from_numpy(trueStateTRAIN)
@@ -466,7 +467,7 @@ def train(epoch):
 
         optimizer.step()
         total_loss += loss.item()
-        trainLoss +=loss.item()
+        trainLoss += loss.item()
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Display training results
@@ -481,7 +482,7 @@ def train(epoch):
             print('PredMSE: ', PredMSE)
             # print('TrueMSE: ', TrueMSE)
             total_loss = 0
-    print('total loss over the whole training set was {}'.format(trainLoss))
+    print('total loss over the whole training set was {}'.format(trainLoss/trainDataLen))
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~~~~~~~~~~~~~~~~~~ EVALUATION ~~~~~~~~~~~~~~~~~~~~~~~~ ###
