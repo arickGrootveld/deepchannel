@@ -661,6 +661,10 @@ if not testSession:
     LSCoefficients = LSTraining(LSTrainData)
     # Saving the LS Coefficients so we do not need to train it again
     modelContext['LSCoefficients'] = LSCoefficients
+
+    # How many times in a row we have had a worse loss than our best case loss scenario
+    numEpochsSinceBest = 0
+
     # Letting the model know when the last epoch happens so we can record the MSEs of the individual samples
     for ep in range(1, epochs+1):
         train(ep)
@@ -676,6 +680,7 @@ if not testSession:
             print('model saved at {}'.format(modelPath))
         else:
             if(tloss <= bestloss):
+                numEpochsSinceBest = 0
                 bestloss = tloss
                 modelBEST = model
                 modelContext['model_state_dict'] = model.state_dict()
@@ -685,7 +690,10 @@ if not testSession:
                 print('model saved at {}'.format(modelPath))
                 print("better loss")
             else:
+                numEpochsSinceBest += 1
                 print("worse loss")
+                if(numEpochsSinceBest >= 10):
+                    break
         print(tloss)
 
     torch.save(modelContext, modelPath)
