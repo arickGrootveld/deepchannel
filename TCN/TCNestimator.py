@@ -668,17 +668,18 @@ if not testSession:
     # How many times in a row we have had a worse loss than our best case loss scenario
     numEpochsSinceBest = 0
 
+    mn = 0.5
     # Letting the model know when the last epoch happens so we can record the MSEs of the individual samples
-    for ep in range(1, epochs+1):
+    for ep in range(0, epochs):
         train(ep)
         tloss = evaluate()
-        scheduler.step(tloss)
 
+        scheduler.step(tloss)
         # Updating the learning rate that will be displayed for each epoch
-        lr = scheduler.get_lr()
+        lr = optimizer.param_groups[0]['lr']
 
         # Run through all epochs, find the best model and save it for testing
-        if(ep == 1):
+        if(ep == 0):
             bestloss = tloss
             modelContext['model_state_dict'] = model.state_dict()
             modelContext['optimizer_state_dict'] = optimizer.state_dict()
