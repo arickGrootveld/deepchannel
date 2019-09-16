@@ -695,8 +695,6 @@ if not testSession:
             else:
                 numEpochsSinceBest += 1
                 print("worse loss: {} epochs since best loss".format(numEpochsSinceBest))
-                if(numEpochsSinceBest >= 15):
-                    lr =
                 if(numEpochsSinceBest >= 30):
                     print('No progress made in 30 epochs, model is over fitting')
                     break
