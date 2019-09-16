@@ -137,7 +137,7 @@ The AR process states are complex numbers which contain information about the ph
 % ======================================
 \label{sec:dgen}
 
-Using Python computational packages, we designed a data generation script which will output a variable number of AR-n process sequences of a defined length. This data is used for training and testing the least squares (LS), Kalman filter (KF) and TCN state prediction and estimation systems. Separate training and testing subsets of data are created to ensure validity in the numerical results for both the mismatched and non-mismatched AR parameter cases.
+We designed a data generation script which will output $m$ AR process sequences of length $n$. This data is used for training and testing the least squares (LS), Kalman filter (KF) and TCN state prediction and estimation systems. Separate training and testing subsets of data are created to ensure validity in the numerical results for the non-mismatched and mismatched AR parameter cases as well as the Gilbert-Elliott case.
 
 The format of the data that is generated is as follows: 
 \begin{eqnarray*}
@@ -169,7 +169,7 @@ For the mismatched data generation case where each row of the AR process matrix 
 
 \newpage
 
-To construct the data for the Gilbert-Elliott channel of the form shown in Figure \ref{gbe}, we designed a probability based state machine for AR sequence generation. For every new sample generated, the state machine has a probability of transitioning from state to state $(P_{BG}, P_{GB})$ or staying where it is currently $(P_{BB}, P_{GG})$. The "bad" state here corresponds to a process generation scheme where the AR coefficients produce eigenvalues that are close to one, edging on the border between stability and instability. The complete AR sequence will have both transition regions with good and bad coefficients as well as consistent segments. The idea here is to challenge the linear estimators and neural network to recognize when the changes occur, as the optimum solution to this type of channel model would be two Kalman filters that can be switched between, depending on the current state. 
+To construct the data for the Gilbert-Elliott channel of the form shown in Figure \ref{gbe}, we designed a probability based state machine for AR sequence generation. For every new sample generated, the state machine has a probability of transitioning from state to state $(P_{BG}, P_{GB})$ or staying where it is currently $(P_{BB}, P_{GG})$. The "bad" state here corresponds to a process generation scheme where the AR coefficients produce eigenvalues that are close to one, edging on the border between stability and instability. The complete AR sequence will have both transition regions with good and bad coefficients as well as consistent segments. We wish to challenge the linear estimators and neural network to recognize when the changes occur, as the optimum solution to this type of channel model would be two Kalman filters that can be switched between, depending on the current state. 
 
 \begin{figure}[!h]
 \centering\includegraphics[width=0.45\textwidth]{figs/GBmodel.PNG}\\
