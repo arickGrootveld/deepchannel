@@ -693,6 +693,7 @@ if not testSession:
                 numEpochsSinceBest += 1
                 print("worse loss")
                 if(numEpochsSinceBest >= 10):
+                    print('No progress made in 10 epochs, model is over fitting')
                     break
         print(tloss)
 
