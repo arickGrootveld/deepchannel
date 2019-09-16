@@ -674,6 +674,9 @@ if not testSession:
         tloss = evaluate()
         scheduler.step(tloss)
 
+        # Updating the learning rate that will be displayed for each epoch
+        lr = scheduler.get_lr()
+
         # Run through all epochs, find the best model and save it for testing
         if(ep == 1):
             bestloss = tloss
