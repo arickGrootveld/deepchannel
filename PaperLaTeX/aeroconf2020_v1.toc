@@ -6,7 +6,7 @@
 \contentsline {subsection}{Riccati Equation}{3}{section*.3}% 
 \contentsline {subsection}{Least Squares}{3}{section*.4}% 
 \contentsline {subsection}{Kalman Filter}{3}{section*.5}% 
-\contentsline {section}{\numberline {5.}Temporal Convolutional Network}{4}{section.5}% 
+\contentsline {section}{\numberline {5.}Temporal Convolutional Network}{3}{section.5}% 
 \contentsline {section}{\numberline {6.}Results}{4}{section.6}% 
 \contentsline {subsection}{Static AR Processes}{4}{section*.6}% 
 \contentsline {subsection}{Varied AR Processes}{5}{section*.7}% 

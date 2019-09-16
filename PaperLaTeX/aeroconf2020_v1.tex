@@ -199,41 +199,15 @@ The least squares solution is perhaps the simplest and most straight-forward app
 a_{ls}&=&(Z^{\rm T}Z)^{-1}Z^{\rm T}x_{est} \\
 b_{ls}&=&(Z^{\rm T}Z)^{-1}Z^{\rm T}x_{pred}
 \end{eqnarray*}
-
-\begin{eqnarray*}
-x&=&\begin{bmatrix}
-   x[k]   \\
-   x[k-1] \\
-   \vdots \\
-   x[k-M]
-\end{bmatrix}\\
-\hat{x_{pred}}&=&\begin{bmatrix}
-   \hat{x}[k-1]   \\
-   \hat{x}[k-2] \\
-   \vdots \\
-   \hat{x}[k-M-1]
-\end{bmatrix}\\
-\hat{x_{est}}&=&\begin{bmatrix}
-   \hat{x}[k]   \\
-   \hat{x}[k-1] \\
-   \vdots \\
-   \hat{x}[k-M]
-\end{bmatrix}\\
-\end{eqnarray*}
-\begin{eqnarray*}
-a_{ls}&=&\begin{bmatrix}
-   a_{0}   \\
-   a_{1}   \\
-   \vdots  \\
-   a_{N}
-\end{bmatrix} \\
-b_{ls}&=&\begin{bmatrix}
-   b_{0}   \\
-   b_{1}   \\
-   \vdots  \\
-   b_{N}
-\end{bmatrix}
-\end{eqnarray*}
+\begin{align}
+\begin{aligned}
+x&= \left[ \begin{matrix}  x[k]   \dots    x[k-M] \end{matrix} \right]^\top\\
+\hat{x_{pred}} &= \left[ \begin{matrix} \hat{x}[k-1]  \dots \hat{x}[k-M-1]\end{matrix} \right]^\top\\
+\hat{x_{est}}&= \left[ \begin{matrix}   \hat{x}[k]  & \hat{x}[k-1]  &  \dots & \hat{x}[k-M] \end{matrix}\right]^\top\\
+a_{ls}&=  \left[ \begin{matrix}    a_{0} &  a_{1} &  \dots  & a_{N} \end{matrix} \right]^\top\\
+b_{ls}&= \left[ \begin{matrix}   b_{0}   & b_{1}  & \dots &  b_{N}\end{matrix}\right]^\top
+\end{aligned}
+\end{align}
 
 $\vec{Z} = \begin{bmatrix}
    z[k-1]   & ...       & z[k-N-1]     & \\
