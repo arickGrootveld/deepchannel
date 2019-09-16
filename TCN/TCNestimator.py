@@ -431,7 +431,7 @@ else:
 optimizer = getattr(optim, optimMethod)(model.parameters(), lr=lr)
 
 # Creating a learning rate scheduler that updates the learning rate when the model plateaus
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, verbose=True)
 
 # Defining index that will only grab the predicted values
 predInds = [1,3]
