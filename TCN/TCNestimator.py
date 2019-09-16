@@ -430,6 +430,8 @@ else:
 # Initializing the optimizer
 optimizer = getattr(optim, optimMethod)(model.parameters(), lr=lr)
 
+# Creating a learning rate scheduler that updates the learning rate when the model plateaus
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5)
 
 # Defining index that will only grab the predicted values
 predInds = [1,3]
@@ -669,6 +671,7 @@ if not testSession:
     for ep in range(1, epochs+1):
         train(ep)
         tloss = evaluate()
+        scheduler.step(tloss)
 
         # Run through all epochs, find the best model and save it for testing
         if(ep == 1):
@@ -692,6 +695,8 @@ if not testSession:
             else:
                 numEpochsSinceBest += 1
                 print("worse loss: {} epochs since best loss".format(numEpochsSinceBest))
+                if(numEpochsSinceBest >= 15):
+                    lr =
                 if(numEpochsSinceBest >= 30):
                     print('No progress made in 30 epochs, model is over fitting')
                     break
