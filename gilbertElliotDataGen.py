@@ -200,6 +200,8 @@ def GilEllDataGen(params, seed=-1):
             # Going through the steps of an AR Process
             x_current = np.matmul(F, x_current) + v
             z_current = np.matmul(H,x_current) + w
+        else:
+            x_current = np.random.randn()
 
         z[:,i] = z_current
         x[:,i] = x_current[0]

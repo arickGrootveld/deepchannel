@@ -339,7 +339,7 @@ if(testFile == 'None'):
         subsetInfoHolder[u'riccatiConvergencePred'] = subsetTestDataInfo['riccatiConvergences'][0,0]
         subsetInfoHolder[u'riccatiConvergenceEst'] = subsetTestDataInfo['riccatiConvergences'][1,0]
         # Grabbing the first set of AR Coefficients from the F matrix because they should all be the same
-        subsetInfoHolder[u'ARCoefficients'] = subsetTestDataInfo['allF'][0,:,0]
+        subsetInfoHolder[u'ARCoefficients'] = subsetTestDataInfo['trueFs'][0,:,0]
         # Grabbing the file path of the data file
         subsetInfoHolder[u'dataFilePath'] = subsetTestDataInfo['filename']
         subsetInfoHolder[u'seed'] = subsetTestDataInfo['seed']
