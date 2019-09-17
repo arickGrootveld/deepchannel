@@ -36,7 +36,7 @@ def KFTesting(testData, ARCoeffs):
     # Initializing the correction value to be the expected value of the starting state
     x_correction[:, 0, 0] = np.array([0, 0])
     # Initializing the MSE to be the variance in the starting value of the sequence
-    minMSE[:, :, 0, 0] = np.array([[0, 0], [0, 0]])
+    minMSE[:, :, 0, 0] = np.array([[1, 0], [0, 1]])
 
     ## Kalman Filter parameters to be used
 
@@ -54,9 +54,7 @@ def KFTesting(testData, ARCoeffs):
 
     # Initializing the total MSE that we will use to follow the MSE through each iteration
     totalTruePredMSE = 0
-    finalTruePredMSE = 0
     totalTrueEstimateMSE = 0
-    finalTrueEstimateMSE = 0
 
     for i in range(0, seriesLength):
         # Loop through a sequence of data

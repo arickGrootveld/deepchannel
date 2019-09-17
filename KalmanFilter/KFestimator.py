@@ -61,7 +61,7 @@ if args.filePath == 'None':
     stateData, stateInfo = ARDatagenMismatch(dataGenParameters, defaultDataGenValues['seed'], cuda=defaultDataGenValues['cuda'])
     trueStateData = stateData[2]
     measuredStateData = stateData[1]
-    all_F = stateInfo['allF']
+    all_F = stateInfo['trueFs']
 
 # If a file path was passed to it, load the data from the file. Expects it to be formatted how
 # ARDatagenMismatch formats it - also loads all F matrices for best possible MSE value computation
@@ -73,7 +73,7 @@ else:
     matData = hdf5s.loadmat(args.filePath)
     measuredStateData = matData['observedStates']
     trueStateData = matData['finalStateValues']
-    all_F = matData['allF']
+    all_F = matData['trueFs']
     print('loaded from file: ', args.filePath)
 
 # Variables for deciding length of variables
@@ -106,7 +106,7 @@ minMSE = np.zeros((AR_n, AR_n, sequenceLength,
 # Initializing the correction value to be the expected value of the starting state
 x_correction[:,0,0] = np.array([0,0])
 # Initializing the MSE to be the variance in the starting value of the sequence
-minMSE[:,:,0,0] = np.array([[0,0], [0,0]])
+minMSE[:,:,0,0] = np.array([[1,0], [0,1]])
 
 
 ## Kalman Filter parameters to be used
@@ -150,7 +150,7 @@ minMSE_parallel = np.zeros((AR_n, AR_n, sequenceLength,
 # Initializing the correction value to be the expected value of the starting state
 x_correction_parallel[:,0,0] = np.array([0,0])
 # Initializing the MSE to be the variance in the starting value of the sequence
-minMSE_parallel[:,:,0,0] = np.array([[0,0], [0,0]])
+minMSE_parallel[:,:,0,0] = np.array([[1,0], [0,1]])
 
 # F matrix is made up of AR process mean values
 F_parallel = np.array([ARCoeffs,[1,0]])
@@ -317,6 +317,6 @@ logData[u'runType'] = 'KF'
 if not args.filePath == 'None':
     logData[u'dataFileName'] = args.filePath
 else:
-    logData[u'dataFileName'] = stateInfo.filename
+    logData[u'dataFileName'] = stateInfo['filename']
 
 matSave('logs', 'KFLog', logData)
