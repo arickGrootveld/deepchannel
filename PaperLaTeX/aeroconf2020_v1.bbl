@@ -26,6 +26,10 @@ J.~Kang, C.~Chun, I.~Kim, and D.~I. Kim, ``Channel tracking for wireless energy
   transfer: {A} deep recurrent neural network approach,''
   \emph{arXiv:1812.02986}, 2018.
 
+\bibitem{kay1993fundamentals}
+S.~M. Kay, \emph{Fundamentals of statistical signal processing}.\hskip 1em plus
+  0.5em minus 0.4em\relax Prentice Hall PTR, 1993.
+
 \bibitem{7508408}
 K.~{Greff}, R.~K. {Srivastava}, J.~{Koutník}, B.~R. {Steunebrink}, and
   J.~{Schmidhuber}, ``{LSTM}: A search space odyssey,'' \emph{{IEEE} Trans.

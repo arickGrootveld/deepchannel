@@ -8,7 +8,7 @@
 \contentsline {section}{\numberline {4.}Linear Estimators}{3}{section.4}% 
 \contentsline {subsection}{Riccati Equation}{3}{section*.6}% 
 \contentsline {subsection}{Least Squares}{3}{section*.7}% 
-\contentsline {subsection}{Kalman Filter}{3}{section*.8}% 
+\contentsline {subsection}{Kalman Filter}{4}{section*.8}% 
 \contentsline {section}{\numberline {5.}Temporal Convolutional Network}{4}{section.5}% 
 \contentsline {section}{\numberline {6.}Results}{4}{section.6}% 
 \contentsline {subsection}{Case 1: Static AR Processes}{4}{section*.9}% 
