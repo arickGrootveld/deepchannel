@@ -127,8 +127,4 @@ testDataToBeSaved[u'trueStateTEST'] = trueStateTEST
 testDataToBeSaved[u'measuredStateTEST'] = measuredStateTEST
 testDataToBeSaved[u'testDataInfo'] = testDataInfo
 testDataToBeSaved[u'LSandKFTestData'] = LSandKFTestData
-testFile = matSave('data', 'testData', testDataToBeSaved)
-
-
-
-print(test)
+testFile = matSave('data', 'linearTestData', testDataToBeSaved)
