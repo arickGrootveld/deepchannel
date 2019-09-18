@@ -54,9 +54,11 @@ This paper proposes a temporal convolutional network (TCN)-based neural structur
 
 Channel tracking and prediction are critical tasks in communication systems with mobility. The ability to accurately track and predict channels is necessary to enable many aspects of modern communication systems including coherent demodulation, rate and power control, and beamforming \cite{181202986}.
 
-Under an ideal AR channel model with linear dynamics, Gaussian noise and known noise covariance matrices, the classical Kalman filter (KF) is the optimal estimator and predictor \cite{kay1993fundamentals}.  In  non-ideal  situations,  like  for  example,  when  the underlying dynamical model does not match the dynamics of the actual channel, the KF is no longer optimal.
+Under an ideal AR channel model with linear dynamics, Gaussian noise and known noise covariance matrices, the classical Kalman filter (KF) is the optimal estimator and predictor \cite{kay1993fundamentals}.  In  non-ideal  situations,  like  for  example,  when  the underlying dynamical model does not match the dynamics of the actual channel, the KF is no longer optimal. 
 
-We propose a better solution using  advances in deep  learning, specifically using sequence prediction algorithms in the task of  channel  tracking  and  prediction. While recurrent neural networks (RNNs) and long short-term memory (LSTM) have historically been the most popular choice for sequence prediction -- and, indeed, prior work has demonstrated promising results for their use in channel tracking \cite{7508408} \cite{hochreiter1997long} -- recent results in machine learning have shown that a new architecture called temporal convolution networks (TCNs) can often outperform LSTM-based RNNs in sequence prediction problems \cite{BaiTCN2018}.  In addition to their performance advantage in a wide range of sequence prediction problems, TCNs have a number of implementation advantages over RNNs in that they admit a more parallelizable implementation and have reduced memory requirement for training. TCNs also have several structural advantages including an adjustable receptive field size and avoidance of the problem of exploding/vanishing gradients known to plague RNNs.
+We propose a better solution using recent advances in deep  learning, specifically using sequence prediction algorithms in the task of  channel  tracking  and  prediction. While recurrent neural networks (RNNs) and long short-term memory (LSTM) have historically been the most popular choice for sequence prediction -- and, indeed, prior work has demonstrated promising results for their use in channel tracking \cite{7508408} \cite{hochreiter1997long} -- recent results in machine learning have shown that a new architecture called temporal convolution networks (TCNs) can often outperform LSTM-based RNNs in sequence prediction problems \cite{BaiTCN2018}.  In addition to their performance advantage in a wide range of sequence prediction problems, TCNs have a number of implementation advantages over RNNs in that they admit a more parallelizable implementation and have reduced memory requirement for training. TCNs also have several structural advantages including an adjustable receptive field size and avoidance of the problem of exploding/vanishing gradients known to plague RNNs.
+
+To show statistical significance in support of our results, we designed three separate test cases for the TCN: one case where the real channel model matches the assumed, another case where the real model deviates from the assumed channel model and a final case in which the real channel oscillates between good and bad states. 
 
 
 % ======================================
@@ -283,12 +285,18 @@ The temporal convolutional network (TCN) is the neural network architecture we c
 The TCN structure is essentially a one dimensional, fully connected network with causal convolutions. The main differences between a traditional convolutional neural network and the TCN are the diluted causal convolutions between network layers and the ability to specify a desired output sequence length. To accomplish this, the network contains hidden layers which are all of the same length and uses zero padding to keep the dilutions feasible and maintain the output size specification. Diluted convolutions increase the receptive field of each convolutional layer, providing the network the ability to account for sequence elements that are further back in the input history. 
 
 \begin{figure}[!h]
-\centering\includegraphics[width=0.5\textwidth]{figs/TCN.png}\\
-\caption{Temporal Convolutional Network Architecture}
-\label{TCNstruct}
+	\centering\includegraphics[width=0.3\textwidth]{figs/dilutedconv.png}\\
+	\caption{Diluted Convolution Example}
+	\label{dilutedconv}
 \end{figure}
 
 The TCN consists of multiple "residual blocks" which act as fundamental construction elements in this architecture. One instance of this network may consist of many residual blocks, all daisy-chaining in one long sequence. These residual blocks consist of two layers of diluted, causal convolutions and a non-linearity (ReLU) on the output of each layer. The residual blocks contain an identity mapping which aids in training for slight variations around the input sequence by explicitly weighting the output with a scaled version of the input before any convolutions took place. 
+
+\begin{figure}[!h]
+	\centering\includegraphics[width=0.5\textwidth]{figs/TCN.png}\\
+	\caption{Temporal Convolutional Network Architecture}
+	\label{TCNstruct}
+\end{figure}
 
 Due to the complex nature of the channel values, the imaginary and real components had to be split into separate numbers in order to effectively train the network. This splitting into real and imaginary components has already been done previously with favorable results \cite{tacspinar2010back}.  The loss function for this network is the mean-squared error (MSE), and for complex values this is calculated in the following way:
 \begin{eqnarray*}
