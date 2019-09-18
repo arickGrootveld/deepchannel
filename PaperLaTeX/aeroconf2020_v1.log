@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.20 (TeX Live 2019/W32TeX) (preloaded format=pdflatex 2019.9.13)  17 SEP 2019 18:19
+This is pdfTeX, Version 3.14159265-2.6-1.40.20 (TeX Live 2019/W32TeX) (preloaded format=pdflatex 2019.9.13)  18 SEP 2019 14:49
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -706,7 +706,12 @@ LaTeX Font Info:    Font shape `OT1/ptm/bx/sc' in size <10> not available
 \openout6 = `aeroconf2020_v1.toc'.
 
 
-Underfull \vbox (badness 10000) has occurred while \output is active []
+Underfull \hbox (badness 1960) in paragraph at lines 69--70
+[]\OT1/ptm/m/n/10 We as-sume a Gauss-Markov chan-nel model, oth-er-wise
+ []
+
+
+Underfull \vbox (badness 4242) has occurred while \output is active []
 
  [1
 Non-PDF special ignored!
@@ -719,43 +724,46 @@ LaTeX Font Info:    Font shape `U/lasy/b/n' in size <7> not available
 (Font)              Font shape `U/lasy/m/n' tried instead on input line 86.
 LaTeX Font Info:    Font shape `U/lasy/b/n' in size <5> not available
 (Font)              Font shape `U/lasy/m/n' tried instead on input line 86.
-<figs/stability.PNG, id=84, 345.6915pt x 305.943pt>
+<figs/stability.PNG, id=87, 345.6915pt x 305.943pt>
 File: figs/stability.PNG Graphic file (type png)
 <use figs/stability.PNG>
 Package pdftex.def Info: figs/stability.PNG  used on input line 158.
 (pdftex.def)             Requested size: 202.3529pt x 179.08562pt.
  [2 <./figs/stability.png>]
-<figs/heatmap.PNG, id=100, 395.076pt x 299.31825pt>
+<figs/heatmap.PNG, id=101, 395.076pt x 299.31825pt>
 File: figs/heatmap.PNG Graphic file (type png)
 <use figs/heatmap.PNG>
 Package pdftex.def Info: figs/heatmap.PNG  used on input line 174.
 (pdftex.def)             Requested size: 151.76854pt x 114.98439pt.
-<figs/GBmodel.PNG, id=104, 358.941pt x 142.131pt>
+<figs/GBmodel.PNG, id=105, 358.941pt x 142.131pt>
 File: figs/GBmodel.PNG Graphic file (type png)
 <use figs/GBmodel.PNG>
-Package pdftex.def Info: figs/GBmodel.PNG  used on input line 195.
+Package pdftex.def Info: figs/GBmodel.PNG  used on input line 198.
 (pdftex.def)             Requested size: 227.64894pt x 90.14156pt.
 
 
 LaTeX Warning: `!h' float specifier changed to `!ht'.
 
-[3 <./figs/heatmap.PNG> <./figs/GBmodel.PNG>]
-Underfull \hbox (badness 10000) in paragraph at lines 245--246
+
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [3 <./figs/heatmap.PNG> <./figs/GBmodel.PNG>]
+Underfull \hbox (badness 10000) in paragraph at lines 247--248
 
  []
 
-<figs/dilutedconv.png, id=120, 252.945pt x 322.806pt>
+<figs/dilutedconv.png, id=122, 252.945pt x 322.806pt>
 File: figs/dilutedconv.png Graphic file (type png)
 <use figs/dilutedconv.png>
-Package pdftex.def Info: figs/dilutedconv.png  used on input line 288.
+Package pdftex.def Info: figs/dilutedconv.png  used on input line 290.
 (pdftex.def)             Requested size: 151.76854pt x 193.69002pt.
-<figs/TCN.png, id=121, 805.0075pt x 434.62375pt>
+<figs/TCN.png, id=123, 805.0075pt x 434.62375pt>
 File: figs/TCN.png Graphic file (type png)
 <use figs/TCN.png>
-Package pdftex.def Info: figs/TCN.png  used on input line 296.
+Package pdftex.def Info: figs/TCN.png  used on input line 298.
 (pdftex.def)             Requested size: 252.94499pt x 136.56235pt.
 
-Overfull \hbox (9.03374pt too wide) in paragraph at lines 296--296
+Overfull \hbox (9.03374pt too wide) in paragraph at lines 298--298
  [][] 
  []
 
@@ -763,37 +771,37 @@ Overfull \hbox (9.03374pt too wide) in paragraph at lines 296--296
 LaTeX Warning: `!h' float specifier changed to `!ht'.
 
 [4 <./figs/dilutedconv.PNG>]
-LaTeX Font Info:    Try loading font information for OT1+pcr on input line 373.
+LaTeX Font Info:    Try loading font information for OT1+pcr on input line 378.
 
 
 (c:/texlive/2019/texmf-dist/tex/latex/psnfss/ot1pcr.fd
 File: ot1pcr.fd 2001/06/04 font definitions for OT1/pcr.
 ) [5 <./figs/TCN.png>]
 (./aeroconf2020_v1.bbl)
-<figs/grootveld.jpg, id=142, 578.16pt x 723.70375pt>
+<figs/grootveld.jpg, id=144, 578.16pt x 723.70375pt>
 File: figs/grootveld.jpg Graphic file (type jpg)
 <use figs/grootveld.jpg>
-Package pdftex.def Info: figs/grootveld.jpg  used on input line 396.
+Package pdftex.def Info: figs/grootveld.jpg  used on input line 401.
 (pdftex.def)             Requested size: 71.13177pt x 91.048pt.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <10> not available
-(Font)              Font shape `OT1/ptm/b/it' tried instead on input line 396.
-<figs/bugayev.jpg, id=143, 1084.05pt x 1355.0625pt>
+(Font)              Font shape `OT1/ptm/b/it' tried instead on input line 401.
+<figs/bugayev.jpg, id=145, 1084.05pt x 1355.0625pt>
 File: figs/bugayev.jpg Graphic file (type jpg)
 <use figs/bugayev.jpg>
-Package pdftex.def Info: figs/bugayev.jpg  used on input line 402.
+Package pdftex.def Info: figs/bugayev.jpg  used on input line 407.
 (pdftex.def)             Requested size: 71.12737pt x 91.0389pt.
-<figs/klein.jpg, id=144, 537.4479pt x 671.8701pt>
+<figs/klein.jpg, id=146, 537.4479pt x 671.8701pt>
 File: figs/klein.jpg Graphic file (type jpg)
 <use figs/klein.jpg>
-Package pdftex.def Info: figs/klein.jpg  used on input line 408.
+Package pdftex.def Info: figs/klein.jpg  used on input line 413.
 (pdftex.def)             Requested size: 71.1254pt x 91.0471pt.
 
-Underfull \hbox (badness 1158) in paragraph at lines 408--420
+Underfull \hbox (badness 1158) in paragraph at lines 413--425
   []\OT1/ptm/b/it/10 Andrew G. Klein \OT1/ptm/m/it/10 re-ceived the B.S.
  []
 
 
-Underfull \hbox (badness 1917) in paragraph at lines 408--420
+Underfull \hbox (badness 1917) in paragraph at lines 413--425
 \OT1/ptm/m/it/10 NY, USA, the M.S. de-gree from the
  []
 
@@ -801,42 +809,42 @@ Underfull \hbox (badness 1917) in paragraph at lines 408--420
 Underfull \vbox (badness 1546) has occurred while \output is active []
 
  [6 <./figs/grootveld.jpg> <./figs/bugayev.jpg> <./figs/klein.jpg>]
-<figs/brown.jpg, id=150, 72.45067pt x 90.3375pt>
+<figs/brown.jpg, id=152, 72.45067pt x 90.3375pt>
 File: figs/brown.jpg Graphic file (type jpg)
 <use figs/brown.jpg>
-Package pdftex.def Info: figs/brown.jpg  used on input line 423.
+Package pdftex.def Info: figs/brown.jpg  used on input line 428.
 (pdftex.def)             Requested size: 71.13602pt x 91.04991pt.
-<figs/kpv.PNG, id=151, 255.95625pt x 261.97874pt>
+<figs/kpv.PNG, id=153, 255.95625pt x 261.97874pt>
 File: figs/kpv.PNG Graphic file (type png)
 <use figs/kpv.PNG>
-Package pdftex.def Info: figs/kpv.PNG  used on input line 437.
+Package pdftex.def Info: figs/kpv.PNG  used on input line 442.
 (pdftex.def)             Requested size: 71.13219pt x 91.04634pt.
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 442.
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 447.
  [7
 
  <./figs/brown.jpg> <./figs/kpv.PNG>]
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 442.
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 447.
  (./aeroconf2020_v1.aux)
-Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 442.
-Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 442.
+Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 447.
+Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 447.
 Package rerunfilecheck Info: File `aeroconf2020_v1.out' has not changed.
 (rerunfilecheck)             Checksum: 1DB8A4D6B6FF39A51CB03B81A0BB0A13;495.
 LaTeX Font Warning: Some font shapes were not available, defaults substituted.
-Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 442.
+Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 447.
  )
-(\end occurred when \ifx on line 297 was incomplete)
-(\end occurred when \ifx on line 289 was incomplete)
-(\end occurred when \ifx on line 196 was incomplete)
+(\end occurred when \ifx on line 299 was incomplete)
+(\end occurred when \ifx on line 291 was incomplete)
+(\end occurred when \ifx on line 199 was incomplete)
 (\end occurred when \ifx on line 175 was incomplete)
 (\end occurred when \ifx on line 159 was incomplete) 
 Here is how much of TeX's memory you used:
  17913 strings out of 492609
  315633 string characters out of 6132818
- 650942 words of memory out of 5000000
+ 649941 words of memory out of 5000000
  21532 multiletter control sequences out of 15000+600000
  582104 words of font info for 158 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 41i,21n,63p,1245b,373s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 41i,21n,63p,1277b,373s stack positions out of 5000i,500n,10000p,200000b,80000s
 {c:/texlive/2019/texmf-dist
 /fonts/enc/dvips/base/8r.enc}<c:/texlive/2019/texmf-dist/fonts/type1/public/ams
 fonts/cm/cmex10.pfb><c:/texlive/2019/texmf-dist/fonts/type1/public/amsfonts/cm/
@@ -852,10 +860,10 @@ sfonts/cm/cmsy10.pfb><c:/texlive/2019/texmf-dist/fonts/type1/public/amsfonts/cm
 9/texmf-dist/fonts/type1/urw/times/utmb8a.pfb><c:/texlive/2019/texmf-dist/fonts
 /type1/urw/times/utmbi8a.pfb><c:/texlive/2019/texmf-dist/fonts/type1/urw/times/
 utmr8a.pfb><c:/texlive/2019/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on aeroconf2020_v1.pdf (7 pages, 2782767 bytes).
+Output written on aeroconf2020_v1.pdf (7 pages, 2784588 bytes).
 PDF statistics:
- 222 PDF objects out of 1000 (max. 8388607)
- 179 compressed objects within 2 object streams
+ 224 PDF objects out of 1000 (max. 8388607)
+ 181 compressed objects within 2 object streams
  41 named destinations out of 1000 (max. 500000)
  131 words of extra memory for PDF output out of 10000 (max. 10000000)
 
