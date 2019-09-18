@@ -237,6 +237,9 @@ AR_n = 2
 
 # ~~~~~~~~~~~~~~~~~~ LOAD TRAINING SET
 if not testSession:
+    # Parameter to determine how much data to train the Least Squares Filter on
+    pseudoInverseDataThreshold = int(1e6)
+
     if(trainFile == 'None'):
         # Generate AR process training data set - both measured and real states
         trainStateData, trainStateInfo = ARDatagenMismatch([trainDataLen, AR_n, AR_var, seq_length], seed, args.cuda)
@@ -246,7 +249,18 @@ if not testSession:
         fileContent[u'trainDataSize'] = trueStateTRAIN.shape
         # TODO: Improve the format at some point in the future, but for now we are just grabbing the trainingData to train
         # TODO: the LS
-        LSTrainData = trainStateData
+
+        # Only grabbing a portion of the train samples for the LS training, because otherwise the pseudo-inverse
+        # will use too much data
+        if(trainDataLen >= pseudoInverseDataThreshold):
+            LSTrainPlaceHolderTrueStates = trainStateData[0][:, :, 0:pseudoInverseDataThreshold]
+            LSTrainPlaceHolderMeasuredStates = trainStateData[1][:,:,0:pseudoInverseDataThreshold]
+            LSTrainPlaceHolderFinalStates = trainStateData[2][:,0:pseudoInverseDataThreshold]
+            # Recreating the data, but only the first 1e6 of it
+            LSTrainData = [LSTrainPlaceHolderTrueStates, LSTrainPlaceHolderMeasuredStates,
+                           LSTrainPlaceHolderFinalStates]
+        else:
+            LSTrainData = trainStateData
     else:
         # Grab the data from the .mat file
         trainDataDict = hdf5s.loadmat(trainFile)
@@ -258,13 +272,21 @@ if not testSession:
         fileContent[u'trainDataFile'] = trainFile
         fileContent[u'trainDataSize'] = trueStateTRAIN.shape
 
-        # TODO: Improve the format at some point in the future, but for now we are just grabbing the trainingData to train
-        # TODO: the LS
-        LSTrainData = [trainDataDict['systemStates'], trainDataDict['observedStates']]
-
         # Setting the number of batches of train data to be what is supplied in the file
         trainSeriesLength = trueStateTRAIN.shape[2]
         trainDataLen = trainDataDict['finalStateValues'].shape[1]
+
+        # TODO: Improve the format at some point in the future, but for now we are just grabbing the trainingData to train
+        # TODO: the LS
+
+        # Only grabbing a portion of the train samples for the LS training, because otherwise the pseudo-inverse
+        # will use too much data
+        if(trainDataLen >= pseudoInverseDataThreshold):
+            LSTrainData = [trainDataDict['systemStates'][:,:,0:pseudoInverseDataThreshold],
+                           trainDataDict['observedStates'][:,:,0:pseudoInverseDataThreshold]]
+        else:
+            LSTrainData = [trainDataDict['systemStates'], trainDataDict['observedStates']]
+
 
     # Convert numpy arrays to tensors
     trueStateTRAIN = torch.from_numpy(trueStateTRAIN)
@@ -661,6 +683,7 @@ if not testSession:
         'optimizer_parameters': optimizerParameters,
         'LSCoefficients': {}
     }
+
     # Training the Least Squares so we can evaluate its performance on the same dataset
     LSCoefficients = LSTraining(LSTrainData)
     # Saving the LS Coefficients so we do not need to train it again
