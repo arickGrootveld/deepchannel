@@ -308,19 +308,9 @@ Where $x$ and $\hat{x}$ are both complex valued states (actual and computed stat
 
 \subsection{Case 2: Varied AR Processes}
 
-\begin{table}[!h]
-\begin{tabular}{|l|l|l|l|l|}
-\hline
-                            & MMSE                 & Least Squares        & Kalman         & TCN                   \\ \hline
-\multirow{3}{*}{Estimation} & \multirow{3}{*}{ay}  & \multirow{3}{*}{doe} & \multirow{3}{*}{ay}   & \multirow{3}{*}{doe}  \\
-                            &                      &                      &                       &                       \\
-                            &                      &                      &                       &                       \\ \hline
-\multirow{3}{*}{Prediction} & \multirow{3}{*}{aye} & \multirow{3}{*}{doe} & \multirow{3}{*}{ayez} & \multirow{3}{*}{doez} \\
-                            &                      &                      &                       &                       \\
-                            &                      &                      &                       &                       \\ \hline
-\end{tabular}
-\end{table}
+Figures \ref{c2resultsall} and \ref{c2resultszoom} display the MSE results of all three channel tracking methods in the varied AR processes case. Figure \ref{c2resultszoom} is a magnified version of Figure \ref{c2resultsall}, specifically in the region where the Riccati MSE ranges from 0.1 to 0.13. 
 
+The MMSE line in the both figures corresponds to the Riccati equation solution, which provides the asymptotic lower bound for the best possible performance. As can be seen from both figures, all channel tracking methods result in a MSE value that resides above this line. 
 
 \begin{figure}[!h]
 	\centering\includegraphics[width=0.5\textwidth]{figs/mismatchresults_all.PNG}\\
@@ -334,6 +324,7 @@ Where $x$ and $\hat{x}$ are both complex valued states (actual and computed stat
 	\label{c2resultszoom}
 \end{figure}
 
+The results show that in all cases, the TCN outperforms both the least squares and KF in the task of channel prediction for an AR-2 channel model. Irrespective of the amount of model mismatch, the network has little trouble in compensating and adjusting while the least squares and KF solutions become much worse as the Riccati MSE increases (as the amount of model mismatch increases).  
 
 \subsection{Case 3: Gilbert-Elliott Model}
 
