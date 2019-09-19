@@ -7,7 +7,7 @@ import argparse
 
 parser = argparse.ArgumentParser(description='Generating Test Data from a linear set of stable AR Coefficients')
 
-parser.add_argument('--testLen', type=float, default=1e4,
+parser.add_argument('--testLen', type=float, default=1e2,
                     help='length of the test data to be generated')
 
 parser.add_argument('--seqLen', type=float, default=15,
@@ -105,7 +105,7 @@ for k in range(0,numCoeffs):
     # Generating the data with no variance between sequences (which is what the False in the array is for)
     # because we want to generate data with a single set of AR Coefficients
     subsetTestStateData, subsetTestDataInfo = ARDatagenMismatch(params=[testDataLen, 2, 0, seqLen, False], seed=seed + k,
-                                                                ARCoeffs = stableCoeffs[k])
+                                                                arCoeffs=stableCoeffs[k])
     trueStateTEST[k,:,:,:], measuredStateTEST[k,:,:,:,:] = convertToBatched(subsetTestStateData[2], subsetTestStateData[1], batchSize)
 
     # Storing the data that the Least Squares and Kalman Filter will be using
