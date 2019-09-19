@@ -102,34 +102,7 @@ where
     1       & 0 
 \end{bmatrix}
 \end{eqnarray*}
-% \begin{table}[h!]
-% \centering
-% \begin{tabular}{|c|l|}
-% \hline
-% Notation                       & \multicolumn{1}{c|}{Description} \\ \hline
-% \multirow{2}{*}{$\vec{x}[k]$}  & \multirow{2}{*}{State} \\
-%                               &                        \\ \hline
-                               
-% \multirow{2}{*}{$\vec{F}$}              & \multirow{2}{*}{State transformation matrix} \\
-%                               &                       \\ \hline
-                               
-% \multirow{3}{*}{$\vec{v}[k]$}    & \multirow{3}{*}{Process noise, covariance matrix  $\vec{Q}=\begin{bmatrix}
-%     \sigma_v^2       & 0 \\
-%     0       & 0 
-% \end{bmatrix}$ } \\
-%                               &                       \\
-%                               & \\     \hline
-                               
-% \multirow{2}{*}{$z[k]$}              & \multirow{2}{*}{Noisy observation/measurement} \\
-%                               &                       \\ \hline
-                               
-% \multirow{2}{*}{$\vec{H}$}    & \multirow{2}{*}{Observation transformation matrix} \\
-%                               &                       \\ \hline
-                               
-% \multirow{2}{*}{$w[k]$}            & \multirow{2}{*}{Measurement noise, variance matrix $\vec{R}=\sigma_w^2$ } \\
-%                               &                       \\ \hline
-% \end{tabular}
-% \end{table} \\
+
 The AR process states are complex numbers which contain information about the phase and gain modulation inherent to the channel itself. Under the assumption that the transmission frequency band is very narrow in spectrum, we can model the channel as a singular complex number which alters both the phase and magnitude of signals passed through it. We use a neural network to extract the nonlinear and weighted relationships between samples such that we can make better predictions and estimations of the state than we could otherwise with linear estimators like the least squares and Kalman filter approaches. 
 
 
