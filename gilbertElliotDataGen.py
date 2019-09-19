@@ -201,7 +201,8 @@ def GilEllDataGen(params, seed=-1):
             x_current = np.matmul(F, x_current) + v
             z_current = np.matmul(H,x_current) + w
         else:
-            x_current = np.random.randn()
+            x_current = (np.divide(np.matmul(QChol, np.random.randn(2,1)), np.sqrt(2))) + \
+                        (1j * np.divide(np.matmul(QChol, np.random.randn(2,1)), np.sqrt(2)))
 
         z[:,i] = z_current
         x[:,i] = x_current[0]
