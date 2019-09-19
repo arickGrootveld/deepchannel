@@ -155,7 +155,7 @@ The data within each row varies in type, according to the input specifications o
 An important consideration to take when generating an AR-n process are the values of the AR coefficients themselves. If the pair of these values cause the F matrix to have eigenvalues that are greater than 1, the system will become unstable. Figure \ref{stabf1f2} displays the values which provide stability and instability, as well as the centroid which corresponds to the currently chosen coefficients of $f_1$ = 0.5, $f_2$ = -0.4.
 
 \begin{figure}[!h]
-	\centering\includegraphics[width=0.4\textwidth]{figs/stability.PNG}\\
+	\centering\includegraphics[width=0.4\textwidth]{figs/stability.png}\\
 	\caption{AR Coefficient Stability Region}
 	\label{stabf1f2}
 \end{figure}
@@ -287,7 +287,7 @@ The temporal convolutional network (TCN) is the neural network architecture we c
 The TCN structure is essentially a one dimensional, fully connected network with causal convolutions. The main differences between a traditional convolutional neural network and the TCN are the diluted causal convolutions between network layers and the ability to specify a desired output sequence length. To accomplish this, the network contains hidden layers which are all of the same length and uses zero padding to keep the dilutions feasible and maintain the output size specification. Diluted convolutions increase the receptive field of each convolutional layer, providing the network the ability to account for sequence elements that are further back in the input history. Figure \ref{dilutedconv} demonstrates diluted convolution with a kernel size $(K)$ of 3 and two stages of dilution $(d)$.
 
 \begin{figure}[!h]
-	\centering\includegraphics[width=0.3\textwidth]{figs/dilutedconv.png}\\
+	\centering\includegraphics[width=0.3\textwidth]{figs/dilutedconv.PNG}\\
 	\caption{Diluted Convolution Example}
 	\label{dilutedconv}
 \end{figure}
@@ -350,13 +350,13 @@ Where $x$ and $\hat{x}$ are both complex valued states (actual and computed stat
 
 
 \begin{figure}[!h]
-	\centering\includegraphics[width=0.5\textwidth]{figs/mismatchresults_all.png}\\
+	\centering\includegraphics[width=0.5\textwidth]{figs/mismatchresults_all.PNG}\\
 	\caption{Mismatch Scenario Prediction MSE Graph}
 	\label{c2resultsall}
 \end{figure}
 
 \begin{figure}[!h]
-	\centering\includegraphics[width=0.5\textwidth]{figs/mismatchresults_zoom.png}\\
+	\centering\includegraphics[width=0.5\textwidth]{figs/mismatchresults_zoom.PNG}\\
 	\caption{Mismatch Scenario Prediction MSE Graph}
 	\label{c2resultszoom}
 \end{figure}
