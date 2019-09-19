@@ -477,19 +477,6 @@ if __name__ == "__main__":
     goodTransProb = float(args.transProbs[0])
     badTransProb = float(args.transProbs[1])
 
-    # default_q = 0.999
-    # default_p = 0.999
-    # default_F_p = (0.5, -0.4)
-    # default_F_q = (1.414, -0.999698)
-    # default_sequence_length = 100
-    # default_Covariances = (0.1, 0.1)
-    # defaultParams = [(default_p, default_q), (default_F_p, default_F_q), default_sequence_length,
-    #                  default_Covariances]
-    # test = GilEllDataGen(defaultParams)
-    # toepObs, toepTrue = toeplitzData(test, 3)
-    #
-    # test2 = GilEllTrainingDataGen(sequenceLength=10, numSequences=10)
-
     start = time.time()
     if not testGeneration:
         data = GilElDataGenWrapper(numSequences=simuLen, sequenceLength=sequenceLen, randSeed=seed,
