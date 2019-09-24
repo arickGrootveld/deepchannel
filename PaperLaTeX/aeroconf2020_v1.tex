@@ -157,7 +157,7 @@ data matrix contains an AR process generated with the same F matrix. Each row be
 \(
 z[-1] \sim \mathcal{N} \mathrm{(0,1)}
 \)
-Each row contains a different AR process but with the same AR coefficients. This format ensures that the TCN and KF both received a wide variety of AR processes that share the same coefficients but differ in starting value. In this case, both the training and testing data formats are the same. 
+and contains a different AR process but with the same AR coefficients. This format ensures that the TCN and KF both received a wide variety of AR processes that share the same coefficients but differ in starting value. In this case, both the training and testing data formats are the same. 
 
 \subsection{Case 2: Varied AR Processes}
 
@@ -187,10 +187,11 @@ In testing, we wish to acquire better averages for the resulting MSE values, the
 
 \subsection{Case 3: Gilbert-Elliott Model}
 
-To construct the data for the burst noise Gilbert-Elliott channel of the form shown in Figure \ref{gbe}, we utilized a Markov chain for AR sequence generation. For every new sample generated, the Markov chain has a probability of transitioning from state to state $(P_{BG}, P_{GB})$ or staying where it is currently $(P_{BB}, P_{GG})$. The "bad" state here corresponds to a process generation scheme where the AR coefficients produce eigenvalues that are close to one, edging on the border between stability and instability while the "good" state is any other coefficient pair that resides close to the center of the triangle in Figure \ref{stabf1f2}. For the "bad" set of coefficients, we chose the lower right-hand corner of the triangle in Figure \ref{stabf1f2}. For the "good" case, we chose $f_1$ = 0.5, $f_2$ = -0.4.
+To construct the data for the burst noise Gilbert-Elliott channel of the form shown in Figure \ref{gbe}, we utilized a Markov chain for AR sequence generation. For every new sample generated, the Markov chain has a probability of transitioning from state to state $(P_{BG}, P_{GB})$ or staying where it is currently $(P_{BB}, P_{GG})$. The "bad" state here corresponds to a process generation scheme where the AR coefficients produce eigenvalues that are close to one, edging on the border between stability and instability while the "good" state is any other coefficient pair that resides close to the center of the triangle in Figure \ref{stabf1f2}. For the "bad" set of coefficients, we chose the lower right-hand corner of the triangle in Figure \ref{stabf1f2}. For the "good" case, we chose $f_1$ = 0.3, $f_2$ = 0.1.
 
-The complete AR sequence will have both transition regions with good and bad coefficients as well as consistent segments. We wish to challenge the linear estimators and neural network to recognize when the changes occur, as the optimum solution to this type of channel model would be two Kalman filters that can be switched between, depending on the current state. Upon each testing and training iteration, the generated sequence is formed into the following Toeplitz matrix structure:
-
+The complete AR sequence will have both transition regions with good and bad coefficients as well as consistent segments. We wish to challenge the linear estimators and neural network to recognize when the changes occur, as the optimum solution to this type of channel model would be two Kalman filters that can be switched between, depending on the current state. 
+% ** % Formerly was: Upon each testing and training iteration, the generated sequence is formed into the following Toeplitz matrix structure:
+When testing and training the sequence of data was formed into the Toeplitz matrix structure as follows:
 $\vec{\textbf{X}} = \begin{bmatrix}
 x[k-1]   & ...       & x[k-N-1]     & \\
 x[k-2]   & ...       & x[k-N-2]     & \\
@@ -198,8 +199,8 @@ x[k-2]   & ...       & x[k-N-2]     & \\
 x[k-M-1] & ...       & x[k-M-N-1]  
 \end{bmatrix}$
 
-Then, this data is processed by each of the channel tracking systems. In the testing phase, we processed the AR sequence generated using the combination of good and bad coefficients and also obtained results for testing on both sets separately. 
-
+% *** % Formerly Was: Then, this data is processed by each of the channel tracking systems. In the testing phase, we processed the AR sequence generated using the combination of good and bad coefficients and also obtained results for testing on both sets separately. 
+When training the TCN and LS methods, we generated a single long sequence of data, with transitions between the "good" and "bad" F matrices. When testing all three methods, we generated a similar long sequence of data with transitions, as well as a set of data that only used the "good" coefficients and another set that only used the "bad" coefficients. We present results from all three test sets in order to show how well the model was capable of fitting the "good" and "bad" Markov States.
 
 \begin{figure}[!h]
 \centering\includegraphics[width=0.45\textwidth]{figs/GBmodel.PNG}\\
@@ -212,13 +213,15 @@ Then, this data is processed by each of the channel tracking systems. In the tes
 % ======================================
 \label{sec:linest}
 
-The most common approaches to accurately tracking the channel described in Section \ref{sec:channelmodel} use linear estimators such as the least squares solution or the Kalman filter. The LS solution is the most straightforward of the two and simply tries to find a line of best fit to the training data which is then used in further evaluations for test data. The KF on the other hand requires knowledge of the channel statistics such that a probabilistic estimation and prediction can be made of the current and next states. 
+The most common approaches to accurately tracking the channel described in Section \ref{sec:channelmodel} use linear estimators such as the Least Squares solution or the Kalman filter. The LS solution is the most straightforward of the two and simply tries to find a line of best fit to the training data which is then used as a filter in evaluations of test data. The KF on the other hand requires knowledge of the channel statistics such that a probabilistic estimation and prediction can be made of the current and next states. 
 
 \subsection{Riccati Equation}
 
-The Riccati equation allows us to have a lower bound for the best possible performance in channel estimation we could possibly have with a model mismatch, assuming access to an infinite dataset. In this specific case, this equation will always converge to a lower MSE than any other channel estimation method we are using (LS, KF, TCN). In the matched model case, the Riccati will simply verify that the KF is working properly, as they both converge to and provide the same solution. The Riccati in the discrete time domain is implemented with the following equation: 
+The Riccati equation (RE) allows us to have a lower bound for the best possible performance in channel estimation we could possibly have with a model mismatch, assuming access to an infinite dataset. In this specific case, this equation will always converge to a lower MSE than any other channel estimation method we are using (LS, KF, TCN). In the matched model case, the RE will simply verify that the KF is working properly, as the KF should converge nearly to the RE solution. The RE in the discrete time domain is implemented with the following equation \cite{bar2004estimation}: 
 
-$X=A^{\rm T}XF-(F^{\rm T}XH)(R+H^{\rm T}XH)^{-1}(H^{\rm T}XF) + Q $
+\begin{equation}
+X=F^{\rm T}XF-(F^{\rm T}XH)(R+H^{\rm T}XH)^{-1}(H^{\rm T}XF) + Q 
+\end{equation}
 
 \subsection{Least Squares}
 

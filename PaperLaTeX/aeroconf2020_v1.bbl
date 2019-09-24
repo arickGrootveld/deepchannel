@@ -50,6 +50,11 @@ K.~E. Baddour and N.~C. Beaulieu, ``Autoregressive models for fading channel
   (Cat. No. 01CH37270)}, vol.~2.\hskip 1em plus 0.5em minus 0.4em\relax IEEE,
   2001, pp. 1187--1192.
 
+\bibitem{bar2004estimation}
+Y.~Bar-Shalom, X.~R. Li, and T.~Kirubarajan, \emph{Estimation with applications
+  to tracking and navigation: theory algorithms and software}.\hskip 1em plus
+  0.5em minus 0.4em\relax John Wiley \& Sons, 2004.
+
 \bibitem{tacspinar2010back}
 N.~Ta{\c{s}}pinar and M.~N. Seyman, ``Back propagation neural network approach
   for channel estimation in ofdm system,'' pp. 265--268, 2010.
