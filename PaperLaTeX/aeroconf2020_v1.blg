@@ -15,89 +15,45 @@ Database file #2: tcn_biblio.bib
 Warning--empty journal in tacspinar2010back
 
 Done.
-<<<<<<< HEAD
-You've used 8 entries,
+You've used 10 entries,
             4087 wiz_defined-function locations,
-            1235 strings with 15789 characters,
-and the built_in function-call counts, 5593 in all, are:
-= -- 434
-> -- 132
-< -- 46
-+ -- 74
-- -- 22
-* -- 269
-:= -- 837
-add.period$ -- 17
-call.type$ -- 8
-change.case$ -- 6
-chr.to.int$ -- 111
-cite$ -- 9
-duplicate$ -- 396
-empty$ -- 460
-format.name$ -- 29
-if$ -- 1293
-int.to.chr$ -- 0
-int.to.str$ -- 8
-missing$ -- 65
-newline$ -- 47
-num.names$ -- 8
-pop$ -- 161
-preamble$ -- 1
-purify$ -- 0
-quote$ -- 2
-skip$ -- 430
-stack$ -- 0
-substring$ -- 265
-swap$ -- 316
-text.length$ -- 9
-text.prefix$ -- 0
-top$ -- 5
-type$ -- 8
-warning$ -- 1
-while$ -- 23
-width$ -- 9
-write$ -- 92
-=======
-You've used 9 entries,
-            4087 wiz_defined-function locations,
-            1241 strings with 15995 characters,
-and the built_in function-call counts, 7071 in all, are:
-= -- 561
-> -- 165
+            1246 strings with 16184 characters,
+and the built_in function-call counts, 7487 in all, are:
+= -- 587
+> -- 178
 < -- 66
-+ -- 94
-- -- 26
-* -- 344
-:= -- 1037
-add.period$ -- 20
-call.type$ -- 9
++ -- 100
+- -- 29
+* -- 360
+:= -- 1103
+add.period$ -- 22
+call.type$ -- 10
 change.case$ -- 8
 chr.to.int$ -- 159
-cite$ -- 10
-duplicate$ -- 493
-empty$ -- 559
-format.name$ -- 34
-if$ -- 1643
+cite$ -- 11
+duplicate$ -- 525
+empty$ -- 609
+format.name$ -- 38
+if$ -- 1742
 int.to.chr$ -- 0
-int.to.str$ -- 9
-missing$ -- 79
-newline$ -- 50
-num.names$ -- 9
-pop$ -- 185
+int.to.str$ -- 10
+missing$ -- 86
+newline$ -- 53
+num.names$ -- 10
+pop$ -- 208
 preamble$ -- 1
 purify$ -- 0
 quote$ -- 2
-skip$ -- 542
+skip$ -- 575
 stack$ -- 0
 substring$ -- 379
-swap$ -- 412
+swap$ -- 430
 text.length$ -- 13
 text.prefix$ -- 0
 top$ -- 5
-type$ -- 9
+type$ -- 10
 warning$ -- 1
-while$ -- 32
-width$ -- 10
-write$ -- 105
->>>>>>> 541a2a6384e7370fddccd2af08111f9815036e5d
+while$ -- 33
+width$ -- 12
+write$ -- 112
 (There was 1 warning)

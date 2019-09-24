@@ -68,7 +68,7 @@ To show statistical significance in support of our results, we designed three se
 
 We assume a Gauss-Markov channel model, otherwise known as 
 an % ***** % was formerly: "the"
-auto-regressive (AR) model. Time varying transmission channels are often modeled in this way due to the causal and Gaussian white noise influenced system dynamics. Previous related works have supplied the motivation and justification for us to choose this model \cite{181202986} \cite{baddour2001autoregressive}.
+auto-regressive (AR) model. Time varying transmission channels are often modeled in this way due to the causal and Gaussian white noise influenced system dynamics. Previous related works have supplied the motivation and justification for us to choose this model \cite{181202986} \cite{baddour2001autoregressive} \cite{wen2008autoregressive}.
 
 In general, a noisy observation $z[k]$ of an $N$th order autoregressive (AR) process $x[k]$ is described by the equations
 \begin{eqnarray*}
@@ -121,7 +121,7 @@ $m$ AR process sequences of length $n$. This data is used for training and testi
 % *** % Was Formerly: "The format of the data that is generated is as follows:" 
 The generated data follows this format:
 \begin{eqnarray*}
-AR&=&\begin{bmatrix} 
+\textbf{D}&=&\begin{bmatrix} 
 P_{10} & P_{11} & ... & P_{1n} \\
 P_{20} & P_{21} & ... & P_{2n} \\
 \vdots &  & \ddots &  \\
@@ -187,11 +187,13 @@ In testing, we wish to acquire better averages for the resulting MSE values, the
 
 \subsection{Case 3: Gilbert-Elliott Model}
 
-To construct the data for the burst noise Gilbert-Elliott channel of the form shown in Figure \ref{gbe}, we utilized a Markov chain for AR sequence generation. For every new sample generated, the Markov chain has a probability of transitioning from state to state $(P_{BG}, P_{GB})$ or staying where it is currently $(P_{BB}, P_{GG})$. The "bad" state here corresponds to a process generation scheme where the AR coefficients produce eigenvalues that are close to one, edging on the border between stability and instability while the "good" state is any other coefficient pair that resides close to the center of the triangle in Figure \ref{stabf1f2}. For the "bad" set of coefficients, we chose the lower right-hand corner of the triangle in Figure \ref{stabf1f2}. For the "good" case, we chose $f_1$ = 0.3, $f_2$ = 0.1.
+To construct the data for the burst noise Gilbert-Elliott channel of the form shown in Figure \ref{gbe}, we utilized a Markov chain ($M_n$) for AR sequence generation \cite{laourine2010betting}. For every new sample generated, the Markov chain has a probability of transitioning from state to state $P(M_n = G | M_{n-1} = B) = \lambda_0$ or staying where it is currently $P(M_n = G | M_{n-1} = G) = \lambda_1$. The "bad" state here corresponds to a process generation scheme where the AR coefficients produce eigenvalues that are close to one, edging on the border between stability and instability while the "good" state is any other coefficient pair that resides close to the center of the triangle in Figure \ref{stabf1f2}. For the "bad" set of coefficients, we chose the lower right-hand corner of the triangle in Figure \ref{stabf1f2}. For the "good" case, we chose $f_1$ = 0.3, $f_2$ = 0.1.
 
 The complete AR sequence will have both transition regions with good and bad coefficients as well as consistent segments. We wish to challenge the linear estimators and neural network to recognize when the changes occur, as the optimum solution to this type of channel model would be two Kalman filters that can be switched between, depending on the current state. 
 % ** % Formerly was: Upon each testing and training iteration, the generated sequence is formed into the following Toeplitz matrix structure:
 When testing and training the sequence of data was formed into the Toeplitz matrix structure as follows:
+
+
 $\vec{\textbf{X}} = \begin{bmatrix}
 x[k-1]   & ...       & x[k-N-1]     & \\
 x[k-2]   & ...       & x[k-N-2]     & \\
@@ -345,20 +347,12 @@ Where $x$ and $\hat{x}$ are both complex valued states (actual and computed stat
 
 \subsection{Case 2: Varied AR Processes}
 
-Figures \ref{c2resultsall} and \ref{c2resultszoom} display the MSE results of all three channel tracking methods in the varied AR processes case. Figure \ref{c2resultszoom} is a magnified version of Figure \ref{c2resultsall}, specifically in the region where the Riccati MSE ranges from 0.1 to 0.13. 
-
-The MMSE line in the both figures corresponds to the Riccati equation solution, which provides the asymptotic lower bound for the best possible performance. As can be seen from both figures, all channel tracking methods result in a MSE value that resides above this line. 
+Figure \ref{c2resultsall} displays the MSE results of all three channel tracking methods in the varied AR processes case on a logarithmic scale in both axes. The MMSE line in the both figures corresponds to the Riccati equation solution, which provides the asymptotic lower bound for the best possible performance. As can be seen from both figures, all channel tracking methods result in a MSE value that resides above this line. 
 
 \begin{figure}[!h]
-	\centering\includegraphics[width=0.5\textwidth]{figs/mismatchresults_all.PNG}\\
-	\caption{Mismatch Scenario Prediction MSE Graph}
+	\centering\includegraphics[width=0.5\textwidth]{figs/mismatch_LOG.PNG}\\
+	\caption{Mismatch Scenario Prediction MSE Graph - Logarithmic Scale}
 	\label{c2resultsall}
-\end{figure}
-
-\begin{figure}[!h]
-	\centering\includegraphics[width=0.5\textwidth]{figs/mismatchresults_zoom.PNG}\\
-	\caption{Mismatch Scenario Prediction MSE Graph}
-	\label{c2resultszoom}
 \end{figure}
 
 The results show that in all cases, the TCN outperforms both the least squares and KF in the task of channel prediction for an AR-2 channel model. Irrespective of the amount of model mismatch, the network has little trouble in compensating and adjusting while the least squares and KF solutions become much worse as the Riccati MSE increases (as the amount of model mismatch increases).  
