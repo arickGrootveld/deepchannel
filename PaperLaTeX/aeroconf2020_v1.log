@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.18 (TeX Live 2017/Debian) (preloaded format=pdflatex 2019.9.4)  24 SEP 2019 12:00
+This is pdfTeX, Version 3.14159265-2.6-1.40.18 (TeX Live 2017/Debian) (preloaded format=pdflatex 2019.9.4)  24 SEP 2019 13:51
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -787,20 +787,41 @@ File: ot1pcr.fd 2001/06/04 font definitions for OT1/pcr.
 (./aeroconf2020_v1.bbl
 Missing character: There is no Ã in font ptmr7t!
 Missing character: There is no ­ in font ptmr7t!
+
+Underfull \hbox (badness 1902) in paragraph at lines 64--69
+\OT1/ptm/m/n/10 ``Au-tore-gres-sive spec-trum hole pre-dic-tion model for
+ []
+
+
+Underfull \hbox (badness 4569) in paragraph at lines 64--69
+\OT1/ptm/m/n/10 cog-ni-tive ra-dio sys-tems,'' in \OT1/ptm/m/it/10 ICC Workshop
+s-2008
+ []
+
+
+Underfull \hbox (badness 3323) in paragraph at lines 64--69
+\OT1/ptm/m/it/10 IEEE In-ter-na-tional Con-fer-ence on Com-mu-ni-ca-tions
+ []
+
+
+Underfull \hbox (badness 2547) in paragraph at lines 64--69
+\OT1/ptm/m/it/10 Work-shops\OT1/ptm/m/n/10 . IEEE, 2008, pp. 154--157. >>>>>>>
+ []
+
 ) [6]
-<figs/grootveld.jpg, id=162, 578.16pt x 723.70375pt>
+<figs/grootveld.jpg, id=164, 578.16pt x 723.70375pt>
 File: figs/grootveld.jpg Graphic file (type jpg)
 <use figs/grootveld.jpg>
 Package pdftex.def Info: figs/grootveld.jpg  used on input line 415.
 (pdftex.def)             Requested size: 71.13177pt x 91.048pt.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <10> not available
 (Font)              Font shape `OT1/ptm/b/it' tried instead on input line 415.
-<figs/bugayev.jpg, id=163, 1084.05pt x 1355.0625pt>
+<figs/bugayev.jpg, id=165, 1084.05pt x 1355.0625pt>
 File: figs/bugayev.jpg Graphic file (type jpg)
 <use figs/bugayev.jpg>
 Package pdftex.def Info: figs/bugayev.jpg  used on input line 421.
 (pdftex.def)             Requested size: 71.12737pt x 91.0389pt.
-<figs/klein.jpg, id=164, 537.4479pt x 671.8701pt>
+<figs/klein.jpg, id=166, 537.4479pt x 671.8701pt>
 File: figs/klein.jpg Graphic file (type jpg)
 <use figs/klein.jpg>
 Package pdftex.def Info: figs/klein.jpg  used on input line 427.
@@ -818,12 +839,12 @@ Underfull \hbox (badness 1917) in paragraph at lines 427--439
 
 Underfull \vbox (badness 1546) has occurred while \output is active []
 
-<figs/brown.jpg, id=165, 72.45067pt x 90.3375pt>
+<figs/brown.jpg, id=167, 72.45067pt x 90.3375pt>
 File: figs/brown.jpg Graphic file (type jpg)
 <use figs/brown.jpg>
 Package pdftex.def Info: figs/brown.jpg  used on input line 442.
 (pdftex.def)             Requested size: 71.13602pt x 91.04991pt.
-<figs/kpv.PNG, id=166, 255.95625pt x 261.97874pt>
+<figs/kpv.PNG, id=168, 255.95625pt x 261.97874pt>
 File: figs/kpv.PNG Graphic file (type png)
 <use figs/kpv.PNG>
 Package pdftex.def Info: figs/kpv.PNG  used on input line 456.
@@ -848,10 +869,10 @@ Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 461.
 (\end occurred when \ifx on line 182 was incomplete)
 (\end occurred when \ifx on line 147 was incomplete) 
 Here is how much of TeX's memory you used:
- 15794 strings out of 494847
- 276209 string characters out of 6179081
- 447322 words of memory out of 5000000
- 18818 multiletter control sequences out of 15000+600000
+ 15798 strings out of 494847
+ 276303 string characters out of 6179081
+ 447407 words of memory out of 5000000
+ 18820 multiletter control sequences out of 15000+600000
  580038 words of font info for 156 fonts, out of 8000000 for 9000
  59 hyphenation exceptions out of 8191
  33i,21n,37p,10351b,344s stack positions out of 5000i,500n,10000p,200000b,80000s
@@ -871,10 +892,10 @@ s/type1/public/amsfonts/cm/cmsy8.pfb></usr/share/texlive/texmf-dist/fonts/type1
 mb8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmbi8a.pfb></usr
 /share/texlive/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/share/texlive/
 texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on aeroconf2020_v1.pdf (7 pages, 2835935 bytes).
+Output written on aeroconf2020_v1.pdf (7 pages, 2836720 bytes).
 PDF statistics:
- 238 PDF objects out of 1000 (max. 8388607)
- 191 compressed objects within 2 object streams
- 45 named destinations out of 1000 (max. 500000)
+ 240 PDF objects out of 1000 (max. 8388607)
+ 193 compressed objects within 2 object streams
+ 47 named destinations out of 1000 (max. 500000)
  141 words of extra memory for PDF output out of 10000 (max. 10000000)
 
