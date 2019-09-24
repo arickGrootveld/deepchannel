@@ -238,7 +238,7 @@ AR_n = 2
 # ~~~~~~~~~~~~~~~~~~ LOAD TRAINING SET
 if not testSession:
     # Parameter to determine how much data to train the Least Squares Filter on
-    pseudoInverseDataThreshold = int(1e6)
+    pseudoInverseDataThreshold = int(1e7)
 
     if(trainFile == 'None'):
         # Generate AR process training data set - both measured and real states

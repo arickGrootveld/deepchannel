@@ -259,10 +259,13 @@ def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1))
                                     torch.randn(1)),torch.sqrt(torch.tensor(2, dtype=torch.float)))
             w[0] = torch.squeeze(rObsNoise)
             w[1] = torch.squeeze(iObsNoise)
-            # On first iteration through make the noise equal to zero so there the initial state starts at 0
+            # On first iteration through make the noise equal to a unity variance
+            # random number so the initial state is consistently random
             if(n==0):
-                x_complex = torch.randn(2,2, dtype=torch.float)
-                z_complex = torch.randn(2, dtype=torch.float)
+                x_complex = torch.div(torch.randn(2, 2, dtype=torch.float),
+                                      torch.sqrt(torch.tensor(2, dtype=torch.float)))
+                z_complex = torch.div(torch.randn(2, dtype=torch.float),
+                                      torch.sqrt(torch.tensor(2, dtype=torch.float)))
             else:
                 x_complex = torch.matmul(F,x_complex)
                 x_complex = x_complex + v
