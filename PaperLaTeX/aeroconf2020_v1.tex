@@ -302,7 +302,7 @@ The TCN structure is essentially a one dimensional, fully connected network with
 	\label{dilutedconv}
 \end{figure}
 
-The TCN consists of multiple "residual blocks" which act as fundamental construction elements in this architecture. One instance of this network may consist of many residual blocks, all daisy-chaining in one long sequence. These residual blocks consist of two layers of diluted, causal convolutions and a non-linearity (ReLU) on the output of each layer. The residual blocks contain an identity mapping which aids in training for slight variations around the input sequence by explicitly weighting the output with a scaled version of the input before any convolutions took place. 
+The TCN consists of multiple "residual blocks" which act as fundamental construction elements in this architecture. One instance of this network may consist of many residual blocks, chained together in one long sequence. These residual blocks consist of two layers of diluted, causal convolutions and a non-linearity (ReLU) on the output of each layer. The residual blocks contain an identity mapping which aids in training for slight variations around the input sequence by explicitly weighting the output with a scaled version of the input before any convolutions took place. 
 
 \begin{figure}[!h]
 	\centering\includegraphics[width=0.5\textwidth]{figs/TCN.png}\\
@@ -310,9 +310,9 @@ The TCN consists of multiple "residual blocks" which act as fundamental construc
 	\label{TCNstruct}
 \end{figure}
 
-To optimize the TCN for channel prediction and estimation tasks, we implemented some common functions that many neural networks share, namely: learning rate scheduling, early stopping and dropout. Adding a learning rate scheduling system to the network improved the prediction and estimation accuracy while early stopping and dropout were included as countermeasures for model over-fitting. 
+To optimize the TCN for channel prediction and estimation tasks, we implemented some common functions that many neural networks share, namely: learning rate scheduling, early stopping and dropout. Adding a learning rate scheduling system to the network improved the prediction and estimation accuracy while early stopping and dropout were included to prevent model over-fitting. 
 
-We used epochs in the training phase to drastically reduce the amount of time it takes to generate the sequence data and therefore, train the model. Although we can generate an unlimited amount of data to train the network, data generation takes a very long time and significantly cuts into the time available for the training process. By using epochs and over-fitting counter measures, we can attain similar results as we would with longer datasets. 
+We used epochs in the training phase to drastically reduce the amount of time it takes to generate the sequence data and therefore, train the model. Although we can generate an unlimited amount of data to train the network, data generation takes a very long time and significantly cuts into the time available for the training process. By using epochs and techniques to prevent over fitting, we can attain similar results as we would with longer datasets. 
 
 Due to the complex nature of the channel values, the imaginary and real components had to be split into separate numbers in order to effectively train the network. This splitting into real and imaginary components has already been done previously with favorable results \cite{tacspinar2010back}.  The loss function for this network is the mean-squared error (MSE), and for complex values this is calculated in the following way:
 \begin{eqnarray*}
