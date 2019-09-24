@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.18 (TeX Live 2017/Debian) (preloaded format=pdflatex 2019.9.4)  19 SEP 2019 14:56
+This is pdfTeX, Version 3.14159265-2.6-1.40.18 (TeX Live 2017/Debian) (preloaded format=pdflatex 2019.9.4)  24 SEP 2019 10:53
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -852,10 +852,10 @@ Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 458.
 (\end occurred when \ifx on line 182 was incomplete)
 (\end occurred when \ifx on line 147 was incomplete) 
 Here is how much of TeX's memory you used:
- 15792 strings out of 494847
- 276178 string characters out of 6179081
+ 15791 strings out of 494847
+ 276156 string characters out of 6179081
  443283 words of memory out of 5000000
- 18818 multiletter control sequences out of 15000+600000
+ 18817 multiletter control sequences out of 15000+600000
  580038 words of font info for 156 fonts, out of 8000000 for 9000
  59 hyphenation exceptions out of 8191
  33i,21n,37p,10351b,344s stack positions out of 5000i,500n,10000p,200000b,80000s
@@ -875,7 +875,7 @@ s/type1/public/amsfonts/cm/cmsy8.pfb></usr/share/texlive/texmf-dist/fonts/type1
 mb8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmbi8a.pfb></usr
 /share/texlive/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/share/texlive/
 texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on aeroconf2020_v1.pdf (7 pages, 2834659 bytes).
+Output written on aeroconf2020_v1.pdf (7 pages, 2834664 bytes).
 PDF statistics:
  235 PDF objects out of 1000 (max. 8388607)
  188 compressed objects within 2 object streams
