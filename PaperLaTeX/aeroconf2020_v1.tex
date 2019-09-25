@@ -137,9 +137,8 @@ to ensure that the Kalman Filter was able to converge to its steady state MMSE f
 When generating an AR-n process it is important to take into account the matrix that is formed by the AR coefficients. 
 % *** % Was Formerly: "If the pair of these values"
 In our case if the pair of values that form the AR Coefficients
-cause the F matrix to have eigenvalues that are greater than 1, the system will become unstable. Figure \ref{stabf1f2} displays the values which provide stability and instability, as well as the centroid which corresponds to the
-our choosen coefficients, 
-% ** * % Formerly was: "currently chosen coefficients of"
+cause the F matrix to have eigenvalues that are greater than 1, the system will become unstable. Figure \ref{stabf1f2} displays the values which provide stability and instability, as well as the centroid which corresponds to the chosen coefficients, 
+% ** * % Formerly was: "our currently chosen coefficients of"
 $f_1$ = 0.5, $f_2$ = -0.4.
 
 \begin{figure}[!h]
@@ -312,7 +311,7 @@ The TCN consists of multiple "residual blocks" which act as fundamental construc
 
 To optimize the TCN for channel prediction and estimation tasks, we implemented some common functions that many neural networks share, namely: learning rate scheduling, early stopping and dropout. Adding a learning rate scheduling system to the network improved the prediction and estimation accuracy while early stopping and dropout were included to prevent model over-fitting. 
 
-We used epochs in the training phase to drastically reduce the amount of time it takes to generate the sequence data and therefore, train the model. Although we can generate an unlimited amount of data to train the network, data generation takes a very long time and significantly cuts into the time available for the training process. By using epochs and techniques to prevent over fitting, we can attain similar results as we would with longer datasets. 
+We used epochs in the training phase to drastically reduce the amount of time it takes to generate the sequence data and therefore, train the model. Although we can generate an unlimited amount of data to train the network, data generation takes a very long time and significantly cuts into the time available for the training process. By using epochs and techniques to prevent over-fitting, we can attain similar results as we would with longer datasets. 
 
 Due to the complex nature of the channel values, the imaginary and real components had to be split into separate numbers in order to effectively train the network. This splitting into real and imaginary components has already been done previously with favorable results \cite{tacspinar2010back}.  The loss function for this network is the mean-squared error (MSE), and for complex values this is calculated in the following way:
 \begin{eqnarray*}
@@ -328,18 +327,20 @@ Where $x$ and $\hat{x}$ are both complex valued states (actual and computed stat
 
 \subsection{Case 1: Static AR Processes}
 
+The results shown for the Static AR Process were generated from a data set that consisted of a training, evaluation set with a $TODO: Change this to 
+match terms we use in data section$ sequence length of 15, and sample sizes of 2e7, 1e6, and 1e6 respectfully. As was mentioned in the data generation section, the AR Coefficients were choosen to be $f_1 = 0.5$ and $f_2 = -0.4$. $TODO: Link to the data generation section$,  
+
 \begin{table}[!h]
-\begin{tabular}{|l|l|l|l|l|}
-\hline
-                            & MMSE                 & Least Squares        & Kalman         & TCN                   \\ \hline
-\multirow{3}{*}{Estimation} & \multirow{3}{*}{ay}  & \multirow{3}{*}{doe} & \multirow{3}{*}{ay}   & \multirow{3}{*}{doe}  \\
-                            &                      &                      &                       &                       \\
-                            &                      &                      &                       &                       \\ \hline
-\multirow{3}{*}{Prediction} & \multirow{3}{*}{aye} & \multirow{3}{*}{doe} & \multirow{3}{*}{ayez} & \multirow{3}{*}{doez} \\
-                            &                      &                      &                       &                       \\
-                            &                      &                      &                       &                       \\ \hline
-\end{tabular}
+	\begin{tabular}{|l|l|l|l|}
+		\hline
+		 MMSE                 & Least Squares        & Kalman Filter         & TCN                   \\ \hline
+		\multirow{3}{*}{0.1175771} & \multirow{3}{*}{0.1176398} & \multirow{3}{*}{0.1176367} & \multirow{3}{*}{0.1176372} \\
+		                      &                      &                       &                       \\
+		                      &                      &                       &                       \\ \hline
+	\end{tabular}
 \end{table}
+
+These results show that their is a very small difference 
 
 \newpage
 
