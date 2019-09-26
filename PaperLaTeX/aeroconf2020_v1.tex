@@ -71,23 +71,23 @@ an % ***** % was formerly: "the"
 auto-regressive (AR) model. Time varying transmission channels are often modeled in this way due to the causal and Gaussian white noise influenced system dynamics. Previous related works have supplied the motivation and justification for us to choose this model \cite{181202986} \cite{baddour2001autoregressive} \cite{wen2008autoregressive}.
 
 In general, a noisy observation $z[k]$ of an $N$th order autoregressive (AR) process $x[k]$ is described by the equations
-\begin{eqnarray*}
+\begin{eqnarray}
 x[k]&=&\left(\sum_{n=1}^N f_{n}x[k-n]\right) + v[k]\\
 z[k]&=&x[k] + w[k]
-\end{eqnarray*}
+\end{eqnarray}
 where $v[k]$ and $w[k]$ are both Gaussian, zero-mean noise with variances $\sigma_v^2$ and $\sigma_w^2$, assumed to be uncorrelated.
 
 Throughout this paper, we constrain the process order to be AR-2 where the process (or state) $x[k]$ and noisy observation $z[k]$ are given by
-\begin{eqnarray*}
+\begin{eqnarray}
 x[k]&=&f_1x[k-1]+ f_2x[k-2] + v[k]\\
 z[k]&=&x[k] + w[k]
-\end{eqnarray*}
+\end{eqnarray}
 
 In state-space form, this becomes:
-\begin{eqnarray*}
+\begin{eqnarray}
 \vec{x}[k]&=&\vec{Fx}[k-1]+\vec{v}[k]\\
 z[k]&=&\vec{Hx}[k]+w[k]
-\end{eqnarray*}
+\end{eqnarray}
 where
 \begin{eqnarray*}
 \vec{x}[k]&=&\begin{bmatrix}
@@ -133,19 +133,7 @@ to ensure that the Kalman Filter was able to converge to its steady state MMSE f
 % *** % Was formerly: "due to the Gilbert-Elliot case, in which the Kalman Filter required about 15 samples to converge to its lowest MSE"
  
 
-% *** % Was Fromerly: "An important consideration to take when generating an AR-n process are the values of the AR coefficients themselves."
-When generating an AR-n process it is important to take into account the matrix that is formed by the AR coefficients. 
-% *** % Was Formerly: "If the pair of these values"
-In our case if the pair of values that form the AR Coefficients
-cause the F matrix to have eigenvalues that are greater than 1, the system will become unstable. Figure \ref{stabf1f2} displays the values which provide stability and instability, as well as the centroid which corresponds to the chosen coefficients, 
-% ** * % Formerly was: "our currently chosen coefficients of"
-$f_1$ = 0.5, $f_2$ = -0.4.
 
-\begin{figure}[!h]
-	\centering\includegraphics[width=0.4\textwidth]{figs/stability.png}\\
-	\caption{AR Coefficient Stability Region}
-	\label{stabf1f2}
-\end{figure}
 
 \subsection{Case 1: Static AR Processes}
 
@@ -164,15 +152,29 @@ In the varied AR process case, each row of the data matrix contains a different 
 \(
 z[-1] \sim \mathcal{N} \mathrm{(0,1)}
 \). 
-The variations in the F matrices are determined by a normal, Gaussian distribution about the chosen coefficient mean values, such that 
+The variations in the F matrices are determined by a normal, Gaussian distribution about the chosen coefficient mean values $\mu_1$, $\mu_2$, such that 
 \(
-f_1 \sim \mathcal{N} \mathrm{(0.5, 1)} 
+f_1 \sim \mathcal{N} \mathrm{(\mu_1, 1)} 
 \)
 and 
 \(
-f_2 \sim \mathcal{N} \mathrm{(-0.4, 1)}
+f_2 \sim \mathcal{N} \mathrm{(\mu_2, 1)}
 \). 
 The reasoning for introducing this variation is that during the training phase, we wish to expose the model to as many AR processes as possible such that we obtain a network which is better capable of generalizing and extrapolating to other processes. 
+
+% *** % Was Fromerly: "An important consideration to take when generating an AR-n process are the values of the AR coefficients themselves."
+When generating an AR-n process it is important to take into account the matrix that is formed by the AR coefficients. 
+% *** % Was Formerly: "If the pair of these values"
+In our case if the pair of values that form the AR Coefficients
+cause the F matrix to have eigenvalues that are greater than 1, the system will become unstable. Figure \ref{stabf1f2} displays the values which provide stability and instability, as well as the centroid which corresponds to the coefficients we choose as our mean values, 
+% ** * % Formerly was: "our currently chosen coefficients of"
+$f_1$ = 0.5, $f_2$ = -0.4.
+
+\begin{figure}[!h]
+	\centering\includegraphics[width=0.4\textwidth]{figs/stability.png}\\
+	\caption{AR Coefficient Stability Region}
+	\label{stabf1f2}
+\end{figure}
 
 For the mismatched data generation case, we obtain the heatmap of chosen coefficient values shown in Figure \ref{heatmap}. We discard any values which cause the eigenvalues of the F matrix to be larger than one, therefore the actual mean value of the coefficients deviates from what we use to generate the overall dataset. 
 
@@ -218,27 +220,24 @@ The most common approaches to accurately tracking the channel described in Secti
 
 \subsection{Riccati Equation}
 
-The Riccati equation (RE) allows us to have a lower bound for the best possible performance in channel estimation we could possibly have with a model mismatch, assuming access to an infinite dataset. In this specific case, this equation will always converge to a lower MSE than any other channel estimation method we are using (LS, KF, TCN). In the matched model case, the RE will simply verify that the KF is working properly, as the KF should converge nearly to the RE solution. The RE in the discrete time domain is implemented with the following equation \cite{bar2004estimation}: 
-
-\begin{equation}
-X=F^{\rm T}XF-(F^{\rm T}XH)(R+H^{\rm T}XH)^{-1}(H^{\rm T}XF) + Q 
-\end{equation}
+The Riccati equation (RE) allows us to have a lower bound for the best possible performance in channel estimation we could possibly have with a model mismatch, assuming access to an infinite dataset. In this specific case, this equation will always converge to a lower MSE than any other channel estimation method we are using (LS, KF, TCN). In the matched model case, the RE will simply verify that the KF is working properly, as the KF should converge nearly to the RE solution. The equations and solutions that makeup the Riccati Equation are beyond the scope of this paper and can be found in \cite{bar2004estimation}.
 
 \subsection{Least Squares}
 
-Utilizing the least squares algorithm, we obtained filter coefficients which transform the measured state matrix (\textbf{Z}) into the best prediction or estimation ($\hat{x}$) that we can make given a sequence history of $N$ and a filter order of $M$. The prediction/estimation and least squares coefficient solutions $(a_{ls}, b_{ls})$ are given by the following equations:
-\begin{eqnarray*}
-\hat{x_{est}}&=&\textbf{Z}a_{ls} \\ 
-\hat{x_{pred}}&=&\textbf{Z}b_{ls} \\ 
-a_{ls}&=&(\textbf{Z}^{\rm T}\textbf{Z})^{-1}\textbf{Z}^{\rm T}x_{est} \\
+Utilizing the least squares algorithm, we obtained filter coefficients which transform the measured state matrix (\textbf{Z}) into the best prediction or estimation ($\hat{x}$) that we can make given a sequence history of $N$ and a filter order of $M$. The prediction least squares coefficient solutions $a_{ls}$  given by the following equations:
+\begin{eqnarray}
+%\hat{x_{est}}&=&\textbf{Z}a_{ls} \\ 
+%\hat{x_{pred}}&=&\textbf{Z} b_{ls} \\ 
+\hat{x_{pred}} = \textbf{Z} b_{ls} \\
+%a_{ls}&=&(\textbf{Z}^{\rm T}\textbf{Z})^{-1}\textbf{Z}^{\rm T}x_{est} \\
 b_{ls}&=&(\textbf{Z}^{\rm T}\textbf{Z})^{-1}\textbf{Z}^{\rm T}x_{pred}
-\end{eqnarray*}
+\end{eqnarray}
 \begin{align}
 \begin{aligned}
 x&= \left[ \begin{matrix}  x[k]   \dots    x[k-M] \end{matrix} \right]^\top\\
 \hat{x_{pred}} &= \left[ \begin{matrix} \hat{x}[k-1]  \dots \hat{x}[k-M-1]\end{matrix} \right]^\top\\
-\hat{x_{est}} &= \left[ \begin{matrix}   \hat{x}[k]  & \hat{x}[k-1]  &  \dots & \hat{x}[k-M]\end{matrix}\right]^\top\\ \nonumber
-a_{ls}&=  \left[ \begin{matrix}    a_{0} &  a_{1} &  \dots  & a_{N} \end{matrix} \right]^\top\\
+%\hat{x_{est}} &= \left[ \begin{matrix}   \hat{x}[k]  & \hat{x}[k-1]  &  \dots & \hat{x}[k-M]\end{matrix}\right]^\top\\ \nonumber
+%a_{ls}&=  \left[ \begin{matrix}    a_{0} &  a_{1} &  \dots  & a_{N} \end{matrix} \right]^\top\\
 b_{ls}&= \left[ \begin{matrix}   b_{0}   & b_{1}  & \dots &  b_{N}\end{matrix}\right]^\top
 \end{aligned}
 \end{align}
@@ -256,34 +255,41 @@ The least squares filter coefficients are computed once using a training data se
 \subsection{Kalman Filter}
 
  We wish to estimate the current state as well as predict the future state of the AR process using the Kalman filter to compare performance of the TCN to a standard channel tracking system. To realize the KF in this situation, we used the following state update equations \cite{kay1993fundamentals}: \\
-\begin{eqnarray*}
+%\begin{eqnarray}
+\begin{align}
+\begin{aligned}                         
 \hat{x}[n|n-1]&=&\textbf{F}\hat{x}[n-1|n-1] \\
 \textbf{M}[n|n-1]&=&\textbf{FM}[n-1|n-1]\textbf{F}^{\rm T} + \textbf{Q} \\
 \textbf{K}[n]&=&\frac{\textbf{M}[n|n-1]\textbf{H}}{\sigma_{w}^{2} + \textbf{H}^{\rm T}\textbf{M}[n|n-1]\textbf{H}} \\
 \hat{x}[n|n]&=&\hat{x}[n|n-1] + \textbf{K}[n](z[n]-\textbf{H}^{\rm T}\hat{x}[n|n-1]) \\
 \textbf{M}[n|n]&=&(\textbf{I}-\textbf{K}[n]\textbf{H}^{\rm T})\textbf{M}[n|n-1]
-\end{eqnarray*}
+\end{aligned}
+\end{align}
+%\end{eqnarray}
 
 \begin{table}[h!]
 \centering
-\begin{tabular}{|c|l|}
-\hline
-Notation           & Description \\ \hline              
-\multirow{2}{*}{$\hat{x}[n|n-1]$} & \multirow{2}{*}{State prediction} \\
-                   & \\ \hline
-\multirow{2}{*}{$\hat{x}[n-1|n-1]$} & \multirow{2}{*}{Correction value} \\
-                   & \\ \hline
-\multirow{2}{*}{$\textbf{M}[n|n-1]$} & \multirow{2}{*}{Minimum prediction MSE} \\
-                   & \\ \hline
-\multirow{2}{*}{$\textbf{M}[n-1|n-1]$} & \multirow{2}{*}{Minimum estimation MSE} \\
-                   & \\ \hline
-\multirow{2}{*}{Q} & \multirow{2}{*}{Process noise} \\
-                   & \\ \hline
-\multirow{2}{*}{$\textbf{K}[n]$} & \multirow{2}{*}{Kalman gain} \\
-                   & \\ \hline
-\multirow{2}{*}{$\sigma_{w}^2$} & \multirow{2}{*}{Measurement noise covariance} \\
-                   & \\ \hline
-\end{tabular}
+	\begin{tabular}{|c|l|}
+	\hline
+	Notation           & Description \\ \hline              
+	\multirow{2}{*}{$\hat{x}[n|n-1]$} & \multirow{2}{*}{State prediction} \\
+	                   & \\ \hline
+	\multirow{2}{*}{$\hat{x}[n-1|n-1]$} & \multirow{2}{*}{Correction value} \\
+	                   & \\ \hline
+	\multirow{2}{*}{$\textbf{M}[n|n-1]$} & \multirow{2}{*}{Minimum prediction MSE} \\
+	                   & \\ \hline
+	\multirow{2}{*}{$\textbf{M}[n-1|n-1]$} & \multirow{2}{*}{Minimum estimation MSE} \\
+	                   & \\ \hline
+	\multirow{2}{*}{Q} & \multirow{2}{*}{Process noise} \\
+	                   & \\ \hline
+	\multirow{2}{*}{$\textbf{K}[n]$} & \multirow{2}{*}{Kalman gain} \\
+	                   & \\ \hline
+	\multirow{2}{*}{$\sigma_{w}^2$} & \multirow{2}{*}{Measurement noise covariance} \\
+	                   & \\ \hline
+                   
+	\end{tabular}
+	\label{tab:NotationTable}
+	\caption{Notation Table}
 \end{table}
 
 Generally, if the Kalman filter has perfect knowledge of the real AR coefficients, the MSE of this system will approach the Riccati equation MMSE. If the Kalman filter has an error in the assumed channel parameters however, it will result in a worse MSE than the Riccati.  In our case, we tested both circumstances; when the Kalman filter has perfect knowledge of the coefficients and also when there is a slight deviation. 
@@ -311,7 +317,7 @@ The TCN consists of multiple "residual blocks" which act as fundamental construc
 	\label{TCNstruct}
 \end{figure}
 
-To optimize the TCN for channel prediction and estimation tasks, we implemented some common functions that many neural networks share, namely: learning rate scheduling, early stopping and dropout. Adding a learning rate scheduling system to the network improved the prediction and estimation accuracy while early stopping and dropout were included to prevent model over-fitting. 
+To optimize the TCN for the channel prediction tasks, we implemented some common functions that many neural networks share, namely: learning rate scheduling, early stopping and dropout. Adding a learning rate scheduling system to the network improved the prediction accuracy while early stopping and dropout were included to prevent model over-fitting. 
 
 We used epochs in the training phase to drastically reduce the amount of time it takes to generate the sequence data and therefore, train the model. Although we can generate an unlimited amount of data to train the network, data generation takes a very long time and significantly cuts into the time available for the training process. By using epochs and techniques to prevent over-fitting, we can attain similar results as we would with longer datasets. 
 
@@ -329,11 +335,11 @@ Where $x$ and $\hat{x}$ are both complex valued states (actual and computed stat
 
 \subsection{Case 1: Static AR Processes}
 
-The results shown for the Static AR Process were generated from a data set that consisted of a training, evaluation set with a $TODO: Change this to 
-match terms we use in data section$ sequence length of 15, and sample sizes of 2e7, 1e6, and 1e6 respectfully. As was mentioned in the data generation section, the AR Coefficients were choosen to be $f_1 = 0.5$ and $f_2 = -0.4$. $TODO: Link to the data generation section$,  
+The results shown for the Static AR Process Table \ref{tab:staticARResults} were generated from a data set that consisted of a training, evaluation set with a $TODO: Change this to 
+match terms we use in data section$ sequence length of 15, and sample sizes of 2e7, 1e6, and 1e6 respectfully. 
+We chose AR Coefficients for the static case to be $f_1 = 0.5$ and $f_2 = -0.4$.  
 
 \begin{table}[!h]
-<<<<<<< HEAD
 	\begin{tabular}{|l|l|l|l|}
 		\hline
 		 MMSE                 & Least Squares        & Kalman Filter         & TCN                   \\ \hline
@@ -341,24 +347,17 @@ match terms we use in data section$ sequence length of 15, and sample sizes of 2
 		                      &                      &                       &                       \\
 		                      &                      &                       &                       \\ \hline
 	\end{tabular}
-=======
-\begin{tabular}{|l|l|l|l|}
-\hline 
-                             MMSE                 & LS        & KF         & TCN                   \\ \hline
-\multirow{3}{*}{}  \multirow{3}{*}{0.11757706} & \multirow{3}{*}{0.11763980} & \multirow{3}{*}{0.11763666} & \multirow{3}{*}{0.11763723} \\
-                                                  &                      &                       &                       \\
-                                                  &                      &                       &                       \\ \hline
-\end{tabular}
->>>>>>> 0a50b51eb10188a9bebf013b56a4acb82fb3fc16
+	\caption{Static AR Process Results}
+	\label{tab:staticARResults}
 \end{table}
 
-These results show that their is a very small difference 
+It can be seen from the results that the TCN performed only slightly worse than the Kalman Filter, and even outperformed the Least Squares algorithem when their was perfect knowledge of the AR Model.
 
 \newpage
 
 \subsection{Case 2: Varied AR Processes}
 
-Figure \ref{c2resultsall} displays the MSE results of all three channel tracking methods in the varied AR processes case on a logarithmic scale in both axes. The MMSE line in the both figures corresponds to the Riccati equation solution, which provides the asymptotic lower bound for the best possible performance. As can be seen from both figures, all channel tracking methods result in a MSE value that resides above this line. 
+Figure \ref{c2resultsall} displays the MSE results of all three channel tracking methods in the varied AR processes case on a logarithmic scale in both axes. The MMSE line in the both figures corresponds to the Riccati equation solution, a straight line with slope 1, which provides the asymptotic lower bound for the best possible performance. As can be seen from both figures, all channel tracking methods result in a MSE value that resides above this line. 
 
 \begin{figure}[!h]
 	\centering\includegraphics[width=0.5\textwidth]{figs/mismatch_LOG.PNG}\\
