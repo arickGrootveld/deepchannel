@@ -12,6 +12,7 @@
 \input{bibmacros.tex}
 \usepackage{multirow}
 \usepackage{hyperref}
+\usepackage{bm}
 
 \renewcommand{\baselinestretch}{1.07}
 \begin{document}
@@ -224,32 +225,59 @@ The Riccati equation (RE) allows us to have a lower bound for the best possible 
 
 \subsection{Least Squares}
 
-Utilizing the least squares algorithm, we obtained filter coefficients which transform the measured state matrix (\textbf{Z}) into the best prediction or estimation ($\hat{x}$) that we can make given a sequence history of $N$ and a filter order of $M$. The prediction least squares coefficient solutions $a_{ls}$  given by the following equations:
-\begin{eqnarray}
-%\hat{x_{est}}&=&\textbf{Z}a_{ls} \\ 
-%\hat{x_{pred}}&=&\textbf{Z} b_{ls} \\ 
-\hat{x_{pred}} = \textbf{Z} b_{ls} \\
-%a_{ls}&=&(\textbf{Z}^{\rm T}\textbf{Z})^{-1}\textbf{Z}^{\rm T}x_{est} \\
-b_{ls}&=&(\textbf{Z}^{\rm T}\textbf{Z})^{-1}\textbf{Z}^{\rm T}x_{pred}
-\end{eqnarray}
-\begin{align}
-\begin{aligned}
-x&= \left[ \begin{matrix}  x[k]   \dots    x[k-M] \end{matrix} \right]^\top\\
-\hat{x_{pred}} &= \left[ \begin{matrix} \hat{x}[k-1]  \dots \hat{x}[k-M-1]\end{matrix} \right]^\top\\
-%\hat{x_{est}} &= \left[ \begin{matrix}   \hat{x}[k]  & \hat{x}[k-1]  &  \dots & \hat{x}[k-M]\end{matrix}\right]^\top\\ \nonumber
-%a_{ls}&=  \left[ \begin{matrix}    a_{0} &  a_{1} &  \dots  & a_{N} \end{matrix} \right]^\top\\
-b_{ls}&= \left[ \begin{matrix}   b_{0}   & b_{1}  & \dots &  b_{N}\end{matrix}\right]^\top
-\end{aligned}
-\end{align}
+Utilizing the least squares algorithm, we obtained filter coefficients which transform the measured state matrix (\textbf{Z}) into the best prediction ($\hat{x}$) that we can make given a sequence history of $N$ and a filter order of $M$. 
 
-$\vec{\textbf{Z}} = \begin{bmatrix}
+The Least Squares Filter coefficients $b_{ls}$ can be calculated from:
+\begin{equation}
+\bm{b_{ls}}=(\bm{Z}^{\rm T}\bm{Z})^{-1}\bm{Z}^{\rm T}\bm{x_{pred}}
+\end{equation}
+With $\bm{Z}$ and $\bm{x_{pred}}$ defined as
+\begin{equation*}
+	\bm{x_{pred}} = \left[ \begin{matrix} x[k-1]  \dots x[k-M-1]\end{matrix} \right]^\top\\
+\end{equation*}
+$\vec{\bm{Z}} = \begin{bmatrix}
    z[k-1]   & ...       & z[k-N-1]     & \\
    z[k-2]   & ...       & z[k-N-2]     & \\
    \vdots             &  \ddots   &              & \\
    z[k-M-1] & ...       & z[k-M-N-1]  
 \end{bmatrix}$
 
-The least squares filter coefficients are computed once using a training data sequence consisting of many segments of either one AR process or many, depending on the case being examined. Both the mismatched and matched model cases are evaluated with training occurring on large collections of AR processes and testing on individual, longer sequences. The Gilbert-Elliott case requires the LS to be trained on a Toeplitz matrix input data structure, as is mentioned in Section \ref{sec:dgen}.
+where $\bm{x_{pred}}$ is obtained from the System States of the training data, and $\bm{Z}$ is obtained from the Observation States of the training data. 
+
+Once the Least Squares Coefficients are computed, it can be applied with a simple matrix multiplication to get the predicted states:
+\begin{equation}
+\bm{\hat{x}_{pred}} = \bm{Z} \bm{b_{ls}} \\
+\end{equation}
+
+
+
+%% ** %% Reformatting this whole section to give a little bit of a better explanation %% ** %%
+
+%The prediction least squares coefficient solutions $a_{ls}$  given by the following equations:
+%\begin{eqnarray} 
+%{\hat{x}_{pred}} = \bm{Z} \bm{b_{ls}} \\
+%\bm{b_{ls}}&=&(\textbf{Z}^{\rm T}\textbf{Z})^{-1}\textbf{Z}^{\rm T}x_{pred}
+%\end{eqnarray}
+%\begin{align}
+%\begin{aligned}
+%x&= \left[ \begin{matrix}  x[k]   \dots    x[k-M] \end{matrix} \right]^\top\\
+%\hat{x_{pred}} &= \left[ \begin{matrix} \hat{x}[k-1]  \dots \hat{x}[k-M-1]\end{matrix} \right]^\top\\
+%%\hat{x_{est}} &= \left[ \begin{matrix}   \hat{x}[k]  & \hat{x}[k-1]  &  \dots & \hat{x}[k-M]\end{matrix}\right]^\top\\ \nonumber
+%%a_{ls}&=  \left[ \begin{matrix}    a_{0} &  a_{1} &  \dots  & a_{N} \end{matrix} \right]^\top\\
+%b_{ls}&= \left[ \begin{matrix}   b_{0}   & b_{1}  & \dots &  b_{N}\end{matrix}\right]^\top
+%\end{aligned}
+%\end{align}
+%
+%$\vec{\textbf{Z}} = \begin{bmatrix}
+%   z[k-1]   & ...       & z[k-N-1]     & \\
+%   z[k-2]   & ...       & z[k-N-2]     & \\
+%   \vdots             &  \ddots   &              & \\
+%   z[k-M-1] & ...       & z[k-M-N-1]  
+%\end{bmatrix}$
+
+
+
+The least squares filter coefficients are computed once using a training data sequence consisting of many segments of either one AR process or many, depending on the case being examined. Both the mismatched and matched model cases are evaluated with training occurring on large collections of AR processes and testing on individual, longer sequences. The Gilbert-Elliott case requires the LS to be trained on a Toeplitz matrix input data structure, as stated in Section \ref{sec:dgen}.
  
 
 \subsection{Kalman Filter}
