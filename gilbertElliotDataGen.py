@@ -483,10 +483,12 @@ if __name__ == "__main__":
 
     start = time.time()
     if not testGeneration:
-        data = GilElDataGenWrapper(numSequences=simuLen, sequenceLength=sequenceLen, randSeed=seed,
+        # Null out the return, as we do not use is
+        _ = GilElDataGenWrapper(numSequences=simuLen, sequenceLength=sequenceLen, randSeed=seed,
                                    goodTransProb=goodTransProb, badTransProb=badTransProb)
     else:
-        data = GilElTestDataGen(numSequences=simuLen, sequenceLength=sequenceLen, randSeed=seed,
+        # Null out the return, as we do not use it
+        _ = GilElTestDataGen(numSequences=simuLen, sequenceLength=sequenceLen, randSeed=seed,
                                 goodTransProb=goodTransProb, badTransProb=badTransProb)
 
     end = time.time()
