@@ -132,6 +132,10 @@ parser.add_argument('--model_path', type=str, default='None',
 # If model is loaded from a path, will skip over the training and evaluation loops and go straight to testing. This will
 # ignore all data generation specified for train and eval, and will only generate/load data for the testing process.
 
+# Setting the model and setup to debug mode so that we can recover instantaneous squared errors, etc.
+parser.add_argument('--debug', action='store_true',
+                    help='set code to debug mode (default: False)')
+
 # Coefficients used by the Kalman filter for the F matrix it assumes the Gauss Markov Process uses
 parser.add_argument('--KFCoeffs', nargs='+', default=[0.5, -0.4],
                     help='Coefficients Passed to the Kalman Filter, will depend on the scenario you are looking at'
@@ -201,6 +205,8 @@ lr = args.lr
 trainDataLen = int(args.simu_len)
 seed = args.seed
 optimMethod = args.optim
+
+debug_mode = args.debug
 
 evalDataLen = int(args.eval_len)
 testDataLen = int(args.test_set_depth)
@@ -389,6 +395,13 @@ else:
 
     print('test data loaded from: {}'.format(testFile))
     fileContent[u'testDataFile'] = testFile
+
+# Enabling Debug Parameters
+if debug_mode:
+    debug_data = {}
+    instantaneousSquaredErrors = torch.empty(trueStateTEST.shape, dtype=torch.float)
+
+
 
 trueStateTEST = torch.from_numpy(trueStateTEST)
 measuredStateTEST = torch.from_numpy(measuredStateTEST)
@@ -598,6 +611,10 @@ def test():
                 test_loss = F.mse_loss(output, y_test, reduction="sum")
 
                 PredMSE = torch.sum(((output[:, 0] - y_test[:, 0]) ** 2) + (output[:, 1] - y_test[:, 1]) ** 2) / output.size(0)
+                
+                if debug_mode:
+                    print('test')
+
                 # TrueMSE = torch.sum((output[:, 0] - y_test[:, 0]) ** 2 + (output[:, 2] - y_test[:, 2]) ** 2) / output.size(0)
                 TotalAvgPredMSE+=PredMSE
                 # TotalAvgTrueMSE+=TrueMSE
