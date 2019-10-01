@@ -720,7 +720,6 @@ numEpochsSinceBest = 0
 
 # Letting the model know when the last epoch happens so we can record the MSEs of the individual samples
 for ep in range(0, epochs):
-    print('test')
     train(ep)
     tloss = evaluate()
 
