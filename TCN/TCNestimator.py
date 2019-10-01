@@ -399,7 +399,10 @@ else:
 # Enabling Debug Parameters
 if debug_mode:
     debug_data = {}
-    instantaneousSquaredErrors = torch.empty(trueStateTEST.shape, dtype=torch.float)
+    trueStateTestShape = trueStateTEST.shape
+    instantaneousSquaredErrors = torch.empty((trueStateTestShape[0], 
+                                              trueStateTestShape[1], trueStateTestShape[3]), 
+                                              dtype=torch.float)
 
 
 
@@ -614,6 +617,9 @@ def test():
                 
                 if debug_mode:
                     print('test')
+                    instantaneousSquaredErrors[r, :, i] = ((output[:, 0] - y_test[:, 0]) ** 2) + \
+                                                          (output[:, 1] - y_test[:, 1]) ** 2)
+
 
                 # TrueMSE = torch.sum((output[:, 0] - y_test[:, 0]) ** 2 + (output[:, 2] - y_test[:, 2]) ** 2) / output.size(0)
                 TotalAvgPredMSE+=PredMSE
@@ -622,7 +628,7 @@ def test():
                 # testEstMSEs[i] = TrueMSE
 
             n+=1
-
+        testInfor[r][u'instantaneousSquaredErrors'] = (torch.squeeze(instantaneousSquaredErrors[r,:,:])).item()
         TotalAvgPredMSE = TotalAvgPredMSE / n
         # TotalAvgTrueMSE = TotalAvgTrueMSE / n
 
