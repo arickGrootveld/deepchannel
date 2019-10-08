@@ -398,7 +398,6 @@ else:
 
 # Enabling Debug Parameters
 if debug_mode:
-    debug_data = {}
     trueStateTestShape = trueStateTEST.shape
     instantaneousSquaredErrors = torch.empty((trueStateTestShape[0], 
                                               trueStateTestShape[1], trueStateTestShape[3]), 
@@ -449,6 +448,9 @@ if args.cuda:
         trueStateEVAL = trueStateEVAL.cuda()
         measuredStateEVAL = measuredStateEVAL.cuda()
 
+    # Pushing the Squared Error calculations to cuda as well
+    if debug_mode:
+        instantaneousSquaredErrors = instantaneousSquaredErrors.cuda()
     # Test set
     trueStateTEST = trueStateTEST.cuda()
     measuredStateTEST = measuredStateTEST.cuda()
@@ -614,12 +616,10 @@ def test():
                 test_loss = F.mse_loss(output, y_test, reduction="sum")
 
                 PredMSE = torch.sum(((output[:, 0] - y_test[:, 0]) ** 2) + (output[:, 1] - y_test[:, 1]) ** 2) / output.size(0)
-                
-                if debug_mode:
-                    print('test')
-                    instantaneousSquaredErrors[r, :, i] = ((output[:, 0] - y_test[:, 0]) ** 2) + \
-                                                          (output[:, 1] - y_test[:, 1]) ** 2)
 
+                if debug_mode:
+                    instantaneousSquaredErrors[r, :, i] = ((output[:, 0] - y_test[:, 0]) ** 2) + \
+                                                          ((output[:, 1] - y_test[:, 1]) ** 2)
 
                 # TrueMSE = torch.sum((output[:, 0] - y_test[:, 0]) ** 2 + (output[:, 2] - y_test[:, 2]) ** 2) / output.size(0)
                 TotalAvgPredMSE+=PredMSE
@@ -628,7 +628,10 @@ def test():
                 # testEstMSEs[i] = TrueMSE
 
             n+=1
-        testInfor[r][u'instantaneousSquaredErrors'] = (torch.squeeze(instantaneousSquaredErrors[r,:,:])).item()
+        # Recording the instantaneous errors if the model is set to debug mode
+        if debug_mode:
+            testDataInfo[r][u'instantaneousSquaredErrors'] = (torch.squeeze(instantaneousSquaredErrors[r,:,:])).cpu().numpy()
+
         TotalAvgPredMSE = TotalAvgPredMSE / n
         # TotalAvgTrueMSE = TotalAvgTrueMSE / n
 
