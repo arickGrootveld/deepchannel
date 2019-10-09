@@ -232,7 +232,11 @@ testSeriesLength = int(testDataLen/batch_size)
 testSession = False
 if(args.model_path != 'None'):
     testSession = True
-    modelContext = torch.load(args.model_path)
+    if(args.cuda):
+        modelContext = torch.load(args.model_path)
+    else:
+        device = torch.device('cpu')
+        modelContext = torch.load(args.model_path, map_location=device)
 modelPath = args.model_path
 ### ~~~~~~~~~~~~~~~ LOAD DATA/GENERATE MODEL ~~~~~~~~~~~~~~~~ ###
 # Here we have the option of loading from a saved .mat file or just calling the data generation
