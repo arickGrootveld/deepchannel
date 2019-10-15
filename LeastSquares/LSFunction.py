@@ -30,7 +30,7 @@ def LSTraining(trainData):
 
     # Removing the first elements of the data (last row after flipping) because it
     # is all zeros and that causes problems with matrix inverses
-    z = z[:, 0:-1]
+    # z = z[:, 0:-1]
 
     z_psuedoInverse = np.linalg.pinv(z)
 
@@ -77,7 +77,7 @@ def LSTesting(estAndPredFilterCoeffs, testData):
 
     # Removing the first elements of the data (last row after flipping) because it
     # is all zeros and that causes problems with matrix inverses
-    z = z[:, 0:-1]
+    # z = z[:, 0:-1]
 
     # Calculate MSE of estimation
     f = abs((x_est - np.matmul(z, a_ls))) ** 2
