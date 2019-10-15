@@ -28,10 +28,6 @@ def LSTraining(trainData):
     x_est[:, 0] = ARValuesComplex[N - 1, :]
     x_pred[:, 0] = ARValuesComplex[N, :]
 
-    # Removing the first elements of the data (last row after flipping) because it
-    # is all zeros and that causes problems with matrix inverses
-    # z = z[:, 0:-1]
-
     z_psuedoInverse = np.linalg.pinv(z)
 
     # estimate coefficients
@@ -74,10 +70,6 @@ def LSTesting(estAndPredFilterCoeffs, testData):
     z[:, :] = np.transpose(np.flipud(measuredStateDataComplex[0:N, :]))
     x_est[:, 0] = ARValuesComplex[N - 1, :]
     x_pred[:, 0] = ARValuesComplex[N, :]
-
-    # Removing the first elements of the data (last row after flipping) because it
-    # is all zeros and that causes problems with matrix inverses
-    # z = z[:, 0:-1]
 
     # Calculate MSE of estimation
     f = abs((x_est - np.matmul(z, a_ls))) ** 2
