@@ -677,7 +677,7 @@ def test():
 
         print('Riccati Convergence MSE')
         print("MSE Riccati Prediction for set number {}: ".format(r+1), testDataInfo[r]['riccatiConvergencePred'])
-        print("MSE Riccati Estimation for set number {}: ".format(r+1), testDataInfo[r]['riccatiConvergenceEst'])
+        # print("MSE Riccati Estimation for set number {}: ".format(r+1), testDataInfo[r]['riccatiConvergenceEst'])
 
         # Printing a newline to make it easier to tell test sets apart
         print(' ')
@@ -755,6 +755,15 @@ if not testSession:
                 if(numEpochsSinceBest >= 31):
                     print('No progress made in 31 epochs, model is over fitting')
                     break
+                # This is experimental, please remove if not working
+                # What this does is reset the model back to the best model after 10 epochs of no improvement
+                # to get the benefit of the decreased step size
+                if((numEpochsSinceBest % 10) == 0):
+                    model = modelBEST
+                    print('model reset to best model')
+
+
+
         print(tloss)
 
     torch.save(modelContext, modelPath)

@@ -271,7 +271,7 @@ def toeplitzData(sequenceData, numColumns):
 # GilElTestDataGen: Function that uses the GilElDatagenWrapper to generate a set of data that has everything required
 #                   for a test data set that can be fed right into the TCN
 def GilElTestDataGen(sequenceLength=10, numSequences=100, goodCoefficients=[0.3, 0.1],
-                          badCoefficients=[1.95, -0.95], goodTransProb=0.001, badTransProb=0.001, QVar=0.1,
+                          badCoefficients=[1.949, -0.95], goodTransProb=0.0005, badTransProb=0.0005, QVar=0.1,
                           RVar=0.1, randSeed=int(np.abs(np.floor(100*np.random.randn(1)))), batch_size=20, **kwargs):
     LSandKFTestData = []
     testDataInfo = []
@@ -402,7 +402,7 @@ def GilElTestDataGen(sequenceLength=10, numSequences=100, goodCoefficients=[0.3,
 
 
 def GilElDataGenWrapper(sequenceLength=10, numSequences=100, goodCoefficients=[0.3, 0.1],
-                          badCoefficients=[1.95, -0.95], goodTransProb=0.001, badTransProb=0.001, QVar=0.1,
+                          badCoefficients=[1.949, -0.95], goodTransProb=0.0005, badTransProb=0.0005, QVar=0.1,
                           RVar=0.1, randSeed=int(np.abs(np.floor(100*np.random.randn(1)))),startingState='random', **kwargs):
     # Generating a much longer sequence that will have the exact length to cause the toeplitz matrix that it will become
     # to have the exact sequence length and number of sequences that we expect
