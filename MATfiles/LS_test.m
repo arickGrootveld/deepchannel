@@ -11,7 +11,7 @@ chan2=[1.95 -0.95]';      % bad channel
 sigma_v2=0.1;             % variance of v (i.e., process noise)
 sigma_w2=0.1;             % variance of measurement noise, decreases with time (remaps Kay's time indices)
 N=1e7;                    % length of training sequence
-TRAIN=0;                  % when set to one, trains LS model to create LS predictor; when set to zero, assumes "a_ls_pred" variable is in workspace and computes performance
+TRAIN=1;                  % when set to one, trains LS model to create LS predictor; when set to zero, assumes "a_ls_pred" variable is in workspace and computes performance
 
 % plotting parameters
 N_plot=1e4;      % number of points to plot (must be <= N)

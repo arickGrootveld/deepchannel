@@ -1,5 +1,7 @@
 import numpy as np
 
+previousEstimate = 0
+
 def KFTesting(testData, ARCoeffs):
 
     # Preset Parameters, because we are on a strict timeline
@@ -91,6 +93,16 @@ def KFTesting(testData, ARCoeffs):
             minMSE[:, :, q, i] = np.matmul(intermediate1, minPredMSE[:, :, q, i])
 
         ############################# KALMAN FILTER 1  ##############################
+
+        # print('inside the series loop')
+        # print(x_correction[:, q-1, i])
+        # print(x_correction.shape())
+        
+        # Updating the correction value to persist between rows, as the Kalman Filter
+        # is an iterative approach, not having this persistence causes it to take 
+        # longer to converge to the Riccati equation than it should
+        if(i < seriesLength - 1):
+            x_correction[:, 0, i + 1] = x_correction[:, q, i]
 
         ## Calculating the actual MSE between the kalman filters final prediction, and the actual value ##
         # Converting the true states into their complex equivalents
