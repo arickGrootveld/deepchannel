@@ -40,17 +40,29 @@ def GaussMarkovProcess(**kwargs):
     if('seed' in kwargs):
         seed = kwargs['seed']
 
+    # Creating transition matrix of appropriate order for the GA Process seen
+    ar_order = len(ar_coeffs)
 
-    F = np.matrix([[ar_coeffs[0], ar_coeffs[1]], [1, 0]], dtype=float)
+    # F Matrix needs to be identity matrix shifted down one row, and with first row
+    # being the ar coefficients
+    F = np.eye(ar_order, dtype=float)
+    F = np.roll(F, ar_order)
+    for m in range(0, ar_order):
+        F[0, m] = ar_coeffs[m]
+
 
     # Process Noise Covariance Matrix
-    Q = np.matrix([[q_covar, 0], [0, 0]], dtype=float)
+    Q = np.zeros((ar_order, ar_order), dtype=float)
+    Q[0,0] = q_covar
 
     # Observation noise covariance matrix
     R = np.matrix(r_covar, dtype=float)
 
+
+
     # Matrix mapping real states into observation domain
-    H = np.matrix([1,0], dtype=float)
+    H = np.zeros((1, ar_order), dtype=float)
+    H[0, 0] = 1
 
     # Pre-allocating process states
     x = np.empty([1, simuLen], dtype=complex)
@@ -69,15 +81,19 @@ def GaussMarkovProcess(**kwargs):
     print(riccatiPred)
     print(riccatiEst)
 
+    initStates = [0]
+    for m in range(0, ar_order-1):
+        initStates.append(0)
     
-    initStates = (0,0)
     for i in range(0, simuLen):
         
-        (x_curr, z_curr) = GaussMarkovSample(init_states=initStates, q_covar=q_covar,
+        (x_curr, z_curr) = GaussMarkovSample(initStates=initStates, q_covar=q_covar,
                                              r_covar=r_covar, ar_coeffs=ar_coeffs, seed=seed)
         x[0, i] = x_curr
         z[0, i] = z_curr
-        initStates = (x_curr, initStates[0])
+        initStates[0] = x_curr
+        for m in range(1, ar_order):
+            initStates[m] = initStates[m-1]
 
     return x, z, riccatiPred, riccatiEst
 
@@ -90,10 +106,11 @@ def GaussMarkovSample(**kwargs):
     '''
     GaussMarkovSample(initStates=(0,0), q_covar=0.1, r_covar=0.1, ar_coeffs=(0.3, 0.1), seed=-1)
         Parameters:
-            initStates (list/tuple): The states of the process at k-1 and k-2 respectfully
+            initStates (list/tuple): The states of the process at k-1, ..., k-N
             q_covar (float): The covariance value of the process noise
             r_covar (float): The covariance value of the observation noise
-            ar_coeffs (list/tuple): The coeffecients of the transition matrix of the GA Process
+            ar_coeffs (list/tuple with N elements): The coeffecients of the 
+                                                    transition matrix of the GA Process 
             seed (int): The seed for the rng of this process, if not set it will default to a random seed
         Outputs: (x, z)
             x (np.complex128): The current (k) state of the process
@@ -123,20 +140,34 @@ def GaussMarkovSample(**kwargs):
     # No else statement needed, if seed not provided to numpy,
     # then it will use random seed
 
+    # Grabbing the order of the AR Process
+    ar_order = len(ar_coeffs)
+
     # Assigning AR Process matrices from input parameters
-    F = np.matrix([ar_coeffs, [0, 1]])
-    Q_Chol = np.matrix([[np.sqrt(q_covar), 0], [0, 0]])
+
+    # F Matrix needs to be identity matrix shifted down one row, and with first row
+    # being the ar coefficients
+    F = np.eye(ar_order, dtype=float)
+    F = np.roll(F, ar_order)
+    for m in range(0, ar_order):
+        F[0, m] = ar_coeffs[m]
+    
+    Q_Chol = np.zeros((ar_order, ar_order), dtype=float)
+    Q_Chol[0, 0] = np.sqrt(q_covar)
+
     R = np.matrix(r_covar)
 
-    x_prev = np.transpose(np.matrix([initStates[0], initStates[1]]))
+    x_prev = np.zeros((ar_order, 1), dtype=np.complex128)
+    for m in range(0, ar_order):
+        x_prev[m] = initStates[m]
 
     # Defining preset matrices
-    H = np.matrix([1,0])
+    H = np.zeros((1, ar_order), dtype=float)
 
 
     # Starting the AR Process here
-    rProcessNoise = np.divide(np.matmul(Q_Chol, np.random.randn(2,1)), np.sqrt(2))
-    iProcessNoise = 1j * np.divide(np.matmul(Q_Chol, np.random.randn(2,1)), np.sqrt(2))
+    rProcessNoise = np.divide(np.matmul(Q_Chol, np.random.randn(ar_order,1)), np.sqrt(2))
+    iProcessNoise = 1j * np.divide(np.matmul(Q_Chol, np.random.randn(ar_order,1)), np.sqrt(2))
 
     v = rProcessNoise + iProcessNoise
 
