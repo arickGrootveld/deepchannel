@@ -104,3 +104,7 @@ xlabel('x');
 ylabel('y');
 set(h,'markersize',2);
 set(h,'linewidth',1.5);
+
+[finalStateValues, observedStates] = reformatIMMData(X_r, Y);
+
+save('data/test.mat', 'finalStateValues', 'observedStates');

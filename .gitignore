@@ -12,3 +12,4 @@ ARMismatchPredictor/ar_mismatch_test.py
 **/__pycache__
 **.mat
 **.pth
+.DS_Store
