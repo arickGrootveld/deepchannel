@@ -15,7 +15,6 @@ import numpy as np
 import sys
 sys.path.append("..") # Adds higher directory to python modules path.
 from model import TCN
-from mismatch_data_gen import ARDatagenMismatch
 from utilities import convertToBatched, matSave
 from LeastSquares.LSFunction import LSTesting, LSTraining
 from KalmanFilter.KFFunction import KFTesting
@@ -173,28 +172,20 @@ channel_sizes = [args.nhid]*args.levels
 kernel_size = args.ksize
 dropout = args.dropout
 lr = args.lr
-trainDataLen = int(args.simu_len)
 seed = args.seed
 optimMethod = args.optim
 
-evalDataLen = int(args.eval_len)
-testDataLen = int(args.test_set_depth)
 cuda_device = args.cuda_device
-AR_var = args.AR_var
 
 trainFile = args.trainDataFile
 evalFile = args.evalDataFile
 testFile = args.testDataFile
 
-KFARCoeffs = []
-for KFCoeff in args.KFCoeffs:
-    KFARCoeffs.append(float(KFCoeff))
-
 # Calculating the number of batches that will need to be created given the simulation length and the batch size
-trainSeriesLength = int(trainDataLen / batch_size)
-evaluationSeriesLength = int(evalDataLen / batch_size)
+# trainSeriesLength = int(trainDataLen / batch_size)
+# evaluationSeriesLength = int(evalDataLen / batch_size)
 # Doing the same calculation as above for the test data set
-testSeriesLength = int(testDataLen/batch_size)
+# testSeriesLength = int(testDataLen/batch_size)
 # The appropriate seriesLength variables get overwritten if we load data from files
 
 # Determining whether this run is for testing only, or if it is for training a model to be tested
@@ -255,13 +246,12 @@ if not testSession:
 # so we can't just generate a single set of data. We simply generate several sequences
 # from the same AR process, and then format everything so it makes sense
 
-testSetLen = int(args.test_set_len)
 # trueStateDataTEST Dimensionality: comprised of sets of data based on the number of AR
 #                                   coefficients that are to be generated in the 1st
 #                                   dimension, then of batch elements in the 2nd
 #                                   dimension, real and imaginary portions of the true state
 #                                   in the 3rd dimension, and by batches in the 4th dimension
-trueStateTEST = np.empty((testSetLen, batch_size, 4, testSeriesLength), dtype=float)
+# trueStateTEST = np.empty((testSetLen, batch_size, 4, testSeriesLength), dtype=float)
 
 # measuredStateTEST Dimensionality: comprised of sets of data based on the number of AR
 #                                   coefficients used for testing in the 1st dimension,
@@ -269,19 +259,21 @@ trueStateTEST = np.empty((testSetLen, batch_size, 4, testSeriesLength), dtype=fl
 #                                   values in the 3rd dimension, sequence elements in the
 #                                   4th dimension, and by batches in the 5th dimension
 
-measuredStateTEST = np.empty((testSetLen, batch_size, 2, seq_length, testSeriesLength), dtype=float)
+# measuredStateTEST = np.empty((testSetLen, batch_size, 2, seq_length, testSeriesLength), dtype=float)
 
 
 
 
 # Loading all test data from a file
 testDataToBeLoaded = hdf5s.loadmat(testFile)
-trueStateTEST = testDataToBeLoaded['trueStateTEST']
-measuredStateTEST = testDataToBeLoaded['measuredStateTEST']
+[trueStateTEST, measuredStateTEST] = convertToBatched(
+                                        testDataToBeLoaded['finalStateValues'], 
+                                        testDataToBeLoaded['observedStates'], 
+                                        batch_size)
 
 # overriding parameters from command line, because we are loading from file
-testSetLen = trueStateTEST.shape[0]
-testSeriesLength = trueStateTEST.shape[3]
+testSetLen = 1
+testSeriesLength = trueStateTEST.shape[2]
 
 print('test data loaded from: {}'.format(testFile))
 fileContent[u'testDataFile'] = testFile
@@ -470,8 +462,8 @@ def test():
         for i in range(0, testSeriesLength):
 
             # Grab the current series
-            x_test = measuredStateTEST[r, :, :, :, i]
-            y_test = trueStateTEST[r, :, :, i]
+            x_test = measuredStateTEST[:, :, :, i]
+            y_test = trueStateTEST[:, :, i]
 
             x_test = x_test.float()
             y_test = y_test.float()
@@ -499,44 +491,9 @@ def test():
         predVariance = torch.sum((testPredMSEs[:]-TotalAvgPredMSE)**2)/testPredMSEs.size(0)
         estVariance = torch.sum((testEstMSEs[:]-TotalAvgTrueMSE)**2)/testEstMSEs.size(0)
 
-        # Logging
-        testDataInfo[r][u'predictionVariance'] = predVariance.item()
-        testDataInfo[r][u'estimationVariance'] = estVariance.item()
-        testDataInfo[r][u'estimationMSE'] = TotalAvgTrueMSE.item()
-        testDataInfo[r][u'predictionMSE'] = TotalAvgPredMSE.item()
-
         print('TCN Performance:')
         print("TotalAvgPredMSE for test set number {}: ".format(r+1), TotalAvgPredMSE.item())
         print("TotalAvgTrueMSEfor test set number {}: ".format(r+1), TotalAvgTrueMSE.item())
-        # Commenting out printing the variances, since they serve no purpose as of now
-        # print("Variance of Prediction for test set number {}: ".format(r+1), predVariance.item())
-        # print("Variance of Estimate for test set number {}: ".format(r+1), estVariance.item())
-
-        # Computing the LS performance on this data set
-        LS_MSEE, LS_MSEP = LSTesting(LSCoefficients, LSandKFTestData[r])
-
-        print('LS Performance')
-        print("MSE of LS predictor for set number {}: ".format(r+1), LS_MSEP)
-        print("MSE of LS estimator for set number {}: ".format(r+1), LS_MSEE)
-
-        testDataInfo[r][u'LS_PredMSE'] = LS_MSEP
-        testDataInfo[r][u'LS_EstMSE'] = LS_MSEE
-
-        # Computing Kalman performance
-        KF_MSEE, KF_MSEP = KFTesting(LSandKFTestData[r],KFARCoeffs)
-
-        print('KF Performance')
-        print("MSE of KF predictor for set number {}: ".format(r+1), KF_MSEP)
-        print("MSE of KF estimator for set number {}: ".format(r+1), KF_MSEE)
-
-        testDataInfo[r][u'KF_PredMSE'] = KF_MSEP
-        testDataInfo[r][u'KF_EstMSE'] = KF_MSEE
-
-        print('Riccati Convergence MSE')
-        print("MSE Riccati Prediction for set number {}: ".format(r+1), testDataInfo[r]['riccatiConvergencePred'])
-        print("MSE Riccati Estimation for set number {}: ".format(r+1), testDataInfo[r]['riccatiConvergenceEst'])
-
-        # Printing a newline to make it easier to tell test sets apart
         print(' ')
 
 
@@ -570,10 +527,6 @@ if not testSession:
         'optimizer_parameters': optimizerParameters,
         'LSCoefficients': {}
     }
-    # Training the Least Squares so we can evaluate its performance on the same dataset
-    LSCoefficients = LSTraining(LSTrainData)
-    # Saving the LS Coefficients so we do not need to train it again
-    modelContext['LSCoefficients'] = LSCoefficients
     # Letting the model know when the last epoch happens so we can record the MSEs of the individual samples
     for ep in range(1, epochs+1):
         train(ep)
@@ -608,9 +561,6 @@ else:
     modelBEST.load_state_dict(modelContext['model_state_dict'])
     optimizer.load_state_dict(modelContext['optimizer_state_dict'])
 
-    # Loading the LS Coefficients
-    LSCoefficients = modelContext['LSCoefficients']
-
 
 # Test once we are done training the model
 tloss = test()
@@ -622,7 +572,6 @@ end = time.time()
 simRunTime=(end-start)
 print('this simulation took:', simRunTime, 'seconds to run')
 
-fileContent[u'testInfo'] = testDataInfo
 fileContent[u'modelPath'] = modelPath
 fileContent[u'trainingLength(seconds)'] = simRunTime
 fileContent[u'runType'] = 'TCN'
