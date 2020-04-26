@@ -90,21 +90,6 @@ parser.add_argument('--nhid', type=int, default=5,
 parser.add_argument('--seed', type=int, default=1111,
                     help='random seed (default: 1111)')
 
-# Data Generation Length
-parser.add_argument('--simu_len', type=float, default=1e2,
-                    help='amount of data generated for training (default: 1e2)')
-
-# Amount of sequences used for each set of AR Coefficients tested against
-parser.add_argument('--test_set_depth', type=float, default=1e2,
-                    help='number of sequences generated per pair of AR Coefficients used for testing (default: 1e2)')
-# Number of sets of AR Coefficients generated for testing
-parser.add_argument('--test_set_len', type=float, default=10,
-                    help='Number of different AR Coefficients that will be used for testing (default=10)')
-
-# Length of data used for eval of models effectiveness
-parser.add_argument('--eval_len', type=float, default=1e2,
-                    help='amount of data generated for testing (default: 1e2)')
-
 # Load data to train with from data file
 parser.add_argument('--trainDataFile', type=str, default='None',
                     help='file path to load training data from, if None then it will generate its own data '
@@ -120,10 +105,6 @@ parser.add_argument('--evalDataFile', type=str, default='None',
 parser.add_argument('--testDataFile', type=str, default='None',
                     help='file path to load test data from, if None then it will generate its own data (default=\'None\')')
 
-# Variance of the random variables that compuse the AR Coefficients
-parser.add_argument('--AR_var', type=float, default=0.2,
-                    help='variance of the AR parameters in the data generation (default=0.1)')
-
 # Location to load the model from
 parser.add_argument('--model_path', type=str, default='None',
                     help='The location to load the model parameters from. If set to None, will generate new model'
@@ -131,11 +112,6 @@ parser.add_argument('--model_path', type=str, default='None',
                          'and simply test the model loaded (default=\'None\')')
 # If model is loaded from a path, will skip over the training and evaluation loops and go straight to testing. This will
 # ignore all data generation specified for train and eval, and will only generate/load data for the testing process.
-
-# Coefficients used by the Kalman filter for the F matrix it assumes the Gauss Markov Process uses
-parser.add_argument('--KFCoeffs', nargs='+', default=[0.5, -0.4],
-                    help='Coefficients Passed to the Kalman Filter, will depend on the scenario you are looking at'
-                         '(default: [0.5, 0.4]')
 
 # Parse out the input arguments
 args = parser.parse_args()
@@ -236,59 +212,38 @@ AR_n = 2
 
 # ~~~~~~~~~~~~~~~~~~ LOAD TRAINING SET
 if not testSession:
-    if(trainFile == 'None'):
-        # Generate AR process training data set - both measured and real states
-        trainStateData, trainStateInfo = ARDatagenMismatch([trainDataLen, AR_n, AR_var, seq_length], seed, args.cuda)
-        # Convert the data from normal formatting to batches
-        trueStateTRAIN, measuredStateTRAIN = convertToBatched(trainStateData[2], trainStateData[1], batch_size)
-        fileContent[u'trainDataFile'] = trainStateInfo['filename']
-        fileContent[u'trainDataSize'] = trueStateTRAIN.shape
-        # TODO: Improve the format at some point in the future, but for now we are just grabbing the trainingData to train
-        # TODO: the LS
-        LSTrainData = trainStateData
-    else:
-        # Grab the data from the .mat file
-        trainDataDict = hdf5s.loadmat(trainFile)
-        print('train data loaded from: {}'.format(trainFile))
-        # Convert the loaded data into batches for the TCN to run with
-        trueStateTRAIN, measuredStateTRAIN = convertToBatched(trainDataDict['finalStateValues'], trainDataDict['observedStates'],
-                                                              batch_size)
-        fileContent[u'trainDataFile'] = trainFile
-        fileContent[u'trainDataSize'] = trueStateTRAIN.shape
+    
+    
+    # Grab the data from the .mat file
+    trainDataDict = hdf5s.loadmat(trainFile)
+    print('train data loaded from: {}'.format(trainFile))
+    # Convert the loaded data into batches for the TCN to run with
+    trueStateTRAIN, measuredStateTRAIN = convertToBatched(trainDataDict['finalStateValues'], trainDataDict['observedStates'],
+                                                            batch_size)
+    fileContent[u'trainDataFile'] = trainFile
+    fileContent[u'trainDataSize'] = trueStateTRAIN.shape
 
-        # TODO: Improve the format at some point in the future, but for now we are just grabbing the trainingData to train
-        # TODO: the LS
-        LSTrainData = [trainDataDict['systemStates'], trainDataDict['observedStates']]
-
-        # Setting the number of batches of train data to be what is supplied in the file
-        trainSeriesLength = trueStateTRAIN.shape[2]
-        trainDataLen = trainSeriesLength * trueStateTRAIN.shape[0]
+    # Setting the number of batches of train data to be what is supplied in the file
+    trainSeriesLength = trueStateTRAIN.shape[2]
+    trainDataLen = trainSeriesLength * trueStateTRAIN.shape[0]
 
     # Convert numpy arrays to tensors
     trueStateTRAIN = torch.from_numpy(trueStateTRAIN)
     measuredStateTRAIN = torch.from_numpy(measuredStateTRAIN)
 
     # ~~~~~~~~~~~~~~~~~~ LOAD EVALUATION SET
-    if(evalFile == 'None'):
-        # Generate AR process evaluation data set - both measured and real states
-        evalStateData, evalStateInfo = ARDatagenMismatch([evalDataLen, AR_n, AR_var, seq_length], seed + 1, args.cuda)
-        # Convert the data from normal formatting to batches
-        trueStateEVAL, measuredStateEVAL = convertToBatched(evalStateData[2], evalStateData[1], batch_size)
-        fileContent[u'evalDataFile'] = evalStateInfo['filename']
-        fileContent[u'evalDataSize'] = trueStateEVAL.shape
-    # loading the data from the file
-    else:
-        # Grab the data from the .mat file
-        evalDataDict = hdf5s.loadmat(evalFile)
-        print('eval data loaded from: {}'.format(evalFile))
-        trueStateEVAL, measuredStateEVAL = convertToBatched(evalDataDict['finalStateValues'],
-                                                            evalDataDict['observedStates'],
-                                                            batch_size)
-        fileContent[u'evalDataFile'] = evalFile
-        fileContent[u'evalDataSize'] = trueStateEVAL.shape
+    
+    # Grab the data from the .mat file
+    evalDataDict = hdf5s.loadmat(evalFile)
+    print('eval data loaded from: {}'.format(evalFile))
+    trueStateEVAL, measuredStateEVAL = convertToBatched(evalDataDict['finalStateValues'],
+                                                        evalDataDict['observedStates'],
+                                                        batch_size)
+    fileContent[u'evalDataFile'] = evalFile
+    fileContent[u'evalDataSize'] = trueStateEVAL.shape
 
-        evalSeriesLength = trueStateEVAL.shape[2]
-        evalDataLen = evalSeriesLength * trueStateEVAL.shape[0]
+    evalSeriesLength = trueStateEVAL.shape[2]
+    evalDataLen = evalSeriesLength * trueStateEVAL.shape[0]
     # Convert numpy arrays to tensors
     trueStateEVAL = torch.from_numpy(trueStateEVAL)
     measuredStateEVAL = torch.from_numpy(measuredStateEVAL)
@@ -319,52 +274,17 @@ measuredStateTEST = np.empty((testSetLen, batch_size, 2, seq_length, testSeriesL
 
 
 
-# Loop for generating the data set for each pair AR Coefficients to test against
-if(testFile == 'None'):
-    LSandKFTestData = []
-    testDataInfo = []
-    for k in range(0,testSetLen):
+# Loading all test data from a file
+testDataToBeLoaded = hdf5s.loadmat(testFile)
+trueStateTEST = testDataToBeLoaded['trueStateTEST']
+measuredStateTEST = testDataToBeLoaded['measuredStateTEST']
 
-        # Generating the data with no variance between sequences (which is what the False in the array is for)
-        # because we want to generate data with a single set of AR Coefficients
-        subsetTestStateData, subsetTestDataInfo = ARDatagenMismatch([testDataLen, AR_n, AR_var, seq_length, False], seed + 2 + k, args.cuda)
-        trueStateTEST[k,:,:,:], measuredStateTEST[k,:,:,:,:] = convertToBatched(subsetTestStateData[2], subsetTestStateData[1], batch_size)
+# overriding parameters from command line, because we are loading from file
+testSetLen = trueStateTEST.shape[0]
+testSeriesLength = trueStateTEST.shape[3]
 
-        # Storing the data that the Least Squares and Kalman Filter will be using
-        LSandKFTestData.append(subsetTestStateData)
-
-        subsetInfoHolder = {}
-        # Grabbing the first riccatiConvergence because they should all be the same for both the estimate and prediction
-        subsetInfoHolder[u'riccatiConvergencePred'] = subsetTestDataInfo['riccatiConvergences'][0,0]
-        subsetInfoHolder[u'riccatiConvergenceEst'] = subsetTestDataInfo['riccatiConvergences'][1,0]
-        # Grabbing the first set of AR Coefficients from the F matrix because they should all be the same
-        subsetInfoHolder[u'ARCoefficients'] = subsetTestDataInfo['allF'][0,:,0]
-        # Grabbing the file path of the data file
-        subsetInfoHolder[u'dataFilePath'] = subsetTestDataInfo['filename']
-        subsetInfoHolder[u'seed'] = subsetTestDataInfo['seed']
-        testDataInfo.append(subsetInfoHolder)
-    # Saving relevant data so it can be recovered and reused
-    testDataToBeSaved = {}
-    testDataToBeSaved[u'trueStateTEST'] = trueStateTEST
-    testDataToBeSaved[u'measuredStateTEST'] = measuredStateTEST
-    testDataToBeSaved[u'testDataInfo'] = testDataInfo
-    testDataToBeSaved[u'LSandKFTestData'] = LSandKFTestData
-    testFile = matSave('data', 'testData', testDataToBeSaved)
-    fileContent[u'testDataFile'] = testFile
-# Loading all data from a file
-else:
-    testDataToBeLoaded = hdf5s.loadmat(testFile)
-    trueStateTEST = testDataToBeLoaded['trueStateTEST']
-    measuredStateTEST = testDataToBeLoaded['measuredStateTEST']
-    testDataInfo = testDataToBeLoaded['testDataInfo']
-    LSandKFTestData = testDataToBeLoaded['LSandKFTestData']
-
-    # overriding parameters from command line, because we are loading from file
-    testSetLen = trueStateTEST.shape[0]
-    testSeriesLength = trueStateTEST.shape[3]
-
-    print('test data loaded from: {}'.format(testFile))
-    fileContent[u'testDataFile'] = testFile
+print('test data loaded from: {}'.format(testFile))
+fileContent[u'testDataFile'] = testFile
 
 trueStateTEST = torch.from_numpy(trueStateTEST)
 measuredStateTEST = torch.from_numpy(measuredStateTEST)
