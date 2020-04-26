@@ -54,7 +54,7 @@ ind{1} = [1 2 3 4]';
 ind{2} = [1 2 3 4 5 6]';
 
 % Generate the data.
-n = 200;
+n = 300;
 
 X_r = zeros(fdims,n);
 X_r(:,1) = zeros(size(F{2},1),1);
@@ -70,11 +70,20 @@ alpha = 0.5;
 p_ij = [alpha 1-alpha; 1-alpha alpha];
 
 % Forced mode transitions
-mstate(1:50) = 1;
-mstate(51:70) = 2;
-mstate(71:120) = 1;
-mstate(121:150) = 2;
-mstate(151:200) = 1;
+% mstate(1:50) = 1;
+% mstate(51:70) = 2;
+% mstate(71:120) = 1;
+% mstate(121:150) = 2;
+% mstate(151:200) = 1;
+mstate = ones(n, 1);
+for m = 1:50:n
+   x = rand(1); 
+   if(x > 0.5)
+       mstate(m:m+50) = 1;
+   else
+       mstate(m:m+50) = 2;
+   end
+end
 
 % Get noise model
 for i=1:nmodels
