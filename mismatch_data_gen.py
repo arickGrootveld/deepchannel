@@ -184,7 +184,7 @@ def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1))
     # The Kalman filter needs to know the AR parameters for each batch AR process to
     # compute the best MSE we can possibly achieve - this allows us to compare the
     # neural network MSE values to the best possible MSE values we can achieve
-    all_F = torch.zeros((AR_n, AR_n, simLength), dtype=torch.float)
+    trueFs = torch.zeros((AR_n, AR_n, simLength), dtype=torch.float)
 
 
     # Pre-allocating for the Ricatti convergences of each of the processes
@@ -223,7 +223,7 @@ def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1))
             F = ARCoeffecientGeneration(arCoeffMeans, AR_coeffecient_noise_var)
 
         # Store F matrices
-        all_F[:, :, i] = F
+        trueFs[:, :, i] = F
 
         # Computing the Riccati equation for the AR process prediction
         riccatiPred = sciAlg.solve_discrete_are(torch.t(F).numpy(),
@@ -239,7 +239,6 @@ def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1))
         riccatiConvergences[0,i] = riccatiPred[0,0]
         # Grabbing the Riccati solution to the estimate
         riccatiConvergences[1,i] = riccatiEst[0,0]
-
 
         ## Loop for generating a sequence of data
         for n in range(0,sequenceLength + 1):
@@ -260,10 +259,13 @@ def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1))
                                     torch.randn(1)),torch.sqrt(torch.tensor(2, dtype=torch.float)))
             w[0] = torch.squeeze(rObsNoise)
             w[1] = torch.squeeze(iObsNoise)
-            # On first iteration through make the noise equal to zero so there the initial state starts at 0
+            # On first iteration through make the noise equal to a unity variance
+            # random number so the initial state is consistently random
             if(n==0):
-                x_complex = torch.zeros(2,2, dtype=torch.float)
-                z_complex = torch.zeros(2, dtype=torch.float)
+                x_complex = torch.div(torch.randn(2, 2, dtype=torch.float),
+                                      torch.sqrt(torch.tensor(2, dtype=torch.float)))
+                z_complex = torch.div(torch.randn(2, dtype=torch.float),
+                                      torch.sqrt(torch.tensor(2, dtype=torch.float)))
             else:
                 x_complex = torch.matmul(F,x_complex)
                 x_complex = x_complex + v
@@ -300,7 +302,7 @@ def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1))
     logContent[u'seed'] = seed
     logContent[u'cuda'] = cuda
     logContent[u'riccatiConvergences'] = riccatiConvergences.numpy()
-    logContent[u'allF'] = all_F.numpy()
+    logContent[u'trueFs'] = trueFs.numpy()
     filename = matSave(storageFilePath,dataFile,logContent)
 
     data=(x.numpy(), z.numpy(), final_states.numpy())
@@ -308,7 +310,7 @@ def ARDatagenMismatch(params, seed=int(torch.abs(torch.floor(100*torch.randn(1))
     info = {}
     info[u'filename'] = filename
     info[u'seed'] = seed
-    info[u'allF'] = all_F.numpy()
+    info[u'trueFs'] = trueFs.numpy()
     info[u'riccatiConvergences'] = riccatiConvergences.numpy()
 
     # Return data

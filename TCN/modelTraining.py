@@ -132,17 +132,40 @@ parser.add_argument('--model_path', type=str, default='None',
 # If model is loaded from a path, will skip over the training and evaluation loops and go straight to testing. This will
 # ignore all data generation specified for train and eval, and will only generate/load data for the testing process.
 
-# Setting the model and setup to debug mode so that we can recover instantaneous squared errors, etc.
-parser.add_argument('--debug', action='store_true',
-                    help='set code to debug mode (default: False)')
-
 # Coefficients used by the Kalman filter for the F matrix it assumes the Gauss Markov Process uses
 parser.add_argument('--KFCoeffs', nargs='+', default=[0.5, -0.4],
                     help='Coefficients Passed to the Kalman Filter, will depend on the scenario you are looking at'
                          '(default: [0.5, 0.4]')
 
+
 # Parse out the input arguments
 args = parser.parse_args()
+
+
+
+### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
+### ~~~~~~~~~~~~~~~~ Iterate the minor version number ~~~~~~~~~~~~~~~~~ ###
+def updateVersionPath(modelPath):
+
+    modelsplit = modelPath.split('model')
+    suffix = modelsplit[2]
+    splitsuffix = suffix.split('.')
+    mnum = splitsuffix[0]
+    msplit = mnum.split('_')
+
+    # If check for strings with no underscore
+    if(len(msplit) == 1):
+        new = mnum + "_1"
+
+    # With an underscore, iterate the number
+    else:
+        update = int(msplit[1]) + 1
+        new = msplit[0] + "_" + str(update)
+
+    modelPath = "models/model" + new + ".pth"
+
+    return(modelPath)
+
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~~~~~~~~~~~~~ Make runs reproducable ~~~~~~~~~~~~~~~~~ ###
@@ -150,6 +173,8 @@ args = parser.parse_args()
 # This sets the seed value for random number generators, making
 # run results repeatable
 torch.manual_seed(args.seed)
+
+
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~~~~~~~~~~~~~~~ Logging Verification ~~~~~~~~~~~~~~~~~ ###
@@ -205,8 +230,6 @@ trainDataLen = int(args.simu_len)
 seed = args.seed
 optimMethod = args.optim
 
-debug_mode = args.debug
-
 evalDataLen = int(args.eval_len)
 testDataLen = int(args.test_set_depth)
 cuda_device = args.cuda_device
@@ -231,11 +254,7 @@ testSeriesLength = int(testDataLen/batch_size)
 testSession = False
 if(args.model_path != 'None'):
     testSession = True
-    if(args.cuda):
-        modelContext = torch.load(args.model_path)
-    else:
-        device = torch.device('cpu')
-        modelContext = torch.load(args.model_path, map_location=device)
+    modelContext = torch.load(args.model_path)
 modelPath = args.model_path
 ### ~~~~~~~~~~~~~~~ LOAD DATA/GENERATE MODEL ~~~~~~~~~~~~~~~~ ###
 # Here we have the option of loading from a saved .mat file or just calling the data generation
@@ -245,86 +264,86 @@ modelPath = args.model_path
 AR_n = 2
 
 # ~~~~~~~~~~~~~~~~~~ LOAD TRAINING SET
-if not testSession:
-    # Parameter to determine how much data to train the Least Squares Filter on
-    pseudoInverseDataThreshold = int(1e7)
+# if not testSession:
+# Parameter to determine how much data to train the Least Squares Filter on
+pseudoInverseDataThreshold = int(1e7)
 
-    if(trainFile == 'None'):
-        # Generate AR process training data set - both measured and real states
-        trainStateData, trainStateInfo = ARDatagenMismatch([trainDataLen, AR_n, AR_var, seq_length], seed, args.cuda)
-        # Convert the data from normal formatting to batches
-        trueStateTRAIN, measuredStateTRAIN = convertToBatched(trainStateData[2], trainStateData[1], batch_size)
-        fileContent[u'trainDataFile'] = trainStateInfo['filename']
-        fileContent[u'trainDataSize'] = trueStateTRAIN.shape
-        # TODO: Improve the format at some point in the future, but for now we are just grabbing the trainingData to train
-        # TODO: the LS
+if(trainFile == 'None'):
+    # Generate AR process training data set - both measured and real states
+    trainStateData, trainStateInfo = ARDatagenMismatch([trainDataLen, AR_n, AR_var, seq_length], seed, args.cuda)
+    # Convert the data from normal formatting to batches
+    trueStateTRAIN, measuredStateTRAIN = convertToBatched(trainStateData[2], trainStateData[1], batch_size)
+    fileContent[u'trainDataFile'] = trainStateInfo['filename']
+    fileContent[u'trainDataSize'] = trueStateTRAIN.shape
+    # TODO: Improve the format at some point in the future, but for now we are just grabbing the trainingData to train
+    # TODO: the LS
 
-        # Only grabbing a portion of the train samples for the LS training, because otherwise the pseudo-inverse
-        # will use too much data
-        if(trainDataLen >= pseudoInverseDataThreshold):
-            LSTrainPlaceHolderTrueStates = trainStateData[0][:, :, 0:pseudoInverseDataThreshold]
-            LSTrainPlaceHolderMeasuredStates = trainStateData[1][:,:,0:pseudoInverseDataThreshold]
-            LSTrainPlaceHolderFinalStates = trainStateData[2][:,0:pseudoInverseDataThreshold]
-            # Recreating the data, but only the first 1e6 of it
-            LSTrainData = [LSTrainPlaceHolderTrueStates, LSTrainPlaceHolderMeasuredStates,
-                           LSTrainPlaceHolderFinalStates]
-        else:
-            LSTrainData = trainStateData
+    # Only grabbing a portion of the train samples for the LS training, because otherwise the pseudo-inverse
+    # will use too much data
+    if(trainDataLen >= pseudoInverseDataThreshold):
+        LSTrainPlaceHolderTrueStates = trainStateData[0][:, :, 0:pseudoInverseDataThreshold]
+        LSTrainPlaceHolderMeasuredStates = trainStateData[1][:,:,0:pseudoInverseDataThreshold]
+        LSTrainPlaceHolderFinalStates = trainStateData[2][:,0:pseudoInverseDataThreshold]
+        # Recreating the data, but only the first 1e6 of it
+        LSTrainData = [LSTrainPlaceHolderTrueStates, LSTrainPlaceHolderMeasuredStates,
+                       LSTrainPlaceHolderFinalStates]
     else:
-        # Grab the data from the .mat file
-        trainDataDict = hdf5s.loadmat(trainFile)
-        print('train data loaded from: {}'.format(trainFile))
-        # Convert the loaded data into batches for the TCN to run with
-        trueStateTRAIN, measuredStateTRAIN = convertToBatched(trainDataDict['finalStateValues'], trainDataDict['observedStates'],
-                                                              batch_size)
+        LSTrainData = trainStateData
+else:
+    # Grab the data from the .mat file
+    trainDataDict = hdf5s.loadmat(trainFile)
+    print('train data loaded from: {}'.format(trainFile))
+    # Convert the loaded data into batches for the TCN to run with
+    trueStateTRAIN, measuredStateTRAIN = convertToBatched(trainDataDict['finalStateValues'], trainDataDict['observedStates'],
+                                                          batch_size)
 
-        fileContent[u'trainDataFile'] = trainFile
-        fileContent[u'trainDataSize'] = trueStateTRAIN.shape
+    fileContent[u'trainDataFile'] = trainFile
+    fileContent[u'trainDataSize'] = trueStateTRAIN.shape
 
-        # Setting the number of batches of train data to be what is supplied in the file
-        trainSeriesLength = trueStateTRAIN.shape[2]
-        trainDataLen = trainDataDict['finalStateValues'].shape[1]
+    # Setting the number of batches of train data to be what is supplied in the file
+    trainSeriesLength = trueStateTRAIN.shape[2]
+    trainDataLen = trainDataDict['finalStateValues'].shape[1]
 
-        # TODO: Improve the format at some point in the future, but for now we are just grabbing the trainingData to train
-        # TODO: the LS
+    # TODO: Improve the format at some point in the future, but for now we are just grabbing the trainingData to train
+    # TODO: the LS
 
-        # Only grabbing a portion of the train samples for the LS training, because otherwise the pseudo-inverse
-        # will use too much data
-        if(trainDataLen >= pseudoInverseDataThreshold):
-            LSTrainData = [trainDataDict['systemStates'][:,:,0:pseudoInverseDataThreshold],
-                           trainDataDict['observedStates'][:,:,0:pseudoInverseDataThreshold]]
-        else:
-            LSTrainData = [trainDataDict['systemStates'], trainDataDict['observedStates']]
-
-
-    # Convert numpy arrays to tensors
-    trueStateTRAIN = torch.from_numpy(trueStateTRAIN)
-    measuredStateTRAIN = torch.from_numpy(measuredStateTRAIN)
-
-    # ~~~~~~~~~~~~~~~~~~ LOAD EVALUATION SET
-    if(evalFile == 'None'):
-        # Generate AR process evaluation data set - both measured and real states
-        evalStateData, evalStateInfo = ARDatagenMismatch([evalDataLen, AR_n, AR_var, seq_length], seed + 1, args.cuda)
-        # Convert the data from normal formatting to batches
-        trueStateEVAL, measuredStateEVAL = convertToBatched(evalStateData[2], evalStateData[1], batch_size)
-        fileContent[u'evalDataFile'] = evalStateInfo['filename']
-        fileContent[u'evalDataSize'] = trueStateEVAL.shape
-    # loading the data from the file
+    # Only grabbing a portion of the train samples for the LS training, because otherwise the pseudo-inverse
+    # will use too much data
+    if(trainDataLen >= pseudoInverseDataThreshold):
+        LSTrainData = [trainDataDict['systemStates'][:,:,0:pseudoInverseDataThreshold],
+                       trainDataDict['observedStates'][:,:,0:pseudoInverseDataThreshold]]
     else:
-        # Grab the data from the .mat file
-        evalDataDict = hdf5s.loadmat(evalFile)
-        print('eval data loaded from: {}'.format(evalFile))
-        trueStateEVAL, measuredStateEVAL = convertToBatched(evalDataDict['finalStateValues'],
-                                                            evalDataDict['observedStates'],
-                                                            batch_size)
-        fileContent[u'evalDataFile'] = evalFile
-        fileContent[u'evalDataSize'] = trueStateEVAL.shape
+        LSTrainData = [trainDataDict['systemStates'], trainDataDict['observedStates']]
 
-        evalSeriesLength = trueStateEVAL.shape[2]
-        evalDataLen = evalSeriesLength * trueStateEVAL.shape[0]
-    # Convert numpy arrays to tensors
-    trueStateEVAL = torch.from_numpy(trueStateEVAL)
-    measuredStateEVAL = torch.from_numpy(measuredStateEVAL)
+
+# Convert numpy arrays to tensors
+trueStateTRAIN = torch.from_numpy(trueStateTRAIN)
+measuredStateTRAIN = torch.from_numpy(measuredStateTRAIN)
+
+# ~~~~~~~~~~~~~~~~~~ LOAD EVALUATION SET
+if(evalFile == 'None'):
+    # Generate AR process evaluation data set - both measured and real states
+    evalStateData, evalStateInfo = ARDatagenMismatch([evalDataLen, AR_n, AR_var, seq_length], seed + 1, args.cuda)
+    # Convert the data from normal formatting to batches
+    trueStateEVAL, measuredStateEVAL = convertToBatched(evalStateData[2], evalStateData[1], batch_size)
+    fileContent[u'evalDataFile'] = evalStateInfo['filename']
+    fileContent[u'evalDataSize'] = trueStateEVAL.shape
+# loading the data from the file
+else:
+    # Grab the data from the .mat file
+    evalDataDict = hdf5s.loadmat(evalFile)
+    print('eval data loaded from: {}'.format(evalFile))
+    trueStateEVAL, measuredStateEVAL = convertToBatched(evalDataDict['finalStateValues'],
+                                                        evalDataDict['observedStates'],
+                                                        batch_size)
+    fileContent[u'evalDataFile'] = evalFile
+    fileContent[u'evalDataSize'] = trueStateEVAL.shape
+
+    evalSeriesLength = trueStateEVAL.shape[2]
+    evalDataLen = evalSeriesLength * trueStateEVAL.shape[0]
+# Convert numpy arrays to tensors
+trueStateEVAL = torch.from_numpy(trueStateEVAL)
+measuredStateEVAL = torch.from_numpy(measuredStateEVAL)
 
 
 # ~~~~~~~~~~~~~~~~~~ LOAD TEST SET
@@ -399,35 +418,26 @@ else:
     print('test data loaded from: {}'.format(testFile))
     fileContent[u'testDataFile'] = testFile
 
-# Enabling Debug Parameters
-if debug_mode:
-    trueStateTestShape = trueStateTEST.shape
-    instantaneousSquaredErrors = torch.empty((trueStateTestShape[0], 
-                                              trueStateTestShape[1], trueStateTestShape[3]), 
-                                              dtype=torch.float)
-
-
-
 trueStateTEST = torch.from_numpy(trueStateTEST)
 measuredStateTEST = torch.from_numpy(measuredStateTEST)
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~~~~~~~~~~~~~~ INITIALIZING THE MODEL ~~~~~~~~~~~~~~~~ ###
-if not testSession:
-    # Saving the model parameters so we can use them to load the model properly later
-    modelParameters = {
-        'input_channels': input_channels,
-        'n_classes': n_classes,
-        'channel_sizes': channel_sizes,
-        'kernel_size': kernel_size,
-        'dropout': dropout
-    }
-else:
-    input_channels = modelContext['model_parameters']['input_channels']
-    n_classes = modelContext['model_parameters']['n_classes']
-    channel_sizes = modelContext['model_parameters']['channel_sizes']
-    kernel_size = modelContext['model_parameters']['kernel_size']
-    dropout = modelContext['model_parameters']['dropout']
+# if not testSession:
+# Saving the model parameters so we can use them to load the model properly later
+modelParameters = {
+    'input_channels': input_channels,
+    'n_classes': n_classes,
+    'channel_sizes': channel_sizes,
+    'kernel_size': kernel_size,
+    'dropout': dropout
+}
+# else:
+#     input_channels = modelContext['model_parameters']['input_channels']
+#     n_classes = modelContext['model_parameters']['n_classes']
+#     channel_sizes = modelContext['model_parameters']['channel_sizes']
+#     kernel_size = modelContext['model_parameters']['kernel_size']
+#     dropout = modelContext['model_parameters']['dropout']
 # Generate the model
 model = TCN(input_channels, n_classes, channel_sizes, kernel_size=kernel_size, dropout=dropout)
 # Creating a backup of the model that we can use for early stopping
@@ -441,35 +451,32 @@ if args.cuda:
     model.cuda()
     modelBEST.cuda()
     # If we are not just testing then load everything into cuda
-    if not testSession:
+    # if not testSession:
 
-        # Train set
-        trueStateTRAIN = trueStateTRAIN.cuda()
-        measuredStateTRAIN = measuredStateTRAIN.cuda()
+    # Train set
+    trueStateTRAIN = trueStateTRAIN.cuda()
+    measuredStateTRAIN = measuredStateTRAIN.cuda()
 
-        # Evaluation set
-        trueStateEVAL = trueStateEVAL.cuda()
-        measuredStateEVAL = measuredStateEVAL.cuda()
+    # Evaluation set
+    trueStateEVAL = trueStateEVAL.cuda()
+    measuredStateEVAL = measuredStateEVAL.cuda()
 
-    # Pushing the Squared Error calculations to cuda as well
-    if debug_mode:
-        instantaneousSquaredErrors = instantaneousSquaredErrors.cuda()
     # Test set
     trueStateTEST = trueStateTEST.cuda()
     measuredStateTEST = measuredStateTEST.cuda()
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~~~~~~~~~~~~~~~~~~~ OPTIMIZER ~~~~~~~~~~~~~~~~~~~~~~~~ ###
-if not testSession:
-    # Create the optimizer
-    optimizerParameters = {
-        'optim': optimMethod,
-        'lr': lr
-    }
-else:
-    # Loading the optimizer parameters to use
-    optimMethod = modelContext['optimizer_parameters']['optim']
-    lr = modelContext['optimizer_parameters']['lr']
+# if not testSession:
+# Create the optimizer
+optimizerParameters = {
+    'optim': optimMethod,
+    'lr': lr
+}
+# else:
+#     # Loading the optimizer parameters to use
+#     optimMethod = modelContext['optimizer_parameters']['optim']
+#     lr = modelContext['optimizer_parameters']['lr']
 
 # Initializing the optimizer
 optimizer = getattr(optim, optimMethod)(model.parameters(), lr=lr)
@@ -619,11 +626,6 @@ def test():
                 test_loss = F.mse_loss(output, y_test, reduction="sum")
 
                 PredMSE = torch.sum(((output[:, 0] - y_test[:, 0]) ** 2) + (output[:, 1] - y_test[:, 1]) ** 2) / output.size(0)
-
-                if debug_mode:
-                    instantaneousSquaredErrors[r, :, i] = ((output[:, 0] - y_test[:, 0]) ** 2) + \
-                                                          ((output[:, 1] - y_test[:, 1]) ** 2)
-
                 # TrueMSE = torch.sum((output[:, 0] - y_test[:, 0]) ** 2 + (output[:, 2] - y_test[:, 2]) ** 2) / output.size(0)
                 TotalAvgPredMSE+=PredMSE
                 # TotalAvgTrueMSE+=TrueMSE
@@ -631,28 +633,17 @@ def test():
                 # testEstMSEs[i] = TrueMSE
 
             n+=1
-        # Recording the instantaneous errors if the model is set to debug mode
-        if debug_mode:
-            testDataInfo[r][u'instantaneousSquaredErrors'] = (torch.squeeze(instantaneousSquaredErrors[r,:,:])).cpu().numpy()
 
         TotalAvgPredMSE = TotalAvgPredMSE / n
-        # TotalAvgTrueMSE = TotalAvgTrueMSE / n
 
         predVariance = torch.sum((testPredMSEs[:]-TotalAvgPredMSE)**2)/testPredMSEs.size(0)
-        # estVariance = torch.sum((testEstMSEs[:]-TotalAvgTrueMSE)**2)/testEstMSEs.size(0)
 
         # Logging
         testDataInfo[r][u'predictionVariance'] = predVariance.item()
-        # testDataInfo[r][u'estimationVariance'] = estVariance.item()
-        # testDataInfo[r][u'estimationMSE'] = TotalAvgTrueMSE.item()
         testDataInfo[r][u'predictionMSE'] = TotalAvgPredMSE.item()
 
         print('TCN Performance:')
         print("TotalAvgPredMSE for test set number {}: ".format(r+1), TotalAvgPredMSE.item())
-        # print("TotalAvgTrueMSEfor test set number {}: ".format(r+1), TotalAvgTrueMSE.item())
-        # Commenting out printing the variances, since they serve no purpose as of now
-        # print("Variance of Prediction for test set number {}: ".format(r+1), predVariance.item())
-        # print("Variance of Estimate for test set number {}: ".format(r+1), estVariance.item())
 
         # Computing the LS performance on this data set
         LS_MSEE, LS_MSEP = LSTesting(LSCoefficients, LSandKFTestData[r])
@@ -676,7 +667,7 @@ def test():
 
         print('Riccati Convergence MSE')
         print("MSE Riccati Prediction for set number {}: ".format(r+1), testDataInfo[r]['riccatiConvergencePred'])
-        # print("MSE Riccati Estimation for set number {}: ".format(r+1), testDataInfo[r]['riccatiConvergenceEst'])
+        print("MSE Riccati Estimation for set number {}: ".format(r+1), testDataInfo[r]['riccatiConvergenceEst'])
 
         # Printing a newline to make it easier to tell test sets apart
         print(' ')
@@ -686,97 +677,91 @@ def test():
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~ LOOP ~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 
-if not testSession:
-    # Determine where to save model checkpoints and final model parameters
-    fileSpaceFound = False
-    modelNumber = 0
+# if not testSession:
+modelPath = args.model_path
+modelPath = updateVersionPath(modelPath)
 
-    # Create the directory to save models to, if non-existent
-    if not (path.exists('./models')):
-        os.mkdir('./models', 0o755)
+# Determine where to save model checkpoints and final model parameters
+fileSpaceFound = False
+modelNumber = 0
 
-    # Saving model to a new file
-    while (fileSpaceFound == False):
-        modelNumber += 1
-        modelPath = './models/model' + str(modelNumber) + '.pth'
-        if not (path.exists(modelPath)):
-            print('model parameters will be saved to: ', modelPath)
-            fileSpaceFound = True
+########################################################################################################################
+########################################################################################################################
 
-    # Initializing model context dict to be saved with model
-    modelContext = {
-        'epoch': 0,
-        'model_state_dict': model.state_dict(),
-        'optimizer_state_dict': optimizer.state_dict(),
-        'model_parameters': modelParameters,
-        'optimizer_parameters': optimizerParameters,
-        'LSCoefficients': {}
-    }
+# # Create the directory to save models to, if non-existent
+if not (path.exists('./models')):
+    os.mkdir('./models', 0o755)
 
-    # Training the Least Squares so we can evaluate its performance on the same dataset
-    LSCoefficients = LSTraining(LSTrainData)
-    # Saving the LS Coefficients so we do not need to train it again
-    modelContext['LSCoefficients'] = LSCoefficients
+# If we are just loading and training a model, then we set the path properly to be saved
 
-    # How many times in a row we have had a worse loss than our best case loss scenario
-    numEpochsSinceBest = 0
+modelBEST.load_state_dict(modelContext['model_state_dict'])
+optimizer.load_state_dict(modelContext['optimizer_state_dict'])
 
-    # Letting the model know when the last epoch happens so we can record the MSEs of the individual samples
-    for ep in range(0, epochs):
-        train(ep)
-        tloss = evaluate()
+# Loading the LS Coefficients
+LSCoefficients = modelContext['LSCoefficients']
 
-        scheduler.step(tloss)
-        # Updating the learning rate that will be displayed for each epoch
-        lr = optimizer.param_groups[0]['lr']
+# Initializing model context dict to be saved with model
+modelContext = {
+    'epoch': 0,
+    'model_state_dict': model.state_dict(),
+    'optimizer_state_dict': optimizer.state_dict(),
+    'model_parameters': modelParameters,
+    'optimizer_parameters': optimizerParameters,
+    'LSCoefficients': {}
+}
 
-        # Run through all epochs, find the best model and save it for testing
-        if(ep == 0):
+# Training the Least Squares so we can evaluate its performance on the same dataset
+LSCoefficients = LSTraining(LSTrainData)
+# Saving the LS Coefficients so we do not need to train it again
+modelContext['LSCoefficients'] = LSCoefficients
+
+# How many times in a row we have had a worse loss than our best case loss scenario
+numEpochsSinceBest = 0
+
+# Letting the model know when the last epoch happens so we can record the MSEs of the individual samples
+for ep in range(0, epochs):
+    train(ep)
+    tloss = evaluate()
+
+    scheduler.step(tloss)
+    # Updating the learning rate that will be displayed for each epoch
+    lr = optimizer.param_groups[0]['lr']
+
+    # Run through all epochs, find the best model and save it for testing
+    if(ep == 0):
+        bestloss = tloss
+        modelContext['model_state_dict'] = model.state_dict()
+        modelContext['optimizer_state_dict'] = optimizer.state_dict()
+        torch.save(modelContext, modelPath)
+        print('model saved at {}'.format(modelPath))
+    else:
+        if(tloss <= bestloss):
+            numEpochsSinceBest = 0
             bestloss = tloss
+            modelBEST = model
             modelContext['model_state_dict'] = model.state_dict()
             modelContext['optimizer_state_dict'] = optimizer.state_dict()
+            modelContext['epoch'] = ep
             torch.save(modelContext, modelPath)
+            print("better loss")
             print('model saved at {}'.format(modelPath))
         else:
-            if(tloss <= bestloss):
-                numEpochsSinceBest = 0
-                bestloss = tloss
-                modelBEST = model
-                modelContext['model_state_dict'] = model.state_dict()
-                modelContext['optimizer_state_dict'] = optimizer.state_dict()
-                modelContext['epoch'] = ep
-                torch.save(modelContext, modelPath)
-                print("better loss")
-                print('model saved at {}'.format(modelPath))
-            else:
-                numEpochsSinceBest += 1
-                print("worse loss: {} epochs since best loss".format(numEpochsSinceBest))
-                if(numEpochsSinceBest >= 31):
-                    print('No progress made in 31 epochs, model is over fitting')
-                    break
-                # This is experimental, please remove if not working
-                # What this does is reset the model back to the best model after 10 epochs of no improvement
-                # to get the benefit of the decreased step size
-                if((numEpochsSinceBest % 10) == 0):
-                    model = modelBEST
-                    print('model reset to best model')
+            numEpochsSinceBest += 1
+            print("worse loss: {} epochs since best loss".format(numEpochsSinceBest))
+            if(numEpochsSinceBest >= 31):
+                print('No progress made in 31 epochs, model is over fitting')
+                break
+    print(tloss)
+
+modelPathIterationNum = 0
 
 
 
-        print(tloss)
-
-    torch.save(modelContext, modelPath)
-else:
-    # If we are just loading and testing a model, then we set the path properly to be saved
-    modelPath = args.model_path
-    modelBEST.load_state_dict(modelContext['model_state_dict'])
-    optimizer.load_state_dict(modelContext['optimizer_state_dict'])
-
-    # Loading the LS Coefficients
-    LSCoefficients = modelContext['LSCoefficients']
+torch.save(modelContext, modelPath)
 
 
-# Test once we are done training the model
+
+# # Test once we are done training the model
 tloss = test()
 
 print("check check")
@@ -795,3 +780,6 @@ print('log data saved to: ', logName)
 print('model parameters saved to: ', modelPath)
 
 hdf5s.savemat(logName, fileContent)
+
+
+

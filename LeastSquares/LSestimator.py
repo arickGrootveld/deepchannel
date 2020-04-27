@@ -3,6 +3,8 @@ import time
 import argparse
 import os.path as path
 import hdf5storage as hdf5s
+import sys
+sys.path.append("..") # Adds higher directory to python modules path.
 from utilities import matSave
 
 #####################################################################################
@@ -97,9 +99,14 @@ if(not path.exists(args.filePathTest)):
 
 # Load relevant training data
 matData = hdf5s.loadmat(args.filePathTest)
-ARValues = matData['systemStates']
-measuredStateData = matData['observedStates']
-trueStateData = matData['finalStateValues']
+# Currently hardcoded to only read the first test set from the test data, might be worth developing later to actually
+# work with all test data
+# TOCODi
+
+ARValues = matData['LSandKFTestData'][0][0]
+measuredStateData = matData['LSandKFTestData'][0][1]
+trueStateData = matData['LSandKFTestData'][0][1]
+
 print('loaded from file: ', args.filePathTest)
 
 # Redefining only M here, because N should stay constant across the test and training set
