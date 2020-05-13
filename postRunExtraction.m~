@@ -1,0 +1,43 @@
+function formatedData = postRunExtraction(logFile)
+    load(logFile, 'testInfo')
+    [~,numTests] = size(testInfo);
+    formatedData = zeros(numTests,10);
+    
+    
+    for i=1:numTests
+        intermediate = testInfo(i);
+        formatedData(i,1) = intermediate{1}.predictionMSE;
+        formatedData(i,2) = intermediate{1}.estimationMSE;
+        formatedData(i,3) = intermediate{1}.predictionVariance;
+        formatedData(i,4) = intermediate{1}.estimationVariance;
+        formatedData(i,5) = intermediate{1}.LS_PredMSE;
+        formatedData(i,6) = intermediate{1}.LS_EstMSE;
+        formatedData(i,7) = intermediate{1}.KF_PredMSE;
+        formatedData(i,8) = intermediate{1}.KF_EstMSE;
+        formatedData(i,9) = intermediate{1}.riccatiConvergencePred;
+        formatedData(i,10) = intermediate{1}.riccatiConvergenceEst;
+        
+    end
+    
+    % Extracting the correct save path from the file path passed
+    pathSplit = strsplit(logFile, '/');
+    [~, pathLen] = size(pathSplit);
+    
+    savePath = '';
+    for i=1:pathLen-1
+        savePath = strcar(savePath, pathSplit{i}, '/');
+        
+    end
+    logNum = erase(pathSplit{pathLen}, 'log');
+    if(contains(logNum, '.')
+    
+    % Saving the extracted data to the same directory the log was loaded
+    % from
+    
+    
+    
+    
+%     csvwrite(
+    
+end
+    
