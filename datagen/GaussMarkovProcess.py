@@ -163,6 +163,7 @@ def GaussMarkovSample(**kwargs):
 
     # Defining preset matrices
     H = np.zeros((1, ar_order), dtype=float)
+    H[0, 0] = 1
 
 
     # Starting the AR Process here

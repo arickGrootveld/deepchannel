@@ -105,8 +105,8 @@ def gilbertElliotProcess(**kwargs):
                                            ar_coeffs=currentCoeffs, \
                                            seed=seed+i)
         x_current = [x_val.item(), x_current[0]]
-        z[0, i] = x_val
-        x[0, i] = z_val
+        z[0, i] = z_val
+        x[0, i] = x_val
 
         # Determining the next channel state
         if(MarkovState == 'good'):
