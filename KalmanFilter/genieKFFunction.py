@@ -43,7 +43,6 @@ def genieKFTesting(testData, ARCoeffs):
     ## Kalman Filter parameters to be used
 
     # F matrix is made up of AR process mean values
-    # F = np.array([[0,0], [1, 0]])
 
     # Covariance of the process noise
     Q = np.array([[0.1, 0], [0, 0]])
@@ -63,6 +62,9 @@ def genieKFTesting(testData, ARCoeffs):
         for q in range(1, sequenceLength):
             
             # Defining F to be the coefficients of the current sample
+#            print(q + i)
+#            print(ARCoeffs[:, q + i])
+#            print(np.array([ARCoeffs[:, q + i],[1, 0]]))
             F = np.array([ARCoeffs[:, q + i],[1, 0]])
             #############################################################################
             ############################# KALMAN FILTER 1  ##############################

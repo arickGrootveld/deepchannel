@@ -39,7 +39,7 @@ from utilities import matSave, convertToBatched
 #           sequenceData[0] (complex128 np.matrix) - x: A sequence of complex numbers that form the
 #                                                                  system states of a Gilbert-Elliot AR Process
 #           sequenceData[1] (complex128 np.matrix) - z: A sequence of complex numbers that form the
-#                                                                      observed sequence of data created by a a
+#                                                                      observed sequence of data created by the
 #                                                                      Gilbert-Elliot AR Process
 #           sequenceData[2] (np.matrix) - ricattiConvergences: The matrix containing the Ricatti Convergences of the two
 #                                                              sets of AR Coefficients, organized with the 1st dimension
@@ -138,7 +138,6 @@ def GilEllDataGen(params, seed=-1):
     badF = np.matrix([badCoeffs, [1,0]])
     # Computing the Riccati Convergences of the two sets of Coefficients
     riccatiPredGood = sciAlg.solve_discrete_are(np.transpose(goodF), np.transpose(H), Q, R)
-
     kRicConIntermediate = np.add(np.matmul(np.matmul(H, riccatiPredGood), np.transpose(H)), R)
     riccatiKalGain = np.matmul(np.matmul(riccatiPredGood, np.transpose(H)), np.linalg.inv(kRicConIntermediate))
 
@@ -276,13 +275,13 @@ def toeplitzData(sequenceData, numColumns):
 #                   for a test data set that can be fed right into the TCN
 def GilElTestDataGen(sequenceLength=10, numSequences=100, goodCoefficients=[0.3, 0.1],
                           badCoefficients=[1.949, -0.95], goodTransProb=0.0005, badTransProb=0.0005, QVar=0.1,
-                          RVar=0.1, randSeed=int(np.abs(np.floor(100*np.random.randn(1)))), batch_size=20, **kwargs):
+                          RVar=0.1, randSeed=int(np.abs(np.floor(100*np.random.randn(1)))), batch_size=20, testSetLen=3,  **kwargs):
     LSandKFTestData = []
     testDataInfo = []
 
     # For right now we will be hard coding this to be 3, because we want to generate a good set of coefficients,
     # a bad set, and a set that is generated from both sets
-    testSetLen = 3
+    # testSetLen = 3
 
     numBatchedSequences = int(numSequences/batch_size)
     # trueStateDataTEST Dimensionality: comprised of sets of data based on the number of AR
@@ -330,7 +329,7 @@ def GilElTestDataGen(sequenceLength=10, numSequences=100, goodCoefficients=[0.3,
             # Grabbing the file path of the data file
             subsetInfoHolder[u'dataFilePath'] = subsetTestDataInfo['filename']
             subsetInfoHolder[u'seed'] = subsetTestDataInfo['seed']
-            testDataInfo.append(subsetTestDataInfo['channelCoefficients'])
+            subsetInfoHolder['channelCoefficients'] = subsetTestDataInfo['channelCoefficients']
             testDataInfo.append(subsetInfoHolder)
         # Generate data from the good coefficients only
         elif(k==1):
@@ -363,6 +362,7 @@ def GilElTestDataGen(sequenceLength=10, numSequences=100, goodCoefficients=[0.3,
             # Grabbing the file path of the data file
             subsetInfoHolder[u'dataFilePath'] = subsetTestDataInfo['filename']
             subsetInfoHolder[u'seed'] = subsetTestDataInfo['seed']
+            subsetInfoHolder['channelCoefficients'] = subsetTestDataInfo['channelCoefficients']
             testDataInfo.append(subsetInfoHolder)
         # Generate data from the bad coefficients
         elif(k == 2):
@@ -395,6 +395,7 @@ def GilElTestDataGen(sequenceLength=10, numSequences=100, goodCoefficients=[0.3,
             # Grabbing the file path of the data file
             subsetInfoHolder[u'dataFilePath'] = subsetTestDataInfo['filename']
             subsetInfoHolder[u'seed'] = subsetTestDataInfo['seed']
+            subsetInfoHolder['channelCoefficients'] = subsetTestDataInfo['channelCoefficients']
             testDataInfo.append(subsetInfoHolder)
     # Saving relevant data so it can be recovered and reused
     testDataToBeSaved = {}
@@ -405,7 +406,7 @@ def GilElTestDataGen(sequenceLength=10, numSequences=100, goodCoefficients=[0.3,
     testFile = matSave('data', 'GETestData', testDataToBeSaved)
     return(testDataToBeSaved)
 
-
+# TODO: Add argument to choose whether to save the data or not
 def GilElDataGenWrapper(sequenceLength=10, numSequences=100, goodCoefficients=[0.3, 0.1],
                           badCoefficients=[1.949, -0.95], goodTransProb=0.0005, badTransProb=0.0005, QVar=0.1,
                           RVar=0.1, randSeed=int(np.abs(np.floor(100*np.random.randn(1)))),startingState='random', **kwargs):
@@ -418,7 +419,6 @@ def GilElDataGenWrapper(sequenceLength=10, numSequences=100, goodCoefficients=[0
     longSequence = GilEllDataGen(([goodTransProb, badTransProb], [goodCoefficients, badCoefficients],
                                   longSequenceLength, [QVar, RVar], startingState), randSeed)
     data = toeplitzData(longSequence, sequenceLength)
-    print(longSequence)
 
     riccatiConvergences = longSequence[2]
     channelCoefficients = longSequence[3]
@@ -477,6 +477,9 @@ if __name__ == "__main__":
     parser.add_argument('--transProbs', nargs='+', default=['0.0005', '0.0005'],
                         help='probabilities of transitioning from the good to bad and from bad to good '
                              'states (respectfully) of the Markov Chain (default: [0.0005, 0.0005])')
+    parser.add_argument('--noMismatchDataGen', action='store_true',
+                         help='specifies whether this simulation is supposed to generate No Mimatch Data, combines with --testDataGen to generate test data for the No Mismatch Scenario (default: False)')
+
 
     args = parser.parse_args()
 
@@ -485,19 +488,32 @@ if __name__ == "__main__":
     sequenceLen = int(args.seq_len)
     seed = args.seed
     testGeneration = args.testDataGen
+    nonMDG = args.noMismatchDataGen
     goodTransProb = float(args.transProbs[0])
     badTransProb = float(args.transProbs[1])
     print(args)
 
     start = time.time()
-    if not testGeneration:
-        # Null out the return, as we do not use is
-        _ = GilElDataGenWrapper(numSequences=simuLen, sequenceLength=sequenceLen, randSeed=seed,
+    if not nonMDG:
+        if not testGeneration:
+            _ = GilElDataGenWrapper(numSequences=simuLen, sequenceLength=sequenceLen, randSeed=seed,
                                    goodTransProb=goodTransProb, badTransProb=badTransProb)
-    else:
-        # Null out the return, as we do not use it
-        _ = GilElTestDataGen(numSequences=simuLen, sequenceLength=sequenceLen, randSeed=seed,
+        else:
+            _ = GilElTestDataGen(numSequences=simuLen, sequenceLength=sequenceLen, randSeed=seed,
                                 goodTransProb=goodTransProb, badTransProb=badTransProb)
+    else:
+        if not testGeneration:
+            _ = GilElDataGenWrapper(numSequences=simuLen, sequenceLength=sequenceLen,
+                                    randSeed=seed,
+                                    goodTransProb=0, badTransProb=1.0,
+                                    goodCoefficients=[0.5, -0.4], 
+                                    badCoefficients=[0,0], startingState='good')
+        else:
+            _ = GilElTestDataGen(numSequences=simuLen, sequenceLength=sequenceLen, 
+                    randSeed=seed, goodTransProb=0, 
+                    badTransProb=1.0, testSetLen=1, 
+                    goodCoefficients=[0.5, -0.4], badCoefficients=[0,0],
+                    startingState='good')
 
     end = time.time()
 

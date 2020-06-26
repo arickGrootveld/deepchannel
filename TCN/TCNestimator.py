@@ -438,7 +438,7 @@ modelBEST = model
 
 if args.cuda:
 
-    torch.cuda.set_device(cuda_device)
+    torch.cuda.device(cuda_device)
     model.cuda()
     modelBEST.cuda()
     # If we are not just testing then load everything into cuda
@@ -666,7 +666,10 @@ def test():
         testDataInfo[r][u'LS_EstMSE'] = LS_MSEE
 
         # Computing Kalman performance
-        KF_MSEE, KF_MSEP = KFTesting(LSandKFTestData[r],KFARCoeffs)
+        KFResults = KFTesting(LSandKFTestData[r],KFARCoeffs, debug=debug_mode)
+
+        KF_MSEP = KFResults[1]
+        KF_MSEE = KFResults[0]
 
         print('KF Performance')
         print("MSE of KF predictor for set number {}: ".format(r+1), KF_MSEP)
@@ -755,7 +758,6 @@ if not testSession:
                 if(numEpochsSinceBest >= 31):
                     print('No progress made in 31 epochs, model is over fitting')
                     break
-                # This is experimental, please remove if not working
                 # What this does is reset the model back to the best model after 10 epochs of no improvement
                 # to get the benefit of the decreased step size
                 if((numEpochsSinceBest % 10) == 0):
