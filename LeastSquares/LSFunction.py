@@ -38,8 +38,8 @@ def LSTraining(trainData):
 
     return [lsEstimateCoeffs, lsPredictionCoeffs]
 
-def LSTesting(estAndPredFilterCoeffs, testData):
-
+def LSTesting(estAndPredFilterCoeffs, testData, debug=False, **kwargs):
+    
     # Expecting the first input to be a list or tuple formatted exactly like LSTrainings output
     a_ls = estAndPredFilterCoeffs[0]
     b_ls = estAndPredFilterCoeffs[1]
@@ -79,5 +79,8 @@ def LSTesting(estAndPredFilterCoeffs, testData):
     f = abs((x_pred - np.matmul(z, b_ls))) ** 2
     MSEP = np.mean(f)
 
-    # Returns the Mean Squared Estimated error, and the Meas Squared Predicted error in that order
-    return(MSEE, MSEP)
+    if debug:
+        return(MSEE, MSEP, x_pred, f)
+    else:
+        # Returns the Mean Squared Estimated error, and the Meas Squared Predicted error in that order
+        return(MSEE, MSEP)

@@ -404,8 +404,14 @@ else:
 if debug_mode:
     trueStateTestShape = trueStateTEST.shape
     instantaneousSquaredErrors = torch.empty((trueStateTestShape[0], 
-                                              trueStateTestShape[1], trueStateTestShape[3]), 
+                                              trueStateTestShape[1], 
+                                              trueStateTestShape[3]),
                                               dtype=torch.float)
+    tcnPredVals = torch.empty((2, trueStateTestShape[0],
+                               trueStateTestShape[1],
+                               trueStateTestShape[3]),
+                               dtype=torch.float)
+        
 
 
 
@@ -624,6 +630,9 @@ def test():
                 if debug_mode:
                     instantaneousSquaredErrors[r, :, i] = ((output[:, 0] - y_test[:, 0]) ** 2) + \
                                                           ((output[:, 1] - y_test[:, 1]) ** 2)
+                    # Grabbing complex and real predicted numbers
+                    tcnPredVals[0, r, :, i] = output[:, 0]
+                    tcnPredVals[1, r, :, i] = output[:, 1]
 
                 # TrueMSE = torch.sum((output[:, 0] - y_test[:, 0]) ** 2 + (output[:, 2] - y_test[:, 2]) ** 2) / output.size(0)
                 TotalAvgPredMSE+=PredMSE
@@ -635,6 +644,7 @@ def test():
         # Recording the instantaneous errors if the model is set to debug mode
         if debug_mode:
             testDataInfo[r][u'instantaneousSquaredErrors'] = (torch.squeeze(instantaneousSquaredErrors[r,:,:])).cpu().numpy()
+            testDataInfo[r][u'tcnPredVals'] = (torch.squeeze(tcnPredVals[r,:,:])).cpu().numpy()
 
         TotalAvgPredMSE = TotalAvgPredMSE / n
         # TotalAvgTrueMSE = TotalAvgTrueMSE / n
@@ -656,7 +666,15 @@ def test():
         # print("Variance of Estimate for test set number {}: ".format(r+1), estVariance.item())
 
         # Computing the LS performance on this data set
-        LS_MSEE, LS_MSEP = LSTesting(LSCoefficients, LSandKFTestData[r])
+        #LS_MSEE, LS_MSEP = LSTesting(LSCoefficients, LSandKFTestData[r])
+        LS_Results = LSTesting(LSCoefficients, LSandKFTestData[r], debug_mode)
+        
+        LS_MSEE = LS_Results[0]
+        LS_MSEP = LS_Results[1]
+
+        if debug_mode:
+            testDataInfo[r][u'LSInstaErrs'] = LS_Results[2]
+            testDataInfo[r][u'LSPredVals'] = LS_Results[3]
 
         print('LS Performance')
         print("MSE of LS predictor for set number {}: ".format(r+1), LS_MSEP)
@@ -667,9 +685,14 @@ def test():
 
         # Computing Kalman performance
         KFResults = KFTesting(LSandKFTestData[r],KFARCoeffs, debug=debug_mode)
+        
+        if debug_mode:
+            testDataInfo[r][u'KFInstaErrs'] = KFResults[2]
+            testDataInfo[r][u'KFPredVals'] = KFResults[3]
 
         KF_MSEP = KFResults[1]
         KF_MSEE = KFResults[0]
+        
 
         print('KF Performance')
         print("MSE of KF predictor for set number {}: ".format(r+1), KF_MSEP)

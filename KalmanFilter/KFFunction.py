@@ -56,10 +56,11 @@ def KFTesting(testData, ARCoeffs, debug=False, **kwargs):
     
     if(debug):
         instaErrs = np.empty([1, seriesLength])
+        kfPreds = np.empty([1, seriesLength], dtype=np.complex128)
 
     for i in range(0, seriesLength):
         # Loop through a sequence of data
-        for q in range(1, sequenceLength):
+        for q in range(0, sequenceLength):
             #############################################################################
             ############################# KALMAN FILTER 1  ##############################
             # This is the original Kalman Filter - does not know the actual AR coeffecients of the
@@ -67,9 +68,13 @@ def KFTesting(testData, ARCoeffs, debug=False, **kwargs):
 
             # Formatting the measured data properly
             measuredDataComplex = measuredStateData[0, q, i] + (measuredStateData[1, q, i] * 1j)
+            
 
             # Calculating the prediction of the next state based on the previous estimate
-            x_prediction[:, q, i] = np.matmul(F, x_correction[:, q - 1, i])
+            if q == 0:
+                x_prediction[:, q, i] = np.matmul(F, x_correction[:, 1, i - 1])
+            else:
+                x_prediction[:, q, i] = np.matmul(F, x_correction[:, q - 1, i])
 
             # Calculating the predicted MSE from the current MSE, the AR Coefficients,
             # and the covariance matrix
@@ -81,24 +86,24 @@ def KFTesting(testData, ARCoeffs, debug=False, **kwargs):
             intermediate2 = np.linalg.inv(R + np.matmul(np.matmul(H, minPredMSE[:, :, q, i]),
                                                         np.transpose(H)))
             kalmanGain[:, :, q, i] = np.matmul(intermediate1, intermediate2)
+            if(q != 0):
+                # Calculating the State Correction Value
+                intermediate1 = np.matmul(H, x_prediction[:, q, i])
+                intermediate2 = measuredDataComplex - intermediate1
+                x_correction[:, q, i] = x_prediction[:, q, i] + np.matmul(kalmanGain[:, :, q, i],intermediate2)
+            else:
+                x_correction[:, q, i] = x_correction[:, q+1, i - 1]
 
-            # Calculating the State Correction Value
-            intermediate1 = np.matmul(H, x_prediction[:, q, i])
-            intermediate2 = measuredDataComplex - intermediate1
-            x_correction[:, q, i] = x_prediction[:, q, i] + np.matmul(kalmanGain[:, :, q, i],
-                                                                      intermediate2)
             # Calculating the MSE of our current state estimate
             intermediate1 = np.identity(AR_n) - np.matmul(kalmanGain[:, :, q, i], H)
             minMSE[:, :, q, i] = np.matmul(intermediate1, minPredMSE[:, :, q, i])
+            
+
+
 
         ############################# KALMAN FILTER 1  ##############################
 
         
-        # Updating the correction value to persist between rows, as the Kalman Filter
-        # is an iterative approach, not having this persistence causes it to take 
-        # longer to converge to the Riccati equation than it should
-        if(i < seriesLength - 1):
-            x_correction[:, 0, i + 1] = x_correction[:, q, i]
 
         ## Calculating the actual MSE between the kalman filters final prediction, and the actual value ##
         # Converting the true states into their complex equivalents
@@ -113,17 +118,23 @@ def KFTesting(testData, ARCoeffs, debug=False, **kwargs):
         trueEstimateMSE = np.absolute(finaEstimate - currentTrueStateComplex) ** 2
         truePredictionMSE = np.absolute(finalPrediction - nextTrueStateComplex) ** 2
 
-        # If Debugging, then grab the instantaneous errors
+        # If Debugging, then grab the instantaneous errors and predicted values
         if debug:
             instaErrs[0, i] = truePredictionMSE
+            kfPreds[0, i] = finalPrediction
 
         totalTrueEstimateMSE += trueEstimateMSE
         totalTruePredMSE += truePredictionMSE
 
     totalTrueEstimateMSE = totalTrueEstimateMSE / (seriesLength)
     totalTruePredMSE = totalTruePredMSE / (seriesLength)
+    
 
-    return (totalTrueEstimateMSE, totalTruePredMSE)
+    # Different return pattern if we are in debug or not
+    if debug:
+        return (totalTrueEstimateMSE, totalTruePredMSE, instaErrs, kfPreds)
+    else:
+        return (totalTrueEstimateMSE, totalTruePredMSE)
 
 
 
