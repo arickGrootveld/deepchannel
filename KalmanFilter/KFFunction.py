@@ -141,11 +141,8 @@ def KFTesting(testData, ARCoeffs, debug=False, **kwargs):
 
 
 # Redone Kalman Filter function to make it faster and make more sense
-# No flattens the data and doesn't do the whole double looping thing anymore
-
-# TODO: Delaying this for now till plots are generated, will return to this when
-# I have more time and we aren't on such a strict schedule
-
+# Now flattens the data and doesn't do the whole double looping thing anymore
+# Has slightly more accuracy for some reason, not sure about this
 def KFTesting2(testData, ARCoeffs, debug=False, **kwargs): 
     # Preset Parameters, because we are on a strict timeline
     measuredStateData = testData[1]
@@ -175,18 +172,18 @@ def KFTesting2(testData, ARCoeffs, debug=False, **kwargs):
     # Prediction/estimate formatted into current and last state value in the 1st dimension,
     # by sequence in the 2nd dimension, and by series in the 3rd dimension
     x_correction = np.zeros((AR_n, 
-                             seriesLength+10), dtype=complex)
+                             seriesLength+9), dtype=complex)
     x_prediction = np.zeros((AR_n, 
-                             seriesLength+10), dtype=complex)
+                             seriesLength+9), dtype=complex)
 
     # Other Kalman Filter variables formatted into a matrix/vector of values in the 1st and 2nd dimensions,
     # by sequence in the 3rd dimension, and by series in the 4th dimension
     kalmanGain = np.zeros((AR_n, 1, 
-                           seriesLength+10))
+                           seriesLength+9))
     minPredMSE = np.zeros((AR_n, AR_n, 
-                           seriesLength+10))
+                           seriesLength+9))
     minMSE = np.zeros((AR_n, AR_n, 
-                       seriesLength+10))
+                       seriesLength+9))
 
     # Initializing the correction value to be the expected value of the starting state
     x_correction[:, 0] = np.array([0, 0])
@@ -215,7 +212,7 @@ def KFTesting2(testData, ARCoeffs, debug=False, **kwargs):
         instaErrs = np.empty([1, seriesLength])
         kfPreds = np.empty([1, seriesLength], dtype=np.complex128)
 
-    for i in range(0, seriesLength + 10):
+    for i in range(0, seriesLength + 9):
         # Loop through a sequence of data
         #############################################################################
         ############################# KALMAN FILTER 1  ##############################
@@ -256,12 +253,12 @@ def KFTesting2(testData, ARCoeffs, debug=False, **kwargs):
         # Updating the correction value to persist between rows, as the Kalman Filter
         # is an iterative approach, not having this persistence causes it to take 
         # longer to converge to the Riccati equation than it should
-        if(i >= 10):
+        if(i >= 9):
 
             ## Calculating the actual MSE between the kalman filters final prediction, and the actual value ##
             # Converting the true states into their complex equivalents
-            currentTrueStateComplex = trueStateData[0, i-10] + (1j * trueStateData[2, i-10])
-            nextTrueStateComplex = trueStateData[1, i-10] + (1j * trueStateData[3, i-10])
+            currentTrueStateComplex = trueStateData[0, i-9] + (1j * trueStateData[2, i-9])
+            nextTrueStateComplex = trueStateData[1, i-9] + (1j * trueStateData[3, i-9])
 
             finalPrediction = np.matmul(F, x_correction[:, i])[0]
             finalEstimate = x_correction[:, i][0]
@@ -272,8 +269,8 @@ def KFTesting2(testData, ARCoeffs, debug=False, **kwargs):
 
 
             if debug:
-                instaErrs[0, i-10] = truePredictionMSE
-                kfPreds[0, i-10] = finalPrediction
+                instaErrs[0, i-9] = truePredictionMSE
+                kfPreds[0, i-9] = finalPrediction
 
             totalTrueEstimateMSE += trueEstimateMSE
             totalTruePredMSE += truePredictionMSE
