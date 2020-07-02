@@ -507,12 +507,12 @@ if __name__ == "__main__":
                                     randSeed=seed,
                                     goodTransProb=0, badTransProb=1.0,
                                     goodCoefficients=[0.5, -0.4], 
-                                    badCoefficients=[0,0], startingState='good')
+                                    badCoefficients=[0.5,-0.4], startingState='good')
         else:
             _ = GilElTestDataGen(numSequences=simuLen, sequenceLength=sequenceLen, 
                     randSeed=seed, goodTransProb=0, 
                     badTransProb=1.0, testSetLen=1, 
-                    goodCoefficients=[0.5, -0.4], badCoefficients=[0,0],
+                    goodCoefficients=[0.5, -0.4], badCoefficients=[0.5,-0.4],
                     startingState='good')
 
     end = time.time()

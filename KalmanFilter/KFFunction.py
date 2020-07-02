@@ -67,7 +67,6 @@ def KFTesting(testData, ARCoeffs, debug=False, **kwargs):
             # AR processes that are input, only knows the theoretical mean values.
             # Formatting the measured data properly
             measuredDataComplex = measuredStateData[0, q, i] + (measuredStateData[1, q, i] * 1j)
-
             # Calculating the prediction of the next state based on the previous estimate
             if q == 0:
                 x_prediction[:, q, i] = np.matmul(F, x_correction[:, 1, i - 1])
@@ -155,14 +154,15 @@ def KFTesting2(testData, ARCoeffs, debug=False, **kwargs):
     
     # Variables for deciding length of variables
     seriesLength = trueStateData.shape[1]
+    sequenceLength = measuredStateData.shape[1]
 
 
     # Looping through data to grab the relevant samples
     for p in range(0, seriesLength):
         if p == 0:
-            measuredStateDataTest[:, 0:10] = measuredStateData[:, :, 0]
+            measuredStateDataTest[:, 0:sequenceLength] = measuredStateData[:, :, 0]
         else:
-            measuredStateDataTest[:, 9 + p] = measuredStateData[:, 9, p]
+            measuredStateDataTest[:, sequenceLength - 1 + p] = measuredStateData[:, sequenceLength - 1, p]
 
     ##### Kalman Filter Implementation #####
     # Initializing the Kalman Filter variables
@@ -172,18 +172,18 @@ def KFTesting2(testData, ARCoeffs, debug=False, **kwargs):
     # Prediction/estimate formatted into current and last state value in the 1st dimension,
     # by sequence in the 2nd dimension, and by series in the 3rd dimension
     x_correction = np.zeros((AR_n, 
-                             seriesLength+9), dtype=complex)
+                             seriesLength+sequenceLength - 1), dtype=complex)
     x_prediction = np.zeros((AR_n, 
-                             seriesLength+9), dtype=complex)
+                             seriesLength+sequenceLength - 1), dtype=complex)
 
     # Other Kalman Filter variables formatted into a matrix/vector of values in the 1st and 2nd dimensions,
     # by sequence in the 3rd dimension, and by series in the 4th dimension
     kalmanGain = np.zeros((AR_n, 1, 
-                           seriesLength+9))
+                           seriesLength+sequenceLength - 1))
     minPredMSE = np.zeros((AR_n, AR_n, 
-                           seriesLength+9))
+                           seriesLength+sequenceLength - 1))
     minMSE = np.zeros((AR_n, AR_n, 
-                       seriesLength+9))
+                       seriesLength+ sequenceLength - 1))
 
     # Initializing the correction value to be the expected value of the starting state
     x_correction[:, 0] = np.array([0, 0])
@@ -212,7 +212,7 @@ def KFTesting2(testData, ARCoeffs, debug=False, **kwargs):
         instaErrs = np.empty([1, seriesLength])
         kfPreds = np.empty([1, seriesLength], dtype=np.complex128)
 
-    for i in range(0, seriesLength + 9):
+    for i in range(0, seriesLength + sequenceLength - 1):
         # Loop through a sequence of data
         #############################################################################
         ############################# KALMAN FILTER 1  ##############################
@@ -253,12 +253,12 @@ def KFTesting2(testData, ARCoeffs, debug=False, **kwargs):
         # Updating the correction value to persist between rows, as the Kalman Filter
         # is an iterative approach, not having this persistence causes it to take 
         # longer to converge to the Riccati equation than it should
-        if(i >= 9):
+        if(i >= sequenceLength - 1):
 
             ## Calculating the actual MSE between the kalman filters final prediction, and the actual value ##
             # Converting the true states into their complex equivalents
-            currentTrueStateComplex = trueStateData[0, i-9] + (1j * trueStateData[2, i-9])
-            nextTrueStateComplex = trueStateData[1, i-9] + (1j * trueStateData[3, i-9])
+            currentTrueStateComplex = trueStateData[0, i-sequenceLength + 1] + (1j * trueStateData[2, i-sequenceLength + 1])
+            nextTrueStateComplex = trueStateData[1, i-sequenceLength + 1] + (1j * trueStateData[3, i-sequenceLength + 1])
 
             finalPrediction = np.matmul(F, x_correction[:, i])[0]
             finalEstimate = x_correction[:, i][0]
@@ -269,8 +269,8 @@ def KFTesting2(testData, ARCoeffs, debug=False, **kwargs):
 
 
             if debug:
-                instaErrs[0, i-9] = truePredictionMSE
-                kfPreds[0, i-9] = finalPrediction
+                instaErrs[0, i-sequenceLength + 1] = truePredictionMSE
+                kfPreds[0, i-sequenceLength + 1] = finalPrediction
 
             totalTrueEstimateMSE += trueEstimateMSE
             totalTruePredMSE += truePredictionMSE

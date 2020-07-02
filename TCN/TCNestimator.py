@@ -18,7 +18,7 @@ from model import TCN
 from mismatch_data_gen import ARDatagenMismatch
 from utilities import convertToBatched, matSave
 from LeastSquares.LSFunction import LSTesting, LSTraining
-from KalmanFilter.KFFunction import KFTesting
+from KalmanFilter.KFFunction import KFTesting2 
 
 # Timer for logging how long the training takes to execute
 import time
@@ -411,8 +411,11 @@ if debug_mode:
                                trueStateTestShape[1],
                                trueStateTestShape[3]),
                                dtype=torch.float)
-        
 
+    realValues = torch.empty((2, trueStateTestShape[0],
+                               trueStateTestShape[1],
+                               trueStateTestShape[3]),
+                               dtype=torch.float)
 
 
 trueStateTEST = torch.from_numpy(trueStateTEST)
@@ -584,7 +587,7 @@ def evaluate():
     TotalAvgPredMSE = TotalAvgPredMSE / n
     # TotalAvgTrueMSE = TotalAvgTrueMSE / n
 
-    predVariance = torch.sum((evalPredMSEs[:]-TotalAvgPredMSE)**2)/evalPredMSEs.size(0)
+    #predVariance = torch.sum((evalPredMSEs[:]-TotalAvgPredMSE)**2)/evalPredMSEs.size(0)
     # estVariance = torch.sum((evalEstMSEs[:]-TotalAvgTrueMSE)**2)/evalEstMSEs.size(0)
 
     print('TotalAvgPredMSE: ', TotalAvgPredMSE.item())
@@ -633,6 +636,10 @@ def test():
                     # Grabbing complex and real predicted numbers
                     tcnPredVals[0, r, :, i] = output[:, 0]
                     tcnPredVals[1, r, :, i] = output[:, 1]
+                    
+                    realValues[0, r, :, i] = y_test[:, 0]
+                    realValues[1, r, :, i] = y_test[:, 1]
+
 
                 # TrueMSE = torch.sum((output[:, 0] - y_test[:, 0]) ** 2 + (output[:, 2] - y_test[:, 2]) ** 2) / output.size(0)
                 TotalAvgPredMSE+=PredMSE
@@ -644,16 +651,18 @@ def test():
         # Recording the instantaneous errors if the model is set to debug mode
         if debug_mode:
             testDataInfo[r][u'instantaneousSquaredErrors'] = (torch.squeeze(instantaneousSquaredErrors[r,:,:])).cpu().numpy()
-            testDataInfo[r][u'tcnPredVals'] = (torch.squeeze(tcnPredVals[r,:,:])).cpu().numpy()
+            testDataInfo[r][u'tcnPredVals'] = (torch.squeeze(tcnPredVals[:,r,:,:])).cpu().numpy()
+
+            testDataInfo[r][u'realValues'] = (torch.squeeze(realValues[:,r,:,:])).cpu().numpy()
 
         TotalAvgPredMSE = TotalAvgPredMSE / n
         # TotalAvgTrueMSE = TotalAvgTrueMSE / n
 
-        predVariance = torch.sum((testPredMSEs[:]-TotalAvgPredMSE)**2)/testPredMSEs.size(0)
+        # predVariance = torch.sum((testPredMSEs[:]-TotalAvgPredMSE)**2)/testPredMSEs.size(0)
         # estVariance = torch.sum((testEstMSEs[:]-TotalAvgTrueMSE)**2)/testEstMSEs.size(0)
 
         # Logging
-        testDataInfo[r][u'predictionVariance'] = predVariance.item()
+        # testDataInfo[r][u'predictionVariance'] = predVariance.item()
         # testDataInfo[r][u'estimationVariance'] = estVariance.item()
         # testDataInfo[r][u'estimationMSE'] = TotalAvgTrueMSE.item()
         testDataInfo[r][u'predictionMSE'] = TotalAvgPredMSE.item()
@@ -673,8 +682,8 @@ def test():
         LS_MSEP = LS_Results[1]
 
         if debug_mode:
-            testDataInfo[r][u'LSInstaErrs'] = LS_Results[2]
-            testDataInfo[r][u'LSPredVals'] = LS_Results[3]
+            testDataInfo[r][u'LSInstaErrs'] = LS_Results[3]
+            testDataInfo[r][u'LSPredVals'] = LS_Results[2]
 
         print('LS Performance')
         print("MSE of LS predictor for set number {}: ".format(r+1), LS_MSEP)
@@ -682,9 +691,9 @@ def test():
 
         testDataInfo[r][u'LS_PredMSE'] = LS_MSEP
         testDataInfo[r][u'LS_EstMSE'] = LS_MSEE
-
+        
         # Computing Kalman performance
-        KFResults = KFTesting(LSandKFTestData[r],KFARCoeffs, debug=debug_mode)
+        KFResults = KFTesting2(LSandKFTestData[r],KFARCoeffs, debug=debug_mode)
         
         if debug_mode:
             testDataInfo[r][u'KFInstaErrs'] = KFResults[2]
@@ -703,7 +712,6 @@ def test():
 
         print('Riccati Convergence MSE')
         print("MSE Riccati Prediction for set number {}: ".format(r+1), testDataInfo[r]['riccatiConvergencePred'])
-        # print("MSE Riccati Estimation for set number {}: ".format(r+1), testDataInfo[r]['riccatiConvergenceEst'])
 
         # Printing a newline to make it easier to tell test sets apart
         print(' ')
