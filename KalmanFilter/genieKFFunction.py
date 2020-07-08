@@ -121,7 +121,9 @@ def genieKFTesting(testData, ARCoeffs, debug = False, **kwargs):
             currentTrueStateComplex = trueStateData[0, i-sequenceLength + 1] + (1j * trueStateData[2, i-sequenceLength + 1])
             nextTrueStateComplex = trueStateData[1, i-sequenceLength + 1] + (1j * trueStateData[3, i-sequenceLength + 1])
 
-            finalPrediction = np.matmul(F, x_correction[:, i])[0]
+            F_next = np.array([ARCoeffs[:, i+1],[1, 0]])
+
+            finalPrediction = np.matmul(F_next, x_correction[:, i])[0]
             finalEstimate = x_correction[:, i][0]
 
             # Calculating the instantaneous MSE of our estimate and prediction
