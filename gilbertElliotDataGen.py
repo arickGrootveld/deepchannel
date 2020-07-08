@@ -203,11 +203,12 @@ def GilEllDataGen(params, seed=-1):
         if not (i == 0):
             # Going through the steps of an AR Process
             x_current = np.matmul(F, x_current) + v
-            z_current = np.matmul(H,x_current) + w
+            
         else:
             x_current = (np.divide(np.matmul(QChol, np.random.randn(2,1)), np.sqrt(2))) + \
                         (1j * np.divide(np.matmul(QChol, np.random.randn(2,1)), np.sqrt(2)))
-
+        z_current = np.matmul(H,x_current) + w
+        
         z[:,i] = z_current
         x[:,i] = x_current[0]
     return((x, z, riccatiConvergences, channelStates))
