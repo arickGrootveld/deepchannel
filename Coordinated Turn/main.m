@@ -45,7 +45,7 @@ ind{1} = (1:4)';
 ind{2} = (1:5)';
 
 %% Generate the data.
-n = 5000;
+n = 10;
 
 X_r = zeros(fdims,n);
 Q_r = zeros(fdims,n);
@@ -154,6 +154,7 @@ GKF_Q{1} = Q{1};
 inter1 = Q{2};
 GKF_Q{2} = inter1(1:4, 1:4);
 
+
 % Overall estimates of IMM filter
 %IMMEKF
 MM1 = zeros(fdims,  n);
@@ -186,6 +187,7 @@ for i = 1:n
     [GKF_M, GKF_P] = kf_update(GKF_M, GKF_P, Y(:,i), H{1}, R{st});
     GKF_MM(:,i) = GKF_M;
     GKF_PP(:,:, i) = GKF_P;
+
 
 end
 
@@ -282,3 +284,4 @@ saveData.riccatiConvergences = [0, 1; 1, 0];
 saveData.seed = 0;
 
 saveMatData(saveData, 'data', 'ManTargData');
+

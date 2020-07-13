@@ -1,0 +1,16 @@
+\contentsline {subsubsection}{\bfseries Abstract}{1}{section*.1}% 
+\contentsline {section}{\numberline {1.}Introduction}{1}{section.1}% 
+\contentsline {section}{\numberline {2.}Channel Model}{1}{section.2}% 
+\contentsline {section}{\numberline {3.}Data Generation}{2}{section.3}% 
+\contentsline {section}{\numberline {4.}Linear Estimators}{2}{section.4}% 
+\contentsline {subsection}{Riccati Equation}{2}{section*.3}% 
+\contentsline {subsection}{Least Squares}{3}{section*.4}% 
+\contentsline {subsection}{Kalman Filter}{3}{section*.5}% 
+\contentsline {section}{\numberline {5.}Temporal Convolutional Network}{3}{section.5}% 
+\contentsline {section}{\numberline {6.}Results}{4}{section.6}% 
+\contentsline {subsection}{Static AR Processes}{4}{section*.6}% 
+\contentsline {subsection}{Varied AR Processes}{4}{section*.7}% 
+\contentsline {section}{\numberline {7.}Conclusion}{4}{section.7}% 
+\contentsline {section}{Acknowledgments}{4}{section*.8}% 
+\contentsline {section}{References}{4}{section*.9}% 
+\contentsline {section}{Biography}{5}{section*.10}% 

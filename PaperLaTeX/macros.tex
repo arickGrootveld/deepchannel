@@ -1,0 +1,66 @@
+% ====================
+% User defined macros
+% ====================
+
+{\global\def\bigPage{
+        \setlength{\topmargin}{-0.6in}
+        \setlength{\textheight}{9in}
+        \setlength{\oddsidemargin}{-0.080in}
+        \setlength{\textwidth}{6.5in}
+        }
+}
+
+\newcommand{\putFig}[3]{
+        \begin{figure}[htbp]
+		\centering 
+		\includegraphics[width=#3in]{figs/#1}
+                \caption{#2}
+                \label{fig:#1}
+        \end{figure} }
+
+\newcommand{\putFrag}[4]{
+        \begin{figure}[htbp]
+		    \centering
+ 		    \psfragfig*[width=#3in,crop=pdfcrop]{figs/#1}{#4}
+		    \caption{#2}    
+            \label{fig:#1}
+        \end{figure} }
+        
+\newcommand{\sgn}{\text{sgn}}
+\newcommand{\SNR}{\mathsf{SNR}}
+\newcommand{\E}{{\rm E}}
+\newcommand{\e}{\mathcal{E}}
+\newcommand{\pderiv}[2]{\mbox{$\frac{\displaystyle \partial #1}{\displaystyle \partial #2}$}}
+\renewcommand{\P}{\text{Prob}}
+\renewcommand{\Re}{\text{Re}}
+\renewcommand{\th}{^{\text{th}}}
+\renewcommand{\vec}[1]{{\ensuremath{\boldsymbol{#1}}}}
+\newtheorem{definition}{Definition}
+\newtheorem{prop}{Proposition}
+\newtheorem{thm}{Theorem}
+%\newtheorem{cor}[thm]{Corollary}
+%\newtheorem{lem}[thm]{Lemma}
+\newtheorem{cor}{Corollary}
+\newtheorem{lem}{Lemma}
+\newcommand{\ts}[1]{\ensuremath{\mathsf{TS}^{(#1)}}}
+\newcommand{\bs}[1]{\ensuremath{\mathsf{S}_{#1}}}
+\newcommand{\upl}{(0)}
+\newcommand{\downl}{(\mathsf{bf})}
+\newcommand{\sync}{(\mathsf{sync})}
+
+\newcommand{\dest}{\ensuremath{\mathsf{D}}}
+
+\newcommand{\ho}{\hat{\omega}}
+\newcommand{\houp}{\hat{\omega}^{\upl}}
+\renewcommand{\to}{\tilde{\omega}}
+\newcommand{\toup}{\tilde{\omega}^{\upl}}
+\newcommand{\hp}{\hat{\phi}}
+\newcommand{\hpup}{\hat{\phi}^{\upl}}
+\newcommand{\tp}{\tilde{\phi}}
+\newcommand{\tpup}{\tilde{\phi}^{\upl}}
+\newcommand{\cw}{\downarrow}
+\newcommand{\ccw}{\uparrow}
+\newcommand{\intv}[2]{\ensuremath{T_{#1}^{(#2)}}}
+\newcommand{\intvup}[1]{\ensuremath{T_{#1}^{\upl}}}
+\newcommand{\intvdown}[1]{\ensuremath{T_{#1}^{\downl}}}
+\newcommand{\of}[1]{^{\scriptscriptstyle{(#1)}}}
