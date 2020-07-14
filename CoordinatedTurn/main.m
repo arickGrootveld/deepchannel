@@ -3,6 +3,10 @@ fdims = 5; %[x1 x2 v1 v2 w]
 hdims = 2;
 nmodels = 2;
 
+n = 200;
+seed=126;
+rng(seed);
+
 %% Stepsize
 dt = 0.1;
 
@@ -44,12 +48,7 @@ F{2} = @c_turn;
 ind{1} = (1:4)';
 ind{2} = (1:5)';
 
-% Set the rng seed for this run so that it does not generate same data each time
-rng(126)
-
 %% Generate the data.
-n = 200;
-
 X_r = zeros(fdims,n);
 Q_r = zeros(fdims,n);
 Y = zeros(hdims,n);
@@ -288,7 +287,7 @@ inter.sequenceLength = sequenceLength;
 saveData.parameters = inter;
 
 saveData.riccatiConvergences = [0, 1; 1, 0];
-saveData.seed = 0;
+saveData.seed = seed;
 
 saveMatData(saveData, 'data', 'ManTargData');
 
