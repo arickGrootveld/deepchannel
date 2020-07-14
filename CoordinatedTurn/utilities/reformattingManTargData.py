@@ -28,6 +28,10 @@ if __name__ == '__main__':
     import hdf5storage as h5
     import argparse
     import os
+
+    import sys
+    sys.path.append('..')
+    from utilities import matSave
     parser = argparse.ArgumentParser(description="""Reformatting .mat data 
                                                     generated
                                                     by matlab to work
@@ -67,11 +71,11 @@ if __name__ == '__main__':
             runData['reformattedData'] = True
 
             # Rewriting the data to a test data file
-            inter1 = targetFile.rfind('/')
-            inter2 = targetFile.find('ManTargData')
-            inter3 = targetFile.rfind('.')
-            targetFile = targetFile[0:inter1 + 1] + 'ManTargTestData' \
-                + targetFile[inter2 + 11:inter3] + '.mat'
+            #inter1 = targetFile.rfind('/')
+            #inter2 = targetFile.find('ManTargData')
+            #inter3 = targetFile.rfind('.')
+            #targetFile = targetFile[0:inter1 + 1] + 'ManTargTestData' \
+            #    + targetFile[inter2 + 11:inter3] + '.mat'
             
             allTrueStates = matlabFormattedData['data'][0,0]['systemStates']
             # inter1 = LSAndKFTestData.shape
@@ -101,14 +105,18 @@ if __name__ == '__main__':
 
             runData['trueStateTEST'] = trueStateTest
             runData['measuredStateTEST'] = measStateTest
-
+            
+            # TODO: Get these numbers correct with Riccati Convergences
+            # TODO: being the genie KF MSE's
+            # TODO: and the seed being the seed of the data generation process
             inter1 = dict()
             inter1['riccatiConvergenceEst'] = 0.00
             inter1['riccatiConvergencePred'] = 0.00
             inter1['seed'] = 0
             runData['testDataInfo'] = [inter1]
+            
+            matSave('data', 'ManTargTestData', runData)
 
-            # TODO: Batch the test data so it has same format as normal files
         else:
             runData['seed'] = matlabFormattedData['data'][0,0]['seed'][0][0]
             runData['finalStateValues'] = matlabFormattedData['data'][0,0]['finalStateValues']
@@ -125,11 +133,9 @@ if __name__ == '__main__':
 
             runData['riccatiConvergences'] = matlabFormattedData['data'][0,0]['riccatiConvergences']
             runData['reformattedData'] = True
-        print('saving data to: ' + targetFile)
 
-        # Saving the data to its new file
-        h5.savemat(targetFile, runData)
-
+            # Saving the data to its new file
+            matSave('data', 'ManTargData', runData)
 
 
 

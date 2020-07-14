@@ -44,8 +44,11 @@ F{2} = @c_turn;
 ind{1} = (1:4)';
 ind{2} = (1:5)';
 
+% Set the rng seed for this run so that it does not generate same data each time
+rng(126)
+
 %% Generate the data.
-n = 500;
+n = 200;
 
 X_r = zeros(fdims,n);
 Q_r = zeros(fdims,n);
@@ -269,6 +272,9 @@ sequenceLength = 10;
 saveData = {};
 % Standard parameters to save to the .mat file
 saveData.channelCoefficients = transitionMatrices;
+
+% Adding the utilities folder to the path for this matlab instance
+addpath('utilities')
 
 % Formatting the X_r's and Y's to fit the standard scheme
 [finalStateValues, observedStates, systemStates] = reformatManTargData(X_r, Y, sequenceLength);
