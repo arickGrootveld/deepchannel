@@ -45,7 +45,7 @@ ind{1} = (1:4)';
 ind{2} = (1:5)';
 
 %% Generate the data.
-n = 10;
+n = 50;
 
 X_r = zeros(fdims,n);
 Q_r = zeros(fdims,n);
@@ -271,9 +271,10 @@ saveData = {};
 saveData.channelCoefficients = transitionMatrices;
 
 % Formatting the X_r's and Y's to fit the standard scheme
-[finalStateValues, observedStates] = reformatManTargData(X_r, Y, sequenceLength);
+[finalStateValues, observedStates, systemStates] = reformatManTargData(X_r, Y, sequenceLength);
 saveData.finalStateValues = finalStateValues;
 saveData.observedStates = observedStates;
+saveData.systemStates = systemStates;
 
 % Saving data generation parameters
 inter.numSequences = n;
