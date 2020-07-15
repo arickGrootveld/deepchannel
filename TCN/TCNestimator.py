@@ -438,9 +438,10 @@ model = TCN(input_channels, n_classes, channel_sizes, kernel_size=kernel_size, d
 
 # Implementing data parrallelism, so that we can use multiple gpus if we have them
 if(args.cuda):
-    if(torch.cuda.is_available & (torch.cuda.device_count() > 1)):
+    if(torch.cuda.is_available() & (torch.cuda.device_count() > 1)):
         print('using multiple gpu\'s')
         model = nn.DataParallel(model)
+        device = torch.device("cuda:0")
         model.to(device)
 
 # Creating a backup of the model that we can use for early stopping
