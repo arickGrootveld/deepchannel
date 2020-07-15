@@ -7,6 +7,7 @@ import torch
 import argparse
 from argparse import RawTextHelpFormatter
 import torch.optim as optim
+import torch.nn as nn
 import torch.nn.functional as F
 import os
 from os import path
@@ -40,11 +41,6 @@ parser.add_argument('--batch_size', type=int, default=32, metavar='N',
 # CUDA enable
 parser.add_argument('--cuda', action='store_true',
                     help='use CUDA (default: False)')
-
-# CUDA device
-parser.add_argument('--cuda_device', type=int, default=0,
-                    help='cuda device to use if running on cuda, only works if cuda'
-                    'is enabled (default 0)')
 
 # Dropout rate
 parser.add_argument('--dropout', type=float, default=0.15,
@@ -210,7 +206,6 @@ debug_mode = args.debug
 
 evalDataLen = int(args.eval_len)
 testDataLen = int(args.test_set_depth)
-cuda_device = args.cuda_device
 AR_var = args.AR_var
 
 trainFile = args.trainDataFile
@@ -440,6 +435,14 @@ else:
     dropout = modelContext['model_parameters']['dropout']
 # Generate the model
 model = TCN(input_channels, n_classes, channel_sizes, kernel_size=kernel_size, dropout=dropout)
+
+# Implementing data parrallelism, so that we can use multiple gpus if we have them
+if(args.cuda):
+    if(torch.cuda.is_available & (torch.cuda.device_count() > 1)):
+        print('using multiple gpu\'s')
+        model = nn.DataParallel(model)
+        model.to(device)
+
 # Creating a backup of the model that we can use for early stopping
 modelBEST = model
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
@@ -447,7 +450,6 @@ modelBEST = model
 
 if args.cuda:
 
-    torch.cuda.device(cuda_device)
     model.cuda()
     modelBEST.cuda()
     # If we are not just testing then load everything into cuda
