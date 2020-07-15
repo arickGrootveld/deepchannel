@@ -12,7 +12,9 @@ function [finStates, obsStates, sysStates] = reformatManTargData(X_r, Y, seqLen)
     inter2 = Y(1:2, :);
     
     for i = 1:numSeqs
+       finStates(1, i) = X_r(1, i + seqLen - 1);
        finStates(2, i) = X_r(1, i + seqLen);
+       finStates(3, i) = X_r(2, i + seqLen - 1);
        finStates(4, i) = X_r(2, i + seqLen);
        sysStates(1, :, i) = X_r(1, i:i+seqLen);
        sysStates(2, :, i) = X_r(2, i:i+seqLen);

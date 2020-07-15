@@ -112,7 +112,7 @@ if __name__ == '__main__':
             inter1 = dict()
             inter1['riccatiConvergenceEst'] = 0.00
             inter1['riccatiConvergencePred'] = 0.00
-            inter1['seed'] = 0
+            inter1['seed'] = matlabFormattedData['data'][0,0]['seed'][0][0]
             runData['testDataInfo'] = [inter1]
             
             matSave('data', 'ManTargTestData', runData)
@@ -128,6 +128,7 @@ if __name__ == '__main__':
             intermed = dict()
             intermed['numSequences'] = matlabFormattedData['data'][0,0]['parameters'][0]['numSequences'][0][0][0]
             intermed['sequenceLength'] = matlabFormattedData['data'][0,0]['parameters'][0]['sequenceLength'][0][0][0]
+            intermed['seed'] = matlabFormattedData['data'][0,0]['seed'][0][0]
             # Saving the parameters to data to be saved
             runData['parameters'] = intermed
 
