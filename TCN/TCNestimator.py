@@ -437,13 +437,15 @@ else:
 model = TCN(input_channels, n_classes, channel_sizes, kernel_size=kernel_size, dropout=dropout)
 
 # Implementing data parrallelism, so that we can use multiple gpus if we have them
-if(args.cuda):
-    if(torch.cuda.is_available() & (torch.cuda.device_count() > 1)):
-        print('using multiple gpu\'s')
-        model = nn.DataParallel(model)
-        device = torch.device("cuda:0")
-        model.to(device)
-
+# TODO: Spend some more time on this, because it certainly doesn't work right now
+#if(args.cuda):
+#    if(torch.cuda.is_available() & (torch.cuda.device_count() > 1)):
+#        print('using multiple gpu\'s')
+#        model = nn.DataParallel(model)
+        #for i in range(0, torch.cuda.device_count()):
+        #    deviceNumber = "cuda:" + str(i)
+        #    models
+                    
 # Creating a backup of the model that we can use for early stopping
 modelBEST = model
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
