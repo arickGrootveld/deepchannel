@@ -42,6 +42,11 @@ parser.add_argument('--batch_size', type=int, default=32, metavar='N',
 parser.add_argument('--cuda', action='store_true',
                     help='use CUDA (default: False)')
 
+parser.add_argument('--cuda_device', type=str, default='all',
+                    help='the cuda device to be used. If all is ' +
+                    'specified then it will use every GPU available.' +
+                    '(default: all)')
+
 # Dropout rate
 parser.add_argument('--dropout', type=float, default=0.15,
                     help='dropout applied to layers (default: 0.15)')
@@ -436,14 +441,43 @@ else:
 # Generate the model
 model = TCN(input_channels, n_classes, channel_sizes, kernel_size=kernel_size, dropout=dropout)
 
-# Implementing data parrallelism, so that we can use multiple gpus if we have them
+# Logic Structure of using cuda in either multiple GPU or single GPU 
+# orientations
 if(args.cuda):
-    if(torch.cuda.is_available() & (torch.cuda.device_count() > 1)):
-        print('using multiple gpu\'s')
-        model = nn.DataParallel(model)
-        for m in range(0, torch.cuda.device_count()):
-            device = torch.device('cuda:' + str(m))
+    if(torch.cuda.is_available()):
+        # Use every GPU available
+        if(args.cuda_device == 'all'):
+            # If multiple GPU's are available
+            if(torch.cuda.device_count() > 1):
+                print('using multiple GPU\'s')
+                model = nn.DataParallel(model)
+                for m in range(0, torch.cuda.device_count()):
+                    device = torch.device('cuda:' + str(m))
+                    model.to(device)
+            # If only a single GPU is available then do nothing because this is 
+            # default behaviour for cuda
+
+        # If a device ID was specified, then use that instead
+        else:
+            try:
+                cuda_device = int(args.cuda_device)
+            except:
+                raise ValueError('Need to specify an integer or all for ' +
+                                 '--cuda_device argument')
+            device = torch.device('cuda:' + str(cuda_device))
             model.to(device)
+                
+            
+    else:
+        raise ValueError('cuda not available, --cuda unavailable')
+
+
+    #if(torch.cuda.is_available() & (torch.cuda.device_count() > 1)):
+    #    print('using multiple gpu\'s')
+    #    model = nn.DataParallel(model)
+    #    for m in range(0, torch.cuda.device_count()):
+    #        device = torch.device('cuda:' + str(m))
+    #        model.to(device)
 
 # Creating a backup of the model that we can use for early stopping
 modelBEST = model
