@@ -31,6 +31,6 @@ function filename = saveMatData(data, filePath, fileSubName)
         disp('ha, gottem');
     end
     
-    save(filename, 'data');
+    save(filename, 'data', '-v7.3');
     disp(strcat('data saved to: ', filename));
 end

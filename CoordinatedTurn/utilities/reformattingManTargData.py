@@ -77,19 +77,19 @@ if __name__ == '__main__':
             #targetFile = targetFile[0:inter1 + 1] + 'ManTargTestData' \
             #    + targetFile[inter2 + 11:inter3] + '.mat'
             
-            allTrueStates = matlabFormattedData['data'][0,0]['systemStates']
+            allTrueStates = matlabFormattedData['data']['systemStates'][0]
             # inter1 = LSAndKFTestData.shape
             # runData['LSandKFTestData'] = np.reshape(LSAndKFTestData, (1, inter1[0], \
                                                     # inter1[1], inter1[2]))
 
-            measInter1 = matlabFormattedData['data'][0,0]['observedStates']
+            measInter1 = matlabFormattedData['data']['observedStates'][0]
             inter2 = measInter1.shape
             # runData['measuredStateTEST'] = np.reshape(inter1, (1, inter2[0], inter2[1], \
                                                     #   inter2[2]))
             measStateTest = np.reshape(measInter1, (1, inter2[0], inter2[1], \
                                                     inter2[2]))
 
-            trueInter1 = matlabFormattedData['data'][0,0]['finalStateValues']
+            trueInter1 = matlabFormattedData['data']['finalStateValues'][0]
             inter2 = trueInter1.shape
             # runData['trueStateTEST'] = np.reshape(inter1, (1, inter2[0], \
                                                 #  inter2[1]))
@@ -112,27 +112,27 @@ if __name__ == '__main__':
             inter1 = dict()
             inter1['riccatiConvergenceEst'] = 0.00
             inter1['riccatiConvergencePred'] = 0.00
-            inter1['seed'] = matlabFormattedData['data'][0,0]['seed'][0][0]
+            inter1['seed'] = matlabFormattedData['data']['seed'][0,0,0]
             runData['testDataInfo'] = [inter1]
             
             matSave('data', 'ManTargTestData', runData)
 
         else:
-            runData['seed'] = matlabFormattedData['data'][0,0]['seed'][0][0]
-            runData['finalStateValues'] = matlabFormattedData['data'][0,0]['finalStateValues']
-            runData['observedStates'] = matlabFormattedData['data'][0,0]['observedStates']
-            runData['systemStates'] = matlabFormattedData['data'][0,0]['systemStates']
+ 
+            runData['finalStateValues'] = matlabFormattedData['data']['finalStateValues'][0]
+            runData['observedStates'] = matlabFormattedData['data']['observedStates'][0]
+            runData['systemStates'] = matlabFormattedData['data']['systemStates'][0]
 
             # Intermediate variable to hold the parameters so they can be 
             # reorganized in usable fashion
             intermed = dict()
-            intermed['numSequences'] = matlabFormattedData['data'][0,0]['parameters'][0]['numSequences'][0][0][0]
-            intermed['sequenceLength'] = matlabFormattedData['data'][0,0]['parameters'][0]['sequenceLength'][0][0][0]
-            intermed['seed'] = matlabFormattedData['data'][0,0]['seed'][0][0]
+            intermed['numSequences'] = matlabFormattedData['data']['parameters']['numSequences'][0,0,0,0]
+            intermed['sequenceLength'] = matlabFormattedData['data']['parameters']['sequenceLength'][0,0,0,0]
+            intermed['seed'] = matlabFormattedData['data']['seed'][0,0,0]
             # Saving the parameters to data to be saved
             runData['parameters'] = intermed
 
-            runData['riccatiConvergences'] = matlabFormattedData['data'][0,0]['riccatiConvergences']
+            runData['riccatiConvergences'] = matlabFormattedData['data']['riccatiConvergences'][0]
             runData['reformattedData'] = True
 
             # Saving the data to its new file
