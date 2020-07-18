@@ -80,7 +80,8 @@ def LSTesting(estAndPredFilterCoeffs, testData, debug=False, **kwargs):
     MSEP = np.mean(f)
 
     if debug:
-        return(MSEE, MSEP, x_pred, f)
+        lsPred = np.matmul(z, b_ls)
+        return(MSEE, MSEP, lsPred, f)
     else:
         # Returns the Mean Squared Estimated error, and the Meas Squared Predicted error in that order
         return(MSEE, MSEP)
