@@ -142,6 +142,11 @@ parser.add_argument('--KFCoeffs', nargs='+', default=[0.5, -0.4],
                     help='Coefficients Passed to the Kalman Filter, will depend on the scenario you are looking at'
                          '(default: [0.5, 0.4]')
 
+parser.add_argument('--initTest', action='store_true',
+                    help='perform various operations to test how'
+                    'all the tested methods perform at channel initialization'
+                    '(default: false)')
+
 
 # Parse out the input arguments
 args = parser.parse_args()
@@ -738,7 +743,7 @@ def test():
         testDataInfo[r][u'LS_EstMSE'] = LS_MSEE
         
         # Computing Kalman performance
-        KFResults = KFTesting2(LSandKFTestData[r],KFARCoeffs, debug=debug_mode)
+        KFResults = KFTesting2(LSandKFTestData[r],KFARCoeffs, initTest=args.initTest, debug=debug_mode)
         
         if debug_mode:
             testDataInfo[r][u'KFInstaErrs'] = KFResults[2]

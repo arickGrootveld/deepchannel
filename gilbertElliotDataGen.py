@@ -275,8 +275,10 @@ def toeplitzData(sequenceData, numColumns):
 # GilElTestDataGen: Function that uses the GilElDatagenWrapper to generate a set of data that has everything required
 #                   for a test data set that can be fed right into the TCN
 def GilElTestDataGen(sequenceLength=10, numSequences=100, goodCoefficients=[0.3, 0.1],
-                          badCoefficients=[1.949, -0.95], goodTransProb=0.0005, badTransProb=0.0005, QVar=0.1,
-                          RVar=0.1, randSeed=int(np.abs(np.floor(100*np.random.randn(1)))), batch_size=20, testSetLen=3,  **kwargs):
+                          badCoefficients=[1.949, -0.95], goodTransProb=0.0005, 
+                          badTransProb=0.0005, QVar=0.1, RVar=0.1, 
+                          randSeed=int(np.abs(np.floor(100*np.random.randn(1)))), 
+                          batch_size=20, testSetLen=3, initTest=False,  **kwargs):
     LSandKFTestData = []
     testDataInfo = []
 
@@ -309,7 +311,7 @@ def GilElTestDataGen(sequenceLength=10, numSequences=100, goodCoefficients=[0.3,
             subsetTestStateData, subsetTestDataInfo = GilElDataGenWrapper(sequenceLength=sequenceLength, numSequences=numSequences,
                                                                           badCoefficients=badCoefficients, goodCoefficients=goodCoefficients,
                                                                           goodTransProb=goodTransProb, badTransProb=badTransProb,
-                                                                          RVar=RVar, QVar=QVar, randSeed=randSeed)
+                                                                          RVar=RVar, QVar=QVar, randSeed=randSeed, initTest=initTest)
             trueStateTEST[k, :, :, :], measuredStateTEST[k, :, :, :, :] = convertToBatched(subsetTestStateData[2],
                                                                                            subsetTestStateData[1],
                                                                                            batch_size)
@@ -408,9 +410,13 @@ def GilElTestDataGen(sequenceLength=10, numSequences=100, goodCoefficients=[0.3,
     return(testDataToBeSaved)
 
 # TODO: Add argument to choose whether to save the data or not
-def GilElDataGenWrapper(sequenceLength=10, numSequences=100, goodCoefficients=[0.3, 0.1],
-                          badCoefficients=[1.949, -0.95], goodTransProb=0.0005, badTransProb=0.0005, QVar=0.1,
-                          RVar=0.1, randSeed=int(np.abs(np.floor(100*np.random.randn(1)))),startingState='random', **kwargs):
+def GilElDataGenWrapper(sequenceLength=10, numSequences=100, 
+                          goodCoefficients=[0.3, 0.1],
+                          badCoefficients=[1.949, -0.95], 
+                          goodTransProb=0.0005, badTransProb=0.0005, QVar=0.1,
+                          RVar=0.1, 
+                          randSeed=int(np.abs(np.floor(100*np.random.randn(1)))),
+                          startingState='random', initTest='False', **kwargs):
     # Generating a much longer sequence that will have the exact length to cause the toeplitz matrix that it will become
     # to have the exact sequence length and number of sequences that we expect
     longSequenceLength = numSequences + sequenceLength - 1
@@ -419,6 +425,35 @@ def GilElDataGenWrapper(sequenceLength=10, numSequences=100, goodCoefficients=[0
     # a random state because this is how we intend to test our system
     longSequence = GilEllDataGen(([goodTransProb, badTransProb], [goodCoefficients, badCoefficients],
                                   longSequenceLength, [QVar, RVar], startingState), randSeed)
+    # If we want to test the initializations of the TCN and LS we 
+    # zero out the first seq_len number of samples
+    if(initTest):
+        # Setting the initial values of the sequences here
+        inter1 = longSequence[0]
+        sShape = inter1.shape
+
+        trueStates = np.zeros(sShape, dtype=np.complex128)
+        trueStates[:, sequenceLength:-1] = inter1[:, 0:sShape[1] - (sequenceLength+1)]
+        trueStates[:, -1] = inter1[:, -1]
+
+        # Setting the measured states here
+        inter1 = longSequence[1]
+        sShape = inter1.shape
+
+        measStates = np.zeros(sShape, dtype=np.complex128)
+        measStates[:, sequenceLength:-1] = inter1[:, 0:sShape[1] - (sequenceLength + 1)]
+        measStates[:, -1] = inter1[:, -1]
+
+        inter1 = longSequence[3]
+        channelCoeffs = np.zeros(inter1.shape)
+        channelCoeffs[:, sequenceLength:-1] = inter1[:, 0:sShape[1] - (sequenceLength + 1)]
+        channelCoeffs[:, -1] = inter1[:, -1]
+
+
+        longSequence = (trueStates, measStates, longSequence[2], channelCoeffs)
+
+        
+
     data = toeplitzData(longSequence, sequenceLength)
 
     riccatiConvergences = longSequence[2]
@@ -480,7 +515,10 @@ if __name__ == "__main__":
                              'states (respectfully) of the Markov Chain (default: [0.0005, 0.0005])')
     parser.add_argument('--noMismatchDataGen', action='store_true',
                          help='specifies whether this simulation is supposed to generate No Mimatch Data, combines with --testDataGen to generate test data for the No Mismatch Scenario (default: False)')
-
+    parser.add_argument('--initTest', action='store_true',
+                        help='specifies that this data should be padded'
+                        'with zeros so that we can test the TCN and LS'
+                        'on init of system (default=False)')
 
     args = parser.parse_args()
 
@@ -492,6 +530,7 @@ if __name__ == "__main__":
     nonMDG = args.noMismatchDataGen
     goodTransProb = float(args.transProbs[0])
     badTransProb = float(args.transProbs[1])
+    initTest = args.initTest
     print(args)
 
     start = time.time()
@@ -501,7 +540,7 @@ if __name__ == "__main__":
                                    goodTransProb=goodTransProb, badTransProb=badTransProb)
         else:
             _ = GilElTestDataGen(numSequences=simuLen, sequenceLength=sequenceLen, randSeed=seed,
-                                goodTransProb=goodTransProb, badTransProb=badTransProb)
+                                goodTransProb=goodTransProb, badTransProb=badTransProb, initTest=initTest)
     else:
         if not testGeneration:
             _ = GilElDataGenWrapper(numSequences=simuLen, sequenceLength=sequenceLen,
@@ -514,7 +553,7 @@ if __name__ == "__main__":
                     randSeed=seed, goodTransProb=0, 
                     badTransProb=1.0, testSetLen=1, 
                     goodCoefficients=[0.5, -0.4], badCoefficients=[0.5,-0.4],
-                    startingState='good')
+                    startingState='good', initTest=initTest)
 
     end = time.time()
 
