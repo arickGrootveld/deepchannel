@@ -171,9 +171,11 @@ def KFTesting2(testData, ARCoeffs, debug=False, initTest=False, **kwargs):
     # the data gen script that generated the data being used
     if initTest:
         seqLen = measuredStateDataTest.shape[1] - trueStateData.shape[1]
-        inter1 = np.zeros(trueStateData.shape)
+        inter1 = np.zeros([2, trueStateData.shape[1]])
         
-        inter1 = measuredStateDataTest[:, sequenceLength:measuredStateDataTest.shape[1]]
+        inter1[0,0] = 0
+        inter1[1,0] = 0
+        inter1[:,1:] = measuredStateDataTest[:, sequenceLength:measuredStateDataTest.shape[1]-1]
         measuredStateDataTest = inter1
         seriesLength = seriesLength - sequenceLength
 
