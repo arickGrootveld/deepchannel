@@ -63,7 +63,7 @@ if __name__ == '__main__':
         print('data in: ' + targetFile + ' is already reformatted')
     else:
 
-        os.remove(targetFile)
+        # os.remove(targetFile)
 
         # If we are generating test data, then we need to have a slightly
         # different format for the data

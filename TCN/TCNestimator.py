@@ -416,6 +416,10 @@ if debug_mode:
                                trueStateTestShape[1],
                                trueStateTestShape[3]),
                                dtype=torch.float)
+    measStateTestShape = measuredStateTEST.shape
+    obsValues = torch.empty((2, measStateTestShape[0],
+                                 measStateTestShape[1], measStateTestShape[3],
+                                 measStateTestShape[4]), dtype=torch.float)
 
 
 trueStateTEST = torch.from_numpy(trueStateTEST)
@@ -678,6 +682,9 @@ def test():
                     realValues[0, r, :, i] = y_test[:, 0]
                     realValues[1, r, :, i] = y_test[:, 1]
 
+                    obsValues[0, r, :, :, i] = x_test[:, 0, :]
+                    obsValues[1, r, :, :, i] = x_test[:, 1, :]
+
 
                 # TrueMSE = torch.sum((output[:, 0] - y_test[:, 0]) ** 2 + (output[:, 2] - y_test[:, 2]) ** 2) / output.size(0)
                 TotalAvgPredMSE+=PredMSE
@@ -692,7 +699,7 @@ def test():
             testDataInfo[r][u'tcnPredVals'] = (torch.squeeze(tcnPredVals[:,r,:,:])).cpu().numpy()
 
             testDataInfo[r][u'realValues'] = (torch.squeeze(realValues[:,r,:,:])).cpu().numpy()
-
+            testDataInfo[r][u'obsValues'] = (torch.squeeze(obsValues[:,r,:,:,:])).cpu().numpy()
         TotalAvgPredMSE = TotalAvgPredMSE / n
         # TotalAvgTrueMSE = TotalAvgTrueMSE / n
 
