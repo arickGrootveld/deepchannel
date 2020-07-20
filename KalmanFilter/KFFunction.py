@@ -174,6 +174,7 @@ def KFTesting2(testData, ARCoeffs, debug=False, initTest=False, **kwargs):
         inter1 = np.zeros(trueStateData.shape)
         
         inter1 = measuredStateDataTest[:, sequenceLength:measuredStateDataTest.shape[1]]
+        measuredStateDataTest = inter1
         seriesLength = seriesLength - sequenceLength
 
     ##### Kalman Filter Implementation #####
