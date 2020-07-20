@@ -77,24 +77,24 @@ if __name__ == '__main__':
             #targetFile = targetFile[0:inter1 + 1] + 'ManTargTestData' \
             #    + targetFile[inter2 + 11:inter3] + '.mat'
             
-            allTrueStates = matlabFormattedData['data']['systemStates']
+            allTrueStates = matlabFormattedData['data']['systemStates'][0,0]
             # inter1 = LSAndKFTestData.shape
             # runData['LSandKFTestData'] = np.reshape(LSAndKFTestData, (1, inter1[0], \
                                                     # inter1[1], inter1[2]))
 
-            measInter1 = matlabFormattedData['data']['observedStates']
+            measInter1 = matlabFormattedData['data']['observedStates'][0,0]
             inter2 = measInter1.shape
             # runData['measuredStateTEST'] = np.reshape(inter1, (1, inter2[0], inter2[1], \
                                                     #   inter2[2]))
-            measStateTest = np.reshape(measInter1, (1, inter2[1], inter2[2], \
-                                                    inter2[3]))
+            measStateTest = np.reshape(measInter1, (1, inter2[0], inter2[1], \
+                                                    inter2[2]))
 
-            trueInter1 = matlabFormattedData['data']['finalStateValues']
+            trueInter1 = matlabFormattedData['data']['finalStateValues'][0,0]
             inter2 = trueInter1.shape
             # runData['trueStateTEST'] = np.reshape(inter1, (1, inter2[0], \
                                                 #  inter2[1]))
-            trueStateTest = np.reshape(trueInter1, (1, inter2[1], \
-                                                inter2[2]))
+            trueStateTest = np.reshape(trueInter1, (1, inter2[0], \
+                                                inter2[1]))
 
             # Before batching it, we save it for the LSandKFTestData variable
             runData['LSandKFTestData'] = [[allTrueStates, measInter1, trueInter1]]
@@ -112,16 +112,16 @@ if __name__ == '__main__':
             inter1 = dict()
             inter1['riccatiConvergenceEst'] = 0.00
             inter1['riccatiConvergencePred'] = 0.00
-            inter1['seed'] = matlabFormattedData['data']['seed'][0,0,0]
+            inter1['seed'] = matlabFormattedData['data']['seed'][0,0][0,0]
             runData['testDataInfo'] = [inter1]
             
             matSave('data', 'ManTargTestData', runData)
 
         else:
  
-            runData['finalStateValues'] = matlabFormattedData['data']['finalStateValues']
-            runData['observedStates'] = matlabFormattedData['data']['observedStates']
-            runData['systemStates'] = matlabFormattedData['data']['systemStates']
+            runData['finalStateValues'] = matlabFormattedData['data']['finalStateValues'][0,0]
+            runData['observedStates'] = matlabFormattedData['data']['observedStates'][0,0]
+            runData['systemStates'] = matlabFormattedData['data']['systemStates'][0,0]
 
             # Intermediate variable to hold the parameters so they can be 
             # reorganized in usable fashion
