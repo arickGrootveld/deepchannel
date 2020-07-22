@@ -3,8 +3,8 @@ fdims = 5; %[x1 x2 v1 v2 w]
 hdims = 2;
 nmodels = 2;
 
-n = 200;
-seed=126;
+n = 100;
+seed=7;
 rng(seed);
 
 %% Stepsize
@@ -266,28 +266,44 @@ GKF_MSE = (sum(sqrt((X_r(1,:)-GKF_MM(1,:)).^2 + (X_r(2,:) - GKF_MM(2,:)).^2)))/l
 disp(strcat("Genie Kalman Filter Prediction MSE: ", num2str(GKF_MSE)));
 
 % Saving the data in a format friendly to TCN usage
-sequenceLength = 10;
+% sequenceLength = 10;
 
-saveData = {};
+% saveData = {};
 % Standard parameters to save to the .mat file
-saveData.channelCoefficients = transitionMatrices;
+% saveData.channelCoefficients = transitionMatrices;
 
 % Adding the utilities folder to the path for this matlab instance
 addpath('utilities')
 
 % Formatting the X_r's and Y's to fit the standard scheme
-[finalStateValues, observedStates, systemStates] = reformatManTargData(X_r, Y, sequenceLength);
-saveData.finalStateValues = finalStateValues;
-saveData.observedStates = observedStates;
-saveData.systemStates = systemStates;
+% [finalStateValues, observedStates, systemStates] = reformatManTargData(X_r, Y, sequenceLength);
+
+
+%% Saving the data
+
+sTrueStates = X_r(1:2,:);
+% Checking to see if the memory requirements are too large to
+% Save them each to their own individual files or if we need
+% to break them up amongst multiple files
+mem1 = whos('sTrueStates');
+mem2 = whos('Y');
+
+% TODO: Implement the breaking up across multiple files code
+
+save('data/trueStates.mat', 'sTrueStates');
+save('data/obsStates.mat', 'Y'); 
 
 % Saving data generation parameters
-inter.numSequences = n;
-inter.sequenceLength = sequenceLength;
-saveData.parameters = inter;
+% inter.numSequences = n;
+% inter.sequenceLength = sequenceLength;
+% saveData.parameters = inter;
 
 saveData.riccatiConvergences = [0, 1; 1, 0];
 saveData.seed = seed;
 
-saveMatData(saveData, 'data', 'ManTargData');
+saveData.trueStateFiles = ['data/trueStates.mat'];
+saveData.obsStateFiles = ['data/obsStates.mat'];
+
+save('data/matData.mat', 'saveData')
+% saveMatData(saveData, 'data', 'ManTargData');
 
