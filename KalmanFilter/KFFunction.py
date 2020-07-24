@@ -201,7 +201,8 @@ def KFTesting2(testData, ARCoeffs, debug=False, initTest=False, **kwargs):
                        seriesLength+ sequenceLength - 1))
 
     # Initializing the correction value to be the expected value of the starting state
-    x_correction[:, 0] = np.array([0, 0])
+    x_correction[:, 0] = np.array([100, 100])
+    x_prediction[:, 0] = np.array([100, 100])
     # Initializing the MSE to be the variance in the starting value of the sequence
     minMSE[:, :, 0] = np.array([[1, 0], [0, 1]])
 
@@ -224,8 +225,12 @@ def KFTesting2(testData, ARCoeffs, debug=False, initTest=False, **kwargs):
     totalTrueEstimateMSE = 0
     
     if(debug):
-        instaErrs = np.empty([1, seriesLength])
-        kfPreds = np.empty([1, seriesLength], dtype=np.complex128)
+        if(initTest):
+            instaErrs = np.empty([1, seriesLength + sequenceLength - 1])
+            kfPreds = np.empty([1, seriesLength + sequenceLength - 1], dtype=np.complex128)
+        else:
+            instaErrs = np.empty([1, seriesLength])
+            kfPreds = np.empty([1, seriesLength], dtype=np.complex128)
 
     for i in range(0, seriesLength + sequenceLength - 1):
         # Loop through a sequence of data
@@ -304,8 +309,8 @@ def KFTesting2(testData, ARCoeffs, debug=False, initTest=False, **kwargs):
 
 
             if debug:
-                instaErrs[0, i-sequenceLength + 1] = truePredictionMSE
-                kfPreds[0, i-sequenceLength + 1] = finalPrediction
+                instaErrs[0, i] = truePredictionMSE
+                kfPreds[0, i] = finalPrediction
 
             totalTrueEstimateMSE += trueEstimateMSE
             totalTruePredMSE += truePredictionMSE
