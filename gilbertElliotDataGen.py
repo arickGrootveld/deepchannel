@@ -542,17 +542,18 @@ if __name__ == "__main__":
             _ = GilElTestDataGen(numSequences=simuLen, sequenceLength=sequenceLen, randSeed=seed,
                                 goodTransProb=goodTransProb, badTransProb=badTransProb, initTest=initTest)
     else:
+        coeffs = [0.3, 0.1]
         if not testGeneration:
             _ = GilElDataGenWrapper(numSequences=simuLen, sequenceLength=sequenceLen,
                                     randSeed=seed,
                                     goodTransProb=0, badTransProb=1.0,
-                                    goodCoefficients=[0.5, -0.4], 
-                                    badCoefficients=[0.5,-0.4], startingState='good')
+                                    goodCoefficients=coeffs, 
+                                    badCoefficients=coeffs, startingState='good')
         else:
             _ = GilElTestDataGen(numSequences=simuLen, sequenceLength=sequenceLen, 
                     randSeed=seed, goodTransProb=0, 
                     badTransProb=1.0, testSetLen=1, 
-                    goodCoefficients=[0.5, -0.4], badCoefficients=[0.5,-0.4],
+                    goodCoefficients=coeffs, badCoefficients=coeffs,
                     startingState='good', initTest=initTest)
 
     end = time.time()

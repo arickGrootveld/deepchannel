@@ -17,6 +17,8 @@ parser.add_argument('--testData', action='store_true',
                     help='Whether this is test data or not (default: False)')
 
 args = parser.parse_args()
+
+testMode = args.testData
 # Hardcoded for now
 dataInfo = h5.loadmat('data/matData.mat')
 
@@ -32,28 +34,28 @@ obsStateMatData = h5.loadmat(dataInfo['saveData']['obsStateFiles'][0,0][0])
 trueStateData = trueStateMatData['sTrueStates']
 obsStateData = obsStateMatData['Y']
 
+# Preallocating the matrices for obsStates, finalStateValues, and trueStates
+dataShape = obsStateData.shape
+numSamples = dataShape[1] - seqLen
+
+observedStates = np.zeros([dataShape[0], seqLen, numSamples])
+systemStates = np.zeros([dataShape[0], seqLen + 1, numSamples])
+finalStateValues = np.zeros([2*dataShape[0], numSamples])
+
+# Formatting final state values
+for i in range(0, numSamples):
+    finalStateValues[0,i] = trueStateData[0, i+seqLen-1]
+    finalStateValues[1, i] = trueStateData[0, i + seqLen]
+    finalStateValues[2,i] = trueStateData[1, i+seqLen-1]
+    finalStateValues[3, i] = trueStateData[1, i + seqLen]
+
+    observedStates[:,:, i] = obsStateData[:, i:i+seqLen]
+
+    systemStates[:, :, i] = trueStateData[:, i:i+seqLen+1]
+
 saveData = dict()
-if ~args.testData:
+if not testMode:
     print('under construction')
-
-    # Preallocating the matrices for obsStates, finalStateValues, and trueStates
-    dataShape = obsStateData.shape
-    numSamples = dataShape[1] - seqLen
-
-    observedStates = np.zeros([dataShape[0], seqLen, numSamples])
-    systemStates = np.zeros([dataShape[0], seqLen + 1, numSamples])
-    finalStateValues = np.zeros([2*dataShape[0], numSamples])
-
-    # Formatting final state values
-    for i in range(0, numSamples):
-        finalStateValues[0,i] = trueStateData[0, i+seqLen-1]
-        finalStateValues[1, i] = trueStateData[0, i + seqLen]
-        finalStateValues[2,i] = trueStateData[1, i+seqLen-1]
-        finalStateValues[3, i] = trueStateData[1, i + seqLen]
-
-        observedStates[:,:, i] = obsStateData[:, i:i+seqLen]
-
-        systemStates[:, :, i] = trueStateData[:, i:i+seqLen+1]
 
     # Once data formatted correctly, we then save it
     saveData['finalStateValues'] = finalStateValues
@@ -74,8 +76,40 @@ if ~args.testData:
 
 
 else:
-    testBatchSize = 1000
-    print('feature not implemented yet')
+    testBatchSize = 10
+    numBatches = int(np.floor(observedStates.shape[2] / testBatchSize))
+
+    measuredStateTest = np.zeros([1, testBatchSize, 
+                                  dataShape[0], seqLen, numBatches])
+
+    trueStateTEST = np.zeros([1, testBatchSize, 2*dataShape[0], numBatches])
+
+    testDataInfo = dict()
+    testDataInfo['seed'] = dataInfo['saveData']['seed'][0,0][0,0]
+    testDataInfo['riccatiConvergencePred'] = 0
+    testDataInfo['riccatiConvergenceEst'] = 0
+
+    # Batching the data
+    for i in range(0, numBatches):
+        trueStateTEST[0, :, :, i] = np.transpose(finalStateValues[:, 
+                                    i*testBatchSize:i*testBatchSize 
+                                    + testBatchSize])
+        measuredStateTest[0, :, :, :, i] = np.reshape(observedStates[:,:, 
+                                           i*testBatchSize:i*testBatchSize 
+                                           + testBatchSize], 
+                                           measuredStateTest[0, :, :, :, i]
+                                           .shape)
+
+
+
+    saveData['LSandKFTestData'] = [[systemStates, observedStates, finalStateValues]]
+    
+    saveData['trueStateTEST'] = trueStateTEST
+    saveData['measuredStateTEST'] = measuredStateTest
+
+    saveData['testDataInfo'] = testDataInfo
+
+    matSave('data', 'ManTargTestData', saveData)
 
 
 print('worked?')
