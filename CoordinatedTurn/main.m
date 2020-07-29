@@ -3,8 +3,10 @@ fdims = 5; %[x1 x2 v1 v2 w]
 hdims = 2;
 nmodels = 2;
 
-n = 100;
-seed=7;
+timer = tic;
+
+n = 50000000;
+seed=3072;
 rng(seed);
 
 %% Stepsize
@@ -307,3 +309,4 @@ saveData.obsStateFiles = ['data/obsStates.mat'];
 save('data/matData.mat', 'saveData')
 % saveMatData(saveData, 'data', 'ManTargData');
 
+toc(timer)
