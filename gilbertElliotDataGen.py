@@ -205,8 +205,9 @@ def GilEllDataGen(params, seed=-1):
             x_current = np.matmul(F, x_current) + v
             
         else:
-            x_current = (np.divide(np.matmul(QChol, np.random.randn(2,1)), np.sqrt(2))) + \
-                        (1j * np.divide(np.matmul(QChol, np.random.randn(2,1)), np.sqrt(2)))
+            # Start the channel with a zero mean unity variance random sample
+            x_current = (np.divide(np.random.randn(2,1), np.sqrt(2))) + \
+                        (1j * np.divide(np.random.randn(2,1), np.sqrt(2)))
         z_current = np.matmul(H,x_current) + w
         
         z[:,i] = z_current
