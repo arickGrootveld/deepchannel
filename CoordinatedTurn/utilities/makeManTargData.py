@@ -108,7 +108,7 @@ else:
     saveData['trueStateTEST'] = trueStateTEST
     saveData['measuredStateTEST'] = measuredStateTest
 
-    testDataInfo[0] = testDataInfoDict
+    testDataInfo.append(testDataInfoDict)
     saveData['testDataInfo'] = testDataInfo
 
     matSave('data', 'ManTargTestData', saveData)
