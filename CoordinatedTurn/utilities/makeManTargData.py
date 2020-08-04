@@ -84,10 +84,11 @@ else:
 
     trueStateTEST = np.zeros([1, testBatchSize, 2*dataShape[0], numBatches])
 
-    testDataInfo = dict()
-    testDataInfo['seed'] = dataInfo['saveData']['seed'][0,0][0,0]
-    testDataInfo['riccatiConvergencePred'] = 0
-    testDataInfo['riccatiConvergenceEst'] = 0
+    testDataInfo = []
+    testDataInfoDict = dict()
+    testDataInfoDict[0]['seed'] = dataInfo['saveData']['seed'][0,0][0,0]
+    testDataInfoDict['riccatiConvergencePred'] = 0
+    testDataInfoDict['riccatiConvergenceEst'] = 0
 
     # Batching the data
     for i in range(0, numBatches):
@@ -107,6 +108,7 @@ else:
     saveData['trueStateTEST'] = trueStateTEST
     saveData['measuredStateTEST'] = measuredStateTest
 
+    testDataInfo[0] = testDataInfoDict
     saveData['testDataInfo'] = testDataInfo
 
     matSave('data', 'ManTargTestData', saveData)
