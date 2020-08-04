@@ -3,10 +3,8 @@ fdims = 5; %[x1 x2 v1 v2 w]
 hdims = 2;
 nmodels = 2;
 
-timer = tic;
-
-n = 50000000;
-seed=3072;
+n = 500;
+seed=7;
 rng(seed);
 
 %% Stepsize
@@ -59,7 +57,7 @@ mstate = zeros(1,n);
 
 w1 =  [0.95 0.05];
 w2 =  [0.95 0.05];
-p_ij = [0.95 0.05; 0.05 0.95];
+p_ij = [0.99 0.01; 0.01 0.99];
 
 %% Forced mode transitions 
 % Start with constant velocity 1 toward right
@@ -79,8 +77,15 @@ p_ij = [0.95 0.05; 0.05 0.95];
 % mstate(161:200) = 1;  
 
 %% Probabilistic Mode Transitions
-mstate = (rand(1,n)< 0.9)+1;
-
+% mstate = (rand(1,n)< 0.9)+1;
+mstate = (rand(1,n) < 0.5) + 1;
+for i = 2:n
+    if(mstate(1,i-1) == 1)
+        mstate(1,i) = (rand(1,1) > p_ij(1,1)) + 1;
+    else
+        mstate(1, i) = (rand(1,1) > p_ij(2,1)) + 1;
+    end
+end
 
 %% Arick Added code
 transitionMatrices = {};
@@ -275,6 +280,8 @@ disp(strcat("Genie Kalman Filter Prediction MSE: ", num2str(GKF_MSE)));
 % saveData.channelCoefficients = transitionMatrices;
 
 % Adding the utilities folder to the path for this matlab instance
+
+% TODO: Uncomment line below
 addpath('utilities')
 
 % Formatting the X_r's and Y's to fit the standard scheme
@@ -283,30 +290,30 @@ addpath('utilities')
 
 %% Saving the data
 
-sTrueStates = X_r(1:2,:);
-% Checking to see if the memory requirements are too large to
-% Save them each to their own individual files or if we need
-% to break them up amongst multiple files
-mem1 = whos('sTrueStates');
-mem2 = whos('Y');
-
-% TODO: Implement the breaking up across multiple files code
-
-save('data/trueStates.mat', 'sTrueStates');
-save('data/obsStates.mat', 'Y'); 
-
-% Saving data generation parameters
-% inter.numSequences = n;
-% inter.sequenceLength = sequenceLength;
-% saveData.parameters = inter;
-
-saveData.riccatiConvergences = [0, 1; 1, 0];
-saveData.seed = seed;
-
-saveData.trueStateFiles = ['data/trueStates.mat'];
-saveData.obsStateFiles = ['data/obsStates.mat'];
-
-save('data/matData.mat', 'saveData')
-% saveMatData(saveData, 'data', 'ManTargData');
-
-toc(timer)
+% TODO: Uncomment all lines below this point
+% sTrueStates = X_r(1:2,:);
+% % Checking to see if the memory requirements are too large to
+% % Save them each to their own individual files or if we need
+% % to break them up amongst multiple files
+% mem1 = whos('sTrueStates');
+% mem2 = whos('Y');
+% 
+% % TODO: Implement the breaking up across multiple files code
+% 
+% save('data/trueStates.mat', 'sTrueStates');
+% save('data/obsStates.mat', 'Y'); 
+% 
+% % Saving data generation parameters
+% % inter.numSequences = n;
+% % inter.sequenceLength = sequenceLength;
+% % saveData.parameters = inter;
+% 
+% saveData.riccatiConvergences = [0, 1; 1, 0];
+% saveData.seed = seed;
+% 
+% saveData.trueStateFiles = ['data/trueStates.mat'];
+% saveData.obsStateFiles = ['data/obsStates.mat'];
+% 
+% save('data/matData.mat', 'saveData')
+% % saveMatData(saveData, 'data', 'ManTargData');
+% 

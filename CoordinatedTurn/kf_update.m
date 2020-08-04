@@ -29,6 +29,7 @@ function [m,P,K,S,Lamda] = kf_update (m,P,z,H,R)
   if nargout > 4
     try 
         Lamda = mvnpdf(z,IM,(S + S.')/2);
+        t = 1;
     catch ex
         Lamda = mvnpdf(z,IM,R);
     end
