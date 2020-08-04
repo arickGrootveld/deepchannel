@@ -86,7 +86,7 @@ else:
 
     testDataInfo = []
     testDataInfoDict = dict()
-    testDataInfoDict[0]['seed'] = dataInfo['saveData']['seed'][0,0][0,0]
+    testDataInfoDict['seed'] = dataInfo['saveData']['seed'][0,0][0,0]
     testDataInfoDict['riccatiConvergencePred'] = 0
     testDataInfoDict['riccatiConvergenceEst'] = 0
 
