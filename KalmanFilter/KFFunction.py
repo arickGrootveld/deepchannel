@@ -201,8 +201,8 @@ def KFTesting2(testData, ARCoeffs, debug=False, initTest=False, **kwargs):
                        seriesLength+ sequenceLength - 1))
 
     # Initializing the correction value to be the expected value of the starting state
-    x_correction[:, 0] = np.array([100, 100])
-    x_prediction[:, 0] = np.array([100, 100])
+    x_correction[:, 0] = np.array([0,0])
+    x_prediction[:, 0] = np.array([0, 0])
     # Initializing the MSE to be the variance in the starting value of the sequence
     minMSE[:, :, 0] = np.array([[1, 0], [0, 1]])
 
@@ -232,7 +232,7 @@ def KFTesting2(testData, ARCoeffs, debug=False, initTest=False, **kwargs):
             instaErrs = np.empty([1, seriesLength])
             kfPreds = np.empty([1, seriesLength], dtype=np.complex128)
 
-    for i in range(0, seriesLength + sequenceLength - 1):
+    for i in range(1, seriesLength + sequenceLength - 1):
         # Loop through a sequence of data
         #############################################################################
         ############################# KALMAN FILTER 1  ##############################
@@ -242,15 +242,10 @@ def KFTesting2(testData, ARCoeffs, debug=False, initTest=False, **kwargs):
         measuredDataComplex = measuredStateDataTest[0, i] + (measuredStateDataTest[1, i] * 1j)
         
         # Calculating the prediction of the next state based on the previous estimate
-        if i > 0:
-            x_prediction[:, i] = np.matmul(F, x_correction[:, i-1])
-
+        x_prediction[:, i] = np.matmul(F, x_correction[:, i-1])
         # Calculating the predicted MSE from the current MSE, the AR Coefficients,
         # and the covariance matrix
-        if i > 0:
-            minPredMSE[:, :, i] = np.matmul(np.matmul(F, minMSE[:, :, i-1]), np.transpose(F)) + Q
-        else:
-            minPredMSE[:, :, i] = np.matmul(np.matmul(F, minMSE[:, :, 0]), np.transpose(F)) + Q
+        minPredMSE[:, :, i] = np.matmul(np.matmul(F, minMSE[:, :, i-1]), np.transpose(F)) + Q
         # Calculating the new Kalman gain
         intermediate1 = np.matmul(minPredMSE[:, :, i], np.transpose(H))
         # Intermediate2 should be a single dimensional number, so we can simply just divide by it
