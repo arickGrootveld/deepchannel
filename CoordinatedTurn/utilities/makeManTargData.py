@@ -95,11 +95,14 @@ else:
         trueStateTEST[0, :, :, i] = np.transpose(finalStateValues[:, 
                                     i*testBatchSize:i*testBatchSize 
                                     + testBatchSize])
-        measuredStateTest[0, :, :, :, i] = np.reshape(observedStates[:,:, 
-                                           i*testBatchSize:i*testBatchSize 
-                                           + testBatchSize], 
-                                           measuredStateTest[0, :, :, :, i]
-                                           .shape)
+
+       # Extremely janky way to do this, but it gets the job done properly
+       # TODO: Figure out how to do this more efficiently with np.reshape
+       # TODO: that doesn't cause massive errors
+        for m in range(0, measuredStateTest.shape[1]):
+            for t in range(0, measuredStateTest.shape[2]):
+                for p in range(0, measuredStateTest.shape[3]):
+                    measuredStateTest[0, m, t, p, i] = observedStates[t, p, i*testBatchSize + m]
 
 
 
