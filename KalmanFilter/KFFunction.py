@@ -274,17 +274,16 @@ def KFTesting2(testData, ARCoeffs, debug=False, initTest=False, **kwargs):
             # Converting the true states into their complex equivalents
             currentTrueStateComplex = trueStateData[0, i-sequenceLength + 1] + (1j * trueStateData[2, i-sequenceLength + 1])
             
-            finalPrediction = x_prediction[:,i]
-            finalEstimate = x_correction[:, i]
+            finalPrediction = x_prediction[:,i][0]
+            finalEstimate = x_correction[:, i][0]
             
             # Calculating the instantaneous MSE of our estimate and prediction
-            trueEstimateMSE = np.sum(np.absolute(finalEstimate - currentTrueStateComplex) ** 2)
+            trueEstimateMSE = np.absolute(finalEstimate - currentTrueStateComplex) ** 2
             
             # Prediction was made before this state had been fed into KF, so
             # this comparison is fine. This current prediction was what the KF
             # thought this current state would be
-            truePredictionMSE = np.sum(np.absolute(finalPrediction - currentTrueStateComplex) ** 2)
-
+            truePredictionMSE = np.absolute(finalPrediction - currentTrueStateComplex) ** 2
 
             if debug:
                 instaErrs[0, i-sequenceLength + 1] = truePredictionMSE
@@ -296,14 +295,13 @@ def KFTesting2(testData, ARCoeffs, debug=False, initTest=False, **kwargs):
         # Recording all the predictions from the beggining and later
         elif initTest:
             currentTrueStateComplex = trueStateData[0, i] + (1j * trueStateData[2, i])
-            nextTrueStateComplex = trueStateData[1, i] + (1j * trueStateData[3, i])
 
-            finalPrediction = np.matmul(F, x_correction[:, i])[0]
+            finalPrediction = x_prediction[:, i][0]
             finalEstimate = x_correction[:, i][0]
 
             # Calculating the instantaneous MSE of our estimate and prediction
             trueEstimateMSE = np.absolute(finalEstimate - currentTrueStateComplex) ** 2
-            truePredictionMSE = np.absolute(finalPrediction - nextTrueStateComplex) ** 2
+            truePredictionMSE = np.absolute(finalPrediction - currentTrueStateComplex) ** 2
 
 
             if debug:
