@@ -273,19 +273,17 @@ def KFTesting2(testData, ARCoeffs, debug=False, initTest=False, **kwargs):
             ## Calculating the actual MSE between the kalman filters final prediction, and the actual value ##
             # Converting the true states into their complex equivalents
             currentTrueStateComplex = trueStateData[0, i-sequenceLength + 1] + (1j * trueStateData[2, i-sequenceLength + 1])
-            nextTrueStateComplex = trueStateData[1, i-sequenceLength + 1] + (1j * trueStateData[3, i-sequenceLength + 1])
-
             
-            finalPrediction = x_prediction[:,i][0]
-            finalEstimate = x_correction[:, i][0]
-
+            finalPrediction = x_prediction[:,i]
+            finalEstimate = x_correction[:, i]
+            
             # Calculating the instantaneous MSE of our estimate and prediction
-            trueEstimateMSE = np.absolute(finalEstimate - currentTrueStateComplex) ** 2
+            trueEstimateMSE = np.sum(np.absolute(finalEstimate - currentTrueStateComplex) ** 2)
             
             # Prediction was made before this state had been fed into KF, so
             # this comparison is fine. This current prediction was what the KF
             # thought this current state would be
-            truePredictionMSE = np.absolute(finalPrediction - currentTrueStateComplex) ** 2
+            truePredictionMSE = np.sum(np.absolute(finalPrediction - currentTrueStateComplex) ** 2)
 
 
             if debug:
