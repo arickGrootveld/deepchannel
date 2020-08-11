@@ -442,7 +442,7 @@ def GilElDataGenWrapper(sequenceLength=10, numSequences=100,
         sShape = inter1.shape
 
         measStates = np.zeros(sShape, dtype=np.complex128)
-        measStates[:, sequenceLength:-1] = inter1[:, 0:sShape[1] - (sequenceLength + 1)]
+        measStates[:, sequenceLength+1:-1] = inter1[:, 1:sShape[1] - (sequenceLength + 1)]
         measStates[:, -1] = inter1[:, -1]
 
         inter1 = longSequence[3]
@@ -543,7 +543,7 @@ if __name__ == "__main__":
             _ = GilElTestDataGen(numSequences=simuLen, sequenceLength=sequenceLen, randSeed=seed,
                                 goodTransProb=goodTransProb, badTransProb=badTransProb, initTest=initTest)
     else:
-        coeffs = [0.3, 0.1]
+        coeffs = [1.949, -0.95]
         if not testGeneration:
             _ = GilElDataGenWrapper(numSequences=simuLen, sequenceLength=sequenceLen,
                                     randSeed=seed,
