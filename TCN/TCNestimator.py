@@ -138,9 +138,9 @@ parser.add_argument('--debug', action='store_true',
                     help='set code to debug mode (default: False)')
 
 # Coefficients used by the Kalman filter for the F matrix it assumes the Gauss Markov Process uses
-parser.add_argument('--KFCoeffs', nargs='+', default=[0.5, -0.4],
+parser.add_argument('--KFCoeffs', nargs='+', default=[0.3, 0.1],
                     help='Coefficients Passed to the Kalman Filter, will depend on the scenario you are looking at'
-                         '(default: [0.5, 0.4]')
+                         '(default: [0.3, 0.1]')
 
 parser.add_argument('--initTest', action='store_true',
                     help='perform various operations to test how'
@@ -725,25 +725,25 @@ def test():
         # print("Variance of Estimate for test set number {}: ".format(r+1), estVariance.item())
 
         # Computing the LS performance on this data set
-        #LS_MSEE, LS_MSEP = LSTesting(LSCoefficients, LSandKFTestData[r])
+        LS_MSEE, LS_MSEP = LSTesting(LSCoefficients, LSandKFTestData[r])
         LS_Results = LSTesting(LSCoefficients, LSandKFTestData[r], debug_mode)
         
         LS_MSEE = LS_Results[0]
         LS_MSEP = LS_Results[1]
-
+        
         if debug_mode:
             testDataInfo[r][u'LSInstaErrs'] = LS_Results[3]
             testDataInfo[r][u'LSPredVals'] = LS_Results[2]
-
+        
         print('LS Performance')
         print("MSE of LS predictor for set number {}: ".format(r+1), LS_MSEP)
         print("MSE of LS estimator for set number {}: ".format(r+1), LS_MSEE)
-
+        
         testDataInfo[r][u'LS_PredMSE'] = LS_MSEP
         testDataInfo[r][u'LS_EstMSE'] = LS_MSEE
         
         # Computing Kalman performance
-        KFResults = KFTesting2(LSandKFTestData[r],KFARCoeffs, initTest=args.initTest, debug=debug_mode)
+        KFResults = KFTesting2(LSandKFTestData[r], KFARCoeffs, initTest=args.initTest, debug=debug_mode)
         
         if debug_mode:
             testDataInfo[r][u'KFInstaErrs'] = KFResults[2]
