@@ -724,6 +724,10 @@ def test():
                     
                     realValues[0, r, :, i] = y_test[:, 0]
                     realValues[1, r, :, i] = y_test[:, 1]
+                    # Setting the observed states back to what they
+                    # were before preprocessing
+                    if biasRemoval:
+                        x_test = x_test + biases[:, :, None]
 
                     obsValues[0, r, :, :, i] = x_test[:, 0, :]
                     obsValues[1, r, :, :, i] = x_test[:, 1, :]
