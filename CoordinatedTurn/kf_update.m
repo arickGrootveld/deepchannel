@@ -1,5 +1,7 @@
 function [m,P,K,S,Lamda] = kf_update (m,P,z,H,R)
 
+% Warning code stolen directly from https://undocumentedmatlab.com/articles/trapping-warnings-efficiently
+
 % In:
 %   m - Nx1 mean state estimate after prediction step
 %   P - NxN state covariance after prediction step
@@ -13,7 +15,6 @@ function [m,P,K,S,Lamda] = kf_update (m,P,z,H,R)
 %   K  - Computed Kalman gain
 %   S  - Covariance or predictive mean of Y
 %   Lamda - Predictive probability (likelihood) of measurement.
- 
   %
   % Perform update
   %
@@ -22,6 +23,7 @@ function [m,P,K,S,Lamda] = kf_update (m,P,z,H,R)
   end
   IM = H*m; % Predicted Measurement
   S = R + H * P * H';
+  
   K = P * H' / S;
   m = m + K * (z - H * m);
   P = P - K * H * P ;
@@ -35,8 +37,9 @@ function [m,P,K,S,Lamda] = kf_update (m,P,z,H,R)
     end
     
   end
+
+% Restore warnings back to previous (non-error) state
 end
 
 
- 
 
