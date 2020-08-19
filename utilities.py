@@ -44,7 +44,7 @@ def convertToBatched(systemDataToBeConverted, observedDataToBeFormatted, batchSi
     return(trueState, measuredState)
 
 # TODO: Make this and the following function more general, so they could
-# TODO: Be used for shuffling matrices of any shape and dimensionality
+# TODO: be used for shuffling matrices of any shape and dimensionality
 def shuffleMeasTrainData(dataToBeShuffled):
     import torch as t
     dataDims = dataToBeShuffled.shape
@@ -53,12 +53,12 @@ def shuffleMeasTrainData(dataToBeShuffled):
     totalDims = dataDims[0] * dataDims[3]
     
     randomPermutation = t.randperm(totalDims)
-
+    cnt = -1
     for m in range(0, dataDims[0]):
         for n in range(0, dataDims[3]):
-
-            i = randomPermutation[(dataDims[0] * m) + n] % dataDims[0]
-            j = randomPermutation[(dataDims[0] * m) + n] / dataDims[0]
+            cnt = cnt + 1
+            i = randomPermutation[cnt] % dataDims[0]
+            j = randomPermutation[cnt] / dataDims[0]
 
             shuffledData[m, :, :, n] = dataToBeShuffled[i, :, :, j]
 
@@ -69,12 +69,12 @@ def shuffleTrueTrainData(dataToBeShuffled, randomPermutation):
     import torch as t
     dataDims = dataToBeShuffled.shape
     shuffledData = t.zeros(dataDims)
-
+    cnt = -1
     for m in range(0, dataDims[0]):
         for n in range(0, dataDims[2]):
-
-            i = randomPermutation[(dataDims[0] * m) + n] % dataDims[0]
-            j = randomPermutation[(dataDims[0] * m) + n] / dataDims[0]
+            cnt = cnt + 1
+            i = randomPermutation[cnt] % dataDims[0]
+            j = randomPermutation[cnt] / dataDims[0]
 
             shuffledData[m, :, n] = dataToBeShuffled[i, :, j]
 

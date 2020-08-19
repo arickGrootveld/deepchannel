@@ -451,7 +451,8 @@ else:
 model = TCN(input_channels, n_classes, channel_sizes, kernel_size=kernel_size, dropout=dropout)
 
 # Setting up the biases variables
-biases_TandE = torch.zeros(measuredStateTRAIN[:,:,0,0].shape)
+if not testSession:
+    biases_TandE = torch.zeros(measuredStateTRAIN[:,:,0,0].shape)
 
 biases_Test = torch.zeros(measuredStateTEST[0,:,:,0,0].shape)
 
@@ -558,7 +559,9 @@ def train(epoch):
         # Grab the current series
         x = shuffledMeasTRAIN[:, :, :, i]
         y = shuffledTrueTRAIN[:, predInds, i]
-
+        if(args.cuda):
+            x = x.cuda()
+            y = y.cuda()
         # Subtracting the bias from each of the samples
         biases_TandE[:,:] = x[:, :, 0]
 
