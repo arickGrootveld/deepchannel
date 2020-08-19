@@ -17,7 +17,7 @@ import sys
 sys.path.append("..") # Adds higher directory to python modules path.
 from model import TCN
 from mismatch_data_gen import ARDatagenMismatch
-from utilities import convertToBatched, matSave
+from utilities import convertToBatched, matSave, shuffleMeasTrainData, shuffleTrueTrainData
 from LeastSquares.LSFunction import LSTesting, LSTraining
 from KalmanFilter.KFFunction import KFTesting2 
 
@@ -547,14 +547,17 @@ def train(epoch):
     total_loss = 0
     trainLoss = 0
 
+    # Shuffle the data each epoch
+    [shuffledMeasTRAIN, perm] = shuffleMeasTrainData(measuredStateTRAIN)
+    shuffledTrueTRAIN = shuffleTrueTrainData(trueStateTRAIN, perm)
  ################################
 
     # Training loop - run until we process every series of data
     for i in range(0, trainSeriesLength):
 
         # Grab the current series
-        x = measuredStateTRAIN[:, :, :, i]
-        y = trueStateTRAIN[:, predInds, i]
+        x = shuffledMeasTRAIN[:, :, :, i]
+        y = shuffledTrueTRAIN[:, predInds, i]
 
         x = x.float()
         y = y.float()
