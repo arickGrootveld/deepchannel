@@ -450,6 +450,11 @@ else:
 # Generate the model
 model = TCN(input_channels, n_classes, channel_sizes, kernel_size=kernel_size, dropout=dropout)
 
+# Setting up the biases variables
+biases_TandE = torch.zeros(measuredStateTRAIN[:,:,0,0].shape)
+
+biases_Test = torch.zeros(measuredStateTEST[0,:,:,0,0].shape)
+
 # Logic Structure of using cuda in either multiple GPU or single GPU 
 # orientations
 if(args.cuda):
@@ -480,14 +485,6 @@ if(args.cuda):
     else:
         raise ValueError('cuda not available, --cuda unavailable')
 
-
-    #if(torch.cuda.is_available() & (torch.cuda.device_count() > 1)):
-    #    print('using multiple gpu\'s')
-    #    model = nn.DataParallel(model)
-    #    for m in range(0, torch.cuda.device_count()):
-    #        device = torch.device('cuda:' + str(m))
-    #        model.to(device)
-
 # Creating a backup of the model that we can use for early stopping
 modelBEST = model
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
@@ -497,6 +494,7 @@ if args.cuda:
 
     model.cuda()
     modelBEST.cuda()
+    biases_Test = biases_Test.cuda()
     # If we are not just testing then load everything into cuda
     if not testSession:
 
@@ -507,6 +505,8 @@ if args.cuda:
         # Evaluation set
         trueStateEVAL = trueStateEVAL.cuda()
         measuredStateEVAL = measuredStateEVAL.cuda()
+
+        biases_TandE = biases_TandE.cuda()
 
     # Pushing the Squared Error calculations to cuda as well
     if debug_mode:
@@ -562,7 +562,7 @@ def train(epoch):
         # Subtracting the bias from each of the samples
         biases_TandE[:,:] = x[:, :, 0]
 
-        x = x - biasesTandE[:, :, None]
+        x = x - biases_TandE[:, :, None]
 
         x = x.float()
         y = y.float()
@@ -620,8 +620,8 @@ def evaluate():
         y_eval = trueStateEVAL[:, predInds, i]
 
         # Subtracting the bias from each of the samples
-        biases_TandE = x_eval[:, :, 0]
-        x_eval = x_eval - biases_TandE[:, :, None]
+        biases_TandE[:,:] = x_eval[:, :, 0]
+        x_eval = x_eval - biases_TandE[:, :, None].type(torch.float64)
 
         x_eval = x_eval.float()
         y_eval = y_eval.type(torch.double)
@@ -631,7 +631,7 @@ def evaluate():
         with torch.no_grad():
 
             # Compute output and loss
-            output = model(x_eval).type(torch.float64) + biases_TandE
+            output = model(x_eval).type(torch.float64) + biases_TandE.type(torch.float64)
             eval_loss = F.mse_loss(output, y_eval, reduction="sum")
 
             PredMSE = torch.sum((output[:, 0] - y_eval[:, 0]) ** 2 + (output[:, 1] - y_eval[:, 1]) ** 2) / output.size(0)
