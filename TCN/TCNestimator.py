@@ -560,9 +560,9 @@ def train(epoch):
         y = shuffledTrueTRAIN[:, predInds, i]
 
         # Subtracting the bias from each of the samples
-        biases = x[:, :, 0]
+        biases_TandE[:,:] = x[:, :, 0]
 
-        x = x - biases[:, :, None]
+        x = x - biasesTandE[:, :, None]
 
         x = x.float()
         y = y.float()
@@ -570,7 +570,7 @@ def train(epoch):
         # Forward/backpass
         optimizer.zero_grad()
         # Computing the output of the network and adding the bias back in
-        output = model(x) + biases
+        output = model(x) + biases_TandE
         loss = F.mse_loss(output, y, reduction="sum")
         loss.backward()
 
@@ -620,8 +620,8 @@ def evaluate():
         y_eval = trueStateEVAL[:, predInds, i]
 
         # Subtracting the bias from each of the samples
-        biases = x_eval[:, :, 0]
-        x_eval = x_eval - biases[:, :, None]
+        biases_TandE = x_eval[:, :, 0]
+        x_eval = x_eval - biases_TandE[:, :, None]
 
         x_eval = x_eval.float()
         y_eval = y_eval.type(torch.double)
@@ -631,7 +631,7 @@ def evaluate():
         with torch.no_grad():
 
             # Compute output and loss
-            output = model(x_eval).type(torch.float64) + biases
+            output = model(x_eval).type(torch.float64) + biases_TandE
             eval_loss = F.mse_loss(output, y_eval, reduction="sum")
 
             PredMSE = torch.sum((output[:, 0] - y_eval[:, 0]) ** 2 + (output[:, 1] - y_eval[:, 1]) ** 2) / output.size(0)
