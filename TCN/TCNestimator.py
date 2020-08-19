@@ -559,12 +559,18 @@ def train(epoch):
         x = shuffledMeasTRAIN[:, :, :, i]
         y = shuffledTrueTRAIN[:, predInds, i]
 
+        # Subtracting the bias from each of the samples
+        biases = x[:, :, 0]
+
+        x = x - biases[:, :, None]
+
         x = x.float()
         y = y.float()
 
         # Forward/backpass
         optimizer.zero_grad()
-        output = model(x)
+        # Computing the output of the network and adding the bias back in
+        output = model(x) + biases
         loss = F.mse_loss(output, y, reduction="sum")
         loss.backward()
 
@@ -613,15 +619,19 @@ def evaluate():
         x_eval = measuredStateEVAL[:, :, :, i]
         y_eval = trueStateEVAL[:, predInds, i]
 
+        # Subtracting the bias from each of the samples
+        biases = x_eval[:, :, 0]
+        x_eval = x_eval - biases[:, :, None]
+
         x_eval = x_eval.float()
-        y_eval = y_eval.float()
+        y_eval = y_eval.type(torch.double)
 
         # Model eval setting
         model.eval()
         with torch.no_grad():
 
             # Compute output and loss
-            output = model(x_eval)
+            output = model(x_eval).type(torch.float64) + biases
             eval_loss = F.mse_loss(output, y_eval, reduction="sum")
 
             PredMSE = torch.sum((output[:, 0] - y_eval[:, 0]) ** 2 + (output[:, 1] - y_eval[:, 1]) ** 2) / output.size(0)
@@ -667,6 +677,10 @@ def test():
             x_test = measuredStateTEST[r, :, :, :, i]
             y_test = trueStateTEST[r, :, predInds, i]
 
+            # Subtracting the bias from each of the samples
+            biases = x_test[:, :, 0]
+            x_eval = x_test - biases[:, :, None]
+
             x_test = x_test.float()
             y_test = y_test.float()
 
@@ -675,7 +689,7 @@ def test():
             with torch.no_grad():
 
                 # Compute output and loss
-                output = modelBEST(x_test)
+                output = modelBEST(x_test) + biases.type(torch.float32)
                 test_loss = F.mse_loss(output, y_test, reduction="sum")
 
                 PredMSE = torch.sum(((output[:, 0] - y_test[:, 0]) ** 2) + (output[:, 1] - y_test[:, 1]) ** 2) / output.size(0)
