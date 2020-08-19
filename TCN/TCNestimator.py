@@ -534,7 +534,7 @@ optimizer = getattr(optim, optimMethod)(model.parameters(), lr=lr)
 
 # Creating a learning rate scheduler that updates the learning rate when the model plateaus
 # Divides the learning rate by 2 if the model has not gotten a lower total loss in 10 epochs
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, verbose=True, patience=9)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.6, verbose=True, patience=19)
 
 # Defining index that will only grab the predicted values
 predInds = [1,3]
@@ -595,8 +595,6 @@ def train(epoch):
                 epoch, processed, measuredStateTRAIN.size(3), 100. * processed / measuredStateTRAIN.size(3), lr, cur_loss))
             PredMSE = torch.sum((output[:, 0] - y[:, 0]) ** 2 + (output[:, 1] - y[:, 1]) ** 2) / output.size(0)
             # TrueMSE = torch.sum((output[:, 0] - y[:, 0]) ** 2 + (output[:, 2] - y[:, 2]) ** 2) / output.size(0)
-            print('PredMSE: ', PredMSE)
-            # print('TrueMSE: ', TrueMSE)
             total_loss = 0
     print('total loss over the whole training set was {}'.format(trainLoss/trainDataLen))
 
@@ -856,7 +854,7 @@ if not testSession:
             else:
                 numEpochsSinceBest += 1
                 print("worse loss: {} epochs since best loss".format(numEpochsSinceBest))
-                if(numEpochsSinceBest >= 31):
+                if(numEpochsSinceBest >= 41):
                     print('No progress made in 31 epochs, model is over fitting')
                     break
                 # What this does is reset the model back to the best model after 10 epochs of no improvement
@@ -867,7 +865,6 @@ if not testSession:
 
 
 
-        print(tloss)
 
     torch.save(modelContext, modelPath)
 else:
