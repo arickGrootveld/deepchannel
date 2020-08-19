@@ -2,9 +2,10 @@
 fdims = 5; %[x1 x2 v1 v2 w]
 hdims = 2;
 nmodels = 2;
+tic;
 
-n = 500;
-seed=7;
+n = 10000;
+seed=1652;
 rng(seed);
 
 %% Stepsize
@@ -78,7 +79,7 @@ p_ij = [0.99 0.01; 0.01 0.99];
 
 %% Probabilistic Mode Transitions
 % mstate = (rand(1,n)< 0.9)+1;
-mstate = (rand(1,n) < 0.5) + 1;
+mstate(1, 1) = (rand(1,1) < 0.5) + 1;
 for i = 2:n
     if(mstate(1,i-1) == 1)
         mstate(1,i) = (rand(1,1) > p_ij(1,1)) + 1;
@@ -201,6 +202,7 @@ for i = 1:n
 end
 
 
+
 %% Calculate Normalise Root Mean Square Error (NRMSE)
 %KF Model 1
 NRMSE_KF1_1 = sqrt(mean((X_r(1,:)-KF_MM(1,:)).^2))/(max(X_r(1,:))-min(X_r(1,:)))*1e2;
@@ -290,8 +292,10 @@ addpath('utilities')
 
 %% Saving the data
 
+save('data/manTargDebugData3.mat', 'mstate', 'X_r', 'Y');
+
 % TODO: Uncomment all lines below this point
-% sTrueStates = X_r(1:2,:);
+sTrueStates = X_r(1:2,:);
 % % Checking to see if the memory requirements are too large to
 % % Save them each to their own individual files or if we need
 % % to break them up amongst multiple files
@@ -300,20 +304,21 @@ addpath('utilities')
 % 
 % % TODO: Implement the breaking up across multiple files code
 % 
-% save('data/trueStates.mat', 'sTrueStates');
-% save('data/obsStates.mat', 'Y'); 
+save('data/trueStates.mat', 'sTrueStates');
+save('data/obsStates.mat', 'Y');
+
+% Saving data generation parameters
+% inter.numSequences = n;
+% inter.sequenceLength = sequenceLength;
+% saveData.parameters = inter;
+
+saveData.riccatiConvergences = [0, 1; 1, 0];
+saveData.seed = seed;
+
+saveData.trueStateFiles = ['data/trueStates.mat'];
+saveData.obsStateFiles = ['data/obsStates.mat'];
+
+save('data/matData.mat', 'saveData')
+% saveMatData(saveData, 'data', 'ManTargData');
 % 
-% % Saving data generation parameters
-% % inter.numSequences = n;
-% % inter.sequenceLength = sequenceLength;
-% % saveData.parameters = inter;
-% 
-% saveData.riccatiConvergences = [0, 1; 1, 0];
-% saveData.seed = seed;
-% 
-% saveData.trueStateFiles = ['data/trueStates.mat'];
-% saveData.obsStateFiles = ['data/obsStates.mat'];
-% 
-% save('data/matData.mat', 'saveData')
-% % saveMatData(saveData, 'data', 'ManTargData');
-% 
+toc

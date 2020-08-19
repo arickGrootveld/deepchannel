@@ -147,6 +147,12 @@ parser.add_argument('--initTest', action='store_true',
                     'all the tested methods perform at channel initialization'
                     '(default: false)')
 
+parser.add_argument('--bias_removal', action='store_true',
+                    help='do data preprocessing to make each'
+                    'sequence start from the origin. Meant for '
+                    'Maneuvering Targets Model System'
+                    '(default: fals)')
+
 
 # Parse out the input arguments
 args = parser.parse_args()
@@ -213,6 +219,7 @@ seed = args.seed
 optimMethod = args.optim
 
 debug_mode = args.debug
+biasRemoval = args.bias_removal
 
 evalDataLen = int(args.eval_len)
 testDataLen = int(args.test_set_depth)
@@ -450,11 +457,10 @@ else:
 # Generate the model
 model = TCN(input_channels, n_classes, channel_sizes, kernel_size=kernel_size, dropout=dropout)
 
-# Setting up the biases variables
-if not testSession:
+# Setting up the biases variable
+if (not testSession) and biasRemoval:
     biases_TandE = torch.zeros(measuredStateTRAIN[:,:,0,0].shape)
 
-biases_Test = torch.zeros(measuredStateTEST[0,:,:,0,0].shape)
 
 # Logic Structure of using cuda in either multiple GPU or single GPU 
 # orientations
@@ -495,7 +501,6 @@ if args.cuda:
 
     model.cuda()
     modelBEST.cuda()
-    biases_Test = biases_Test.cuda()
     # If we are not just testing then load everything into cuda
     if not testSession:
 
@@ -507,7 +512,8 @@ if args.cuda:
         trueStateEVAL = trueStateEVAL.cuda()
         measuredStateEVAL = measuredStateEVAL.cuda()
 
-        biases_TandE = biases_TandE.cuda()
+        if biasRemoval:
+            biases_TandE = biases_TandE.cuda()
 
     # Pushing the Squared Error calculations to cuda as well
     if debug_mode:
@@ -563,9 +569,9 @@ def train(epoch):
             x = x.cuda()
             y = y.cuda()
         # Subtracting the bias from each of the samples
-        biases_TandE[:,:] = x[:, :, 0]
-
-        x = x - biases_TandE[:, :, None]
+        if biasRemoval:
+            biases_TandE[:,:] = x[:, :, 0]
+            x = x - biases_TandE[:, :, None]
 
         x = x.float()
         y = y.float()
@@ -573,7 +579,10 @@ def train(epoch):
         # Forward/backpass
         optimizer.zero_grad()
         # Computing the output of the network and adding the bias back in
-        output = model(x) + biases_TandE
+        if biasRemoval:
+            output = model(x) + biases_TandE
+        else:
+            output = model(x)
         loss = F.mse_loss(output, y, reduction="sum")
         loss.backward()
 
@@ -621,8 +630,9 @@ def evaluate():
         y_eval = trueStateEVAL[:, predInds, i]
 
         # Subtracting the bias from each of the samples
-        biases_TandE[:,:] = x_eval[:, :, 0]
-        x_eval = x_eval - biases_TandE[:, :, None].type(torch.float64)
+        if biasRemoval:
+            biases_TandE[:,:] = x_eval[:, :, 0]
+            x_eval = x_eval - biases_TandE[:, :, None].type(torch.float64)
 
         x_eval = x_eval.float()
         y_eval = y_eval.type(torch.double)
@@ -632,7 +642,11 @@ def evaluate():
         with torch.no_grad():
 
             # Compute output and loss
-            output = model(x_eval).type(torch.float64) + biases_TandE.type(torch.float64)
+            if biasRemoval:
+                output = model(x_eval).type(torch.float64) + biases_TandE.type(torch.float64)
+            else:
+                output = model(x_eval).type(torch.float64)
+            
             eval_loss = F.mse_loss(output, y_eval, reduction="sum")
 
             PredMSE = torch.sum((output[:, 0] - y_eval[:, 0]) ** 2 + (output[:, 1] - y_eval[:, 1]) ** 2) / output.size(0)
@@ -679,8 +693,10 @@ def test():
             y_test = trueStateTEST[r, :, predInds, i]
 
             # Subtracting the bias from each of the samples
-            biases = x_test[:, :, 0]
-            x_test = x_test - biases[:, :, None]
+            if biasRemoval:
+                biases = x_test[:, :, 0]
+                x_test = x_test - biases[:, :, None]
+            
 
             x_test = x_test.float()
             y_test = y_test.float()
@@ -690,9 +706,13 @@ def test():
             with torch.no_grad():
 
                 # Compute output and loss
-                output = modelBEST(x_test) + biases.type(torch.float32)
-                test_loss = F.mse_loss(output, y_test, reduction="sum")
+                if biasRemoval:
+                    output = modelBEST(x_test) + biases.type(torch.float32)
+                    
+                else:
+                    output = modelBEST(x_test)
 
+                test_loss = F.mse_loss(output, y_test, reduction="sum")
                 PredMSE = torch.sum(((output[:, 0] - y_test[:, 0]) ** 2) + (output[:, 1] - y_test[:, 1]) ** 2) / output.size(0)
 
                 if debug_mode:
