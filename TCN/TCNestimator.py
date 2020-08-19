@@ -679,7 +679,7 @@ def test():
 
             # Subtracting the bias from each of the samples
             biases = x_test[:, :, 0]
-            x_eval = x_test - biases[:, :, None]
+            x_test = x_test - biases[:, :, None]
 
             x_test = x_test.float()
             y_test = y_test.float()
