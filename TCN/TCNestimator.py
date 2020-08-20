@@ -409,6 +409,13 @@ else:
     testSetLen = trueStateTEST.shape[0]
     testSeriesLength = trueStateTEST.shape[3]
 
+    altAlgs = False
+    if (('IMMPredVals' in testDataToBeLoaded) and
+        ('GKFPredVals' in testDataToBeLoaded)):
+        altAlgs = True
+        IMMPredVals = testDataToBeLoaded['IMMPredVals']
+        GKFPredVals = testDataToBeLoaded['GKFPredVals']
+
     print('test data loaded from: {}'.format(testFile))
     fileContent[u'testDataFile'] = testFile
 
@@ -915,6 +922,10 @@ fileContent[u'testInfo'] = testDataInfo
 fileContent[u'modelPath'] = modelPath
 fileContent[u'trainingLength(seconds)'] = simRunTime
 fileContent[u'runType'] = 'TCN'
+
+if(altAlgs):
+    fileContent[u'IMMPredVals'] = IMMPredVals
+    fileContent[u'GKFPredVals'] = GKFPredVals
 
 print('log data saved to: ', logName)
 print('model parameters saved to: ', modelPath)

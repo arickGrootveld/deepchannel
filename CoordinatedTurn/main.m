@@ -4,8 +4,8 @@ hdims = 2;
 nmodels = 2;
 tic;
 
-n = 10000;
-seed=1652;
+n = 1000;
+seed=16;
 rng(seed);
 
 %% Stepsize
@@ -87,6 +87,7 @@ for i = 2:n
         mstate(1, i) = (rand(1,1) > p_ij(2,1)) + 1;
     end
 end
+
 
 %% Arick Added code
 transitionMatrices = {};
@@ -177,10 +178,10 @@ MU1 = zeros(2,n); %IMMEKF
 %% Filtering steps. %%
 for i = 1:n
     %KF model 1
-    [KF_M,KF_P] = kf_predict(KF_M,KF_P,F{1},Q{1});
-    [KF_M,KF_P] = kf_update(KF_M,KF_P,Y(:,i),H{1},R{1});
-    KF_MM(:,i)   = KF_M;
-    KF_PP(:,:,i) = KF_P;
+%     [KF_M,KF_P] = kf_predict(KF_M,KF_P,F{1},Q{1});
+%     [KF_M,KF_P] = kf_update(KF_M,KF_P,Y(:,i),H{1},R{1});
+%     KF_MM(:,i)   = KF_M;
+%     KF_PP(:,:,i) = KF_P;
     %IMMEKF
     [x_p1,P_p1,c_j1] = eimm_predict(x_ip1,P_ip1,w1,p_ij,ind,fdims,F,Q,dt);
     [x_ip1,P_ip1,w1,m1,P1] = eimm_update(x_p1,P_p1,c_j1,ind,fdims,Y(:,i),H,R);
@@ -205,22 +206,22 @@ end
 
 %% Calculate Normalise Root Mean Square Error (NRMSE)
 %KF Model 1
-NRMSE_KF1_1 = sqrt(mean((X_r(1,:)-KF_MM(1,:)).^2))/(max(X_r(1,:))-min(X_r(1,:)))*1e2;
-NRMSE_KF1_2 = sqrt(mean((X_r(2,:)-KF_MM(2,:)).^2))/(max(X_r(2,:))-min(X_r(2,:)))*1e2;
-NRMSE_KF1 = 1/2*(NRMSE_KF1_1 + NRMSE_KF1_2);
-fprintf('NRMSE of KF1             :%5.2f%%\n',NRMSE_KF1);
+% NRMSE_KF1_1 = sqrt(mean((X_r(1,:)-KF_MM(1,:)).^2))/(max(X_r(1,:))-min(X_r(1,:)))*1e2;
+% NRMSE_KF1_2 = sqrt(mean((X_r(2,:)-KF_MM(2,:)).^2))/(max(X_r(2,:))-min(X_r(2,:)))*1e2;
+% NRMSE_KF1 = 1/2*(NRMSE_KF1_1 + NRMSE_KF1_2);
+% fprintf('NRMSE of KF1             :%5.2f%%\n',NRMSE_KF1);
 
 %IMM EKF
-NRMSE_IMMEKF1 = sqrt(mean((X_r(1,:)-MM1(1,:)).^2))/(max(X_r(1,:))-min(X_r(1,:)))*1e2;
-NRMSE_IMMEKF2 = sqrt(mean((X_r(2,:)-MM1(2,:)).^2))/(max(X_r(2,:))-min(X_r(2,:)))*1e2;
-NRMSE_IMMEKF = 1/2*(NRMSE_IMMEKF1 + NRMSE_IMMEKF2);
-fprintf('NRMSE of IMMEKF          :%5.2f%%\n',NRMSE_IMMEKF);
+% NRMSE_IMMEKF1 = sqrt(mean((X_r(1,:)-MM1(1,:)).^2))/(max(X_r(1,:))-min(X_r(1,:)))*1e2;
+% NRMSE_IMMEKF2 = sqrt(mean((X_r(2,:)-MM1(2,:)).^2))/(max(X_r(2,:))-min(X_r(2,:)))*1e2;
+% NRMSE_IMMEKF = 1/2*(NRMSE_IMMEKF1 + NRMSE_IMMEKF2);
+% fprintf('NRMSE of IMMEKF          :%5.2f%%\n',NRMSE_IMMEKF);
 
 %Original
-NRMSE_ORG1 = sqrt(mean((X_r(1,:)-Y(1,:)).^2))/(max(X_r(1,:))-min(X_r(1,:)))*1e2;
-NRMSE_ORG2 = sqrt(mean((X_r(2,:)-Y(2,:)).^2))/(max(X_r(2,:))-min(X_r(2,:)))*1e2;
-NRMSE_ORG = 1/2*(NRMSE_ORG1 + NRMSE_ORG2);
-fprintf('NRMSE of Original        :%5.2f%%\n',NRMSE_ORG);
+% NRMSE_ORG1 = sqrt(mean((X_r(1,:)-Y(1,:)).^2))/(max(X_r(1,:))-min(X_r(1,:)))*1e2;
+% NRMSE_ORG2 = sqrt(mean((X_r(2,:)-Y(2,:)).^2))/(max(X_r(2,:))-min(X_r(2,:)))*1e2;
+% NRMSE_ORG = 1/2*(NRMSE_ORG1 + NRMSE_ORG2);
+% fprintf('NRMSE of Original        :%5.2f%%\n',NRMSE_ORG);
 
 % Plot
 
@@ -306,6 +307,8 @@ sTrueStates = X_r(1:2,:);
 % 
 save('data/trueStates.mat', 'sTrueStates');
 save('data/obsStates.mat', 'Y');
+save('data/altAlgPreds.mat', 'GKF_MM', 'MM1');
+
 
 % Saving data generation parameters
 % inter.numSequences = n;
@@ -317,6 +320,7 @@ saveData.seed = seed;
 
 saveData.trueStateFiles = ['data/trueStates.mat'];
 saveData.obsStateFiles = ['data/obsStates.mat'];
+saveData.altAlgFiles = ['data/altAlgPreds'];
 
 save('data/matData.mat', 'saveData')
 % saveMatData(saveData, 'data', 'ManTargData');
