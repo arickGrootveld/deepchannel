@@ -409,6 +409,13 @@ else:
     testSetLen = trueStateTEST.shape[0]
     testSeriesLength = trueStateTEST.shape[3]
 
+    altAlgs = False
+    if (('IMMPredVals' in testDataToBeLoaded) and
+        ('GKFPredVals' in testDataToBeLoaded)):
+        altAlgs = True
+        IMMPredVals = testDataToBeLoaded['IMMPredVals']
+        GKFPredVals = testDataToBeLoaded['GKFPredVals']
+
     print('test data loaded from: {}'.format(testFile))
     fileContent[u'testDataFile'] = testFile
 
@@ -735,7 +742,7 @@ def test():
                     # Setting the observed states back to what they
                     # were before preprocessing
                     if biasRemoval:
-                        x_test = x_test + biases[:, :, None]
+                        x_test = x_test.type(torch.float64) + biases[:, :, None].type(torch.float64)
 
                     obsValues[0, r, :, :, i] = x_test[:, 0, :]
                     obsValues[1, r, :, :, i] = x_test[:, 1, :]
@@ -923,6 +930,10 @@ fileContent[u'testInfo'] = testDataInfo
 fileContent[u'modelPath'] = modelPath
 fileContent[u'trainingLength(seconds)'] = simRunTime
 fileContent[u'runType'] = 'TCN'
+
+if(altAlgs):
+    fileContent[u'IMMPredVals'] = IMMPredVals
+    fileContent[u'GKFPredVals'] = GKFPredVals
 
 print('log data saved to: ', logName)
 print('model parameters saved to: ', modelPath)
