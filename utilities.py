@@ -58,7 +58,7 @@ def shuffleMeasTrainData(dataToBeShuffled):
         for n in range(0, dataDims[3]):
             cnt = cnt + 1
             i = randomPermutation[cnt] % dataDims[0]
-            j = randomPermutation[cnt] / dataDims[0]
+            j = randomPermutation[cnt] // dataDims[0]
 
             shuffledData[m, :, :, n] = dataToBeShuffled[i, :, :, j]
 
@@ -74,7 +74,7 @@ def shuffleTrueTrainData(dataToBeShuffled, randomPermutation):
         for n in range(0, dataDims[2]):
             cnt = cnt + 1
             i = randomPermutation[cnt] % dataDims[0]
-            j = randomPermutation[cnt] / dataDims[0]
+            j = randomPermutation[cnt] // dataDims[0]
 
             shuffledData[m, :, n] = dataToBeShuffled[i, :, j]
 

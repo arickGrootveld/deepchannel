@@ -4,10 +4,10 @@ hdims = 2;
 nmodels = 2;
 tic;
 
-n = 100;
-seed=102;
-
+n = 1000;
+seed=144;
 rng(seed);
+
 tic;
 %% Stepsize
 dt = 0.1;
@@ -59,7 +59,7 @@ mstate = zeros(1,n);
 
 w1 =  [0.95 0.05];
 w2 =  [0.95 0.05];
-p_ij = [0.9 0.1; 0.1 0.9];  
+p_ij = [0.99 0.01; 0.01 0.99];  
 
 %% Probabilistic Mode Transitions
 % Randomly choosing a starting mode, each having same probability
@@ -154,13 +154,13 @@ MU1 = zeros(2,n); %IMMEKF
 %% Filtering steps. %%
 for i = 1:n
     %IMMEKF
-    [x_p1,P_p1,c_j1] = eimm_predict(x_ip1,P_ip1,w1,p_ij,ind,fdims,F,Q,dt);
-    [x_ip1,P_ip1,w1,m1,P1] = eimm_update(x_p1,P_p1,c_j1,ind,fdims,Y(:,i),H,R);
-    MM1(:,i)   = m1;
-    PP1(:,:,i) = P1;
-    MU1(:,i)   = w1';
-    MM1_i(:,i) = x_ip1';
-    PP1_i(:,i) = P_ip1';
+    %[x_p1,P_p1,c_j1] = eimm_predict(x_ip1,P_ip1,w1,p_ij,ind,fdims,F,Q,dt);
+    %[x_ip1,P_ip1,w1,m1,P1] = eimm_update(x_p1,P_p1,c_j1,ind,fdims,Y(:,i),H,R);
+    %MM1(:,i)   = m1;
+    %PP1(:,:,i) = P1;
+    %MU1(:,i)   = w1';
+    %MM1_i(:,i) = x_ip1';
+    %PP1_i(:,i) = P_ip1';
     
     %Genie KF
     st = mstate(i);
@@ -176,9 +176,9 @@ end
 % Calculating the MSE of the IMM's predictions to be able to 
 % compare with TCN 
 
-IMM_MSE = (sum(sqrt((X_r(1,:)-MM1(1,:)).^2 + (X_r(2,:) - MM1(2,:)).^2)))/length(MM1);
+%IMM_MSE = (sum(sqrt((X_r(1,:)-MM1(1,:)).^2 + (X_r(2,:) - MM1(2,:)).^2)))/length(MM1);
 
-disp(strcat("IMM Prediction MSE: ", num2str(IMM_MSE)));
+%disp(strcat("IMM Prediction MSE: ", num2str(IMM_MSE)));
 
 
 GKF_MSE = (sum(sqrt((X_r(1,:)-GKF_MM(1,:)).^2 + (X_r(2,:) - GKF_MM(2,:)).^2)))/length(GKF_MM);
