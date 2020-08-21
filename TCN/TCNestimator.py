@@ -629,6 +629,9 @@ def evaluate():
         x_eval = measuredStateEVAL[:, :, :, i]
         y_eval = trueStateEVAL[:, predInds, i]
 
+        if args.cuda:
+            x_eval = x_eval.cuda()
+            y_eval = y_eval.cuda()
         # Subtracting the bias from each of the samples
         if biasRemoval:
             biases_TandE[:,:] = x_eval[:, :, 0]
@@ -692,6 +695,11 @@ def test():
             x_test = measuredStateTEST[r, :, :, :, i]
             y_test = trueStateTEST[r, :, predInds, i]
 
+
+            if args.cuda:
+                x_test = x_test.cuda()
+                y_test = y_test.cuda()
+            
             # Subtracting the bias from each of the samples
             if biasRemoval:
                 biases = x_test[:, :, 0]
