@@ -2,10 +2,9 @@
 fdims = 5; %[x1 x2 v1 v2 w]
 hdims = 2;
 nmodels = 2;
-tic;
 
-n = 1000;
-seed=144;
+n = 10000;
+seed=137;
 rng(seed);
 
 tic;
@@ -57,8 +56,8 @@ Y = zeros(hdims,n);
 R_r = zeros(hdims,n);
 mstate = zeros(1,n);
 
-w1 =  [0.95 0.05];
-w2 =  [0.95 0.05];
+w1 =  [0.5 0.5];
+w2 =  [0.5 0.5];
 p_ij = [0.99 0.01; 0.01 0.99];  
 
 %% Probabilistic Mode Transitions
@@ -151,24 +150,27 @@ PP1 = zeros(fdims, fdims, n);
 %% IMM Model probabilities 
 MU1 = zeros(2,n); %IMMEKF
 
+% Clearing last warn to make it easier to detect a warning
 %% Filtering steps. %%
 for i = 1:n
+    
     %IMMEKF
-    %[x_p1,P_p1,c_j1] = eimm_predict(x_ip1,P_ip1,w1,p_ij,ind,fdims,F,Q,dt);
-    %[x_ip1,P_ip1,w1,m1,P1] = eimm_update(x_p1,P_p1,c_j1,ind,fdims,Y(:,i),H,R);
-    %MM1(:,i)   = m1;
-    %PP1(:,:,i) = P1;
-    %MU1(:,i)   = w1';
-    %MM1_i(:,i) = x_ip1';
-    %PP1_i(:,i) = P_ip1';
+    [x_p1,P_p1,c_j1,predVal] = eimm_predict(x_ip1,P_ip1,w1,p_ij,ind,fdims,F,Q,dt);
+    [x_ip1,P_ip1,w1,m1,P1] = eimm_update(x_p1,P_p1,c_j1,ind,fdims,Y(:,i),H,R);
+    MM1(:,i)   = predVal;
+    PP1(:,:,i) = P1;
+    MU1(:,i)   = w1';
+    MM1_i(:,i) = x_ip1';
+    PP1_i(:,i) = P_ip1';
     
     %Genie KF
     st = mstate(i);
     %% P and m are not right, i.e. first and second variables
     [GKF_M, GKF_P] = kf_predict(GKF_M, GKF_P, transitionMatrices{i}, GKF_Q{st});
-    [GKF_M, GKF_P] = kf_update(GKF_M, GKF_P, Y(:,i), H{1}, R{st});
     GKF_MM(:,i) = GKF_M;
     GKF_PP(:,:, i) = GKF_P;
+    [GKF_M, GKF_P] = kf_update(GKF_M, GKF_P, Y(:,i), H{1}, R{st});
+    
 
 
 end
@@ -176,20 +178,26 @@ end
 % Calculating the MSE of the IMM's predictions to be able to 
 % compare with TCN 
 
-%IMM_MSE = (sum(sqrt((X_r(1,:)-MM1(1,:)).^2 + (X_r(2,:) - MM1(2,:)).^2)))/length(MM1);
+IMM_MSE = (sum(((X_r(1,11:end)-MM1(1,11:end)).^2 + (X_r(2,11:end) - MM1(2,11:end)).^2)))/length(MM1 - 10);
 
-%disp(strcat("IMM Prediction MSE: ", num2str(IMM_MSE)));
+disp(strcat("IMM Prediction MSE: ", num2str(IMM_MSE)));
 
 
-GKF_MSE = (sum(sqrt((X_r(1,:)-GKF_MM(1,:)).^2 + (X_r(2,:) - GKF_MM(2,:)).^2)))/length(GKF_MM);
+GKF_MSE = (sum(((X_r(1,11:end)-GKF_MM(1,11:end)).^2 + (X_r(2,11:end) - GKF_MM(2,11:end)).^2)))/length(GKF_MM - 10);
 
 disp(strcat("Genie Kalman Filter Prediction MSE: ", num2str(GKF_MSE)));
 
+
+% Plotting squared errors of the IMM and GKF
+% figure(7);
+% imm_SqErrs = (((X_r(1,11:end)-MM1(1,11:end)).^2 + (X_r(2,11:end) - MM1(2,11:end)).^2));
+% gkf_SqErrs = (((X_r(1,11:end)-GKF_MM(1,11:end)).^2 + (X_r(2,11:end) - GKF_MM(2,11:end)).^2));
+% hold on
+% plot(imm_SqErrs, '-r');
+% plot(gkf_SqErrs, '-b');
+% hold off;
 %% Saving the data
 
-save('data/manTargDebugData3.mat', 'mstate', 'X_r', 'Y');
-
-% TODO: Uncomment all lines below this point
 sTrueStates = X_r(1:2,:);
 % % Checking to see if the memory requirements are too large to
 % % Save them each to their own individual files or if we need
@@ -202,12 +210,6 @@ sTrueStates = X_r(1:2,:);
 save('data/trueStates.mat', 'sTrueStates');
 save('data/obsStates.mat', 'Y');
 save('data/altAlgPreds.mat', 'GKF_MM', 'MM1');
-
-
-% Saving data generation parameters
-% inter.numSequences = n;
-% inter.sequenceLength = sequenceLength;
-% saveData.parameters = inter;
 
 saveData.riccatiConvergences = [0, 1; 1, 0];
 saveData.seed = seed;

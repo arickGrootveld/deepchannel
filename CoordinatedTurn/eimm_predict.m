@@ -62,7 +62,7 @@ function [X_p,P_p,c_j,X,P] = eimm_predict(X_ip,P_ip,w,p_ij,ind,dims,F,Q,dt)
 
         % Predicted state covariance
         for i = 1:m
-            P(ind{i},ind{i}) = P(ind{i},ind{i}) + w(i)*(P_p{i} + (X_ip{i}-X(ind{i}))*(X_i{i}-X(ind{i}))');
+            P(ind{i},ind{i}) = P(ind{i},ind{i}) + w(i)*(P_p{i} + (X_ip{i}-X(ind{i}))*(X_ip{i}-X(ind{i}))');
         end
     end
 end
