@@ -547,7 +547,7 @@ optimizer = getattr(optim, optimMethod)(model.parameters(), lr=lr)
 
 # Creating a learning rate scheduler that updates the learning rate when the model plateaus
 # Divides the learning rate by 2 if the model has not gotten a lower total loss in 10 epochs
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.6, verbose=True, patience=19)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, verbose=True, patience=10)
 
 # Defining index that will only grab the predicted values
 predInds = [1,3]
@@ -572,6 +572,9 @@ def train(epoch):
         # Grab the current series
         x = shuffledMeasTRAIN[:, :, :, i]
         y = shuffledTrueTRAIN[:, predInds, i]
+        #x = measuredStateTRAIN[:,:,:,i]
+        #y = trueStateTRAIN[:, predInds, i]
+        
         if(args.cuda):
             x = x.cuda()
             y = y.cuda()
@@ -613,7 +616,10 @@ def train(epoch):
             # TrueMSE = torch.sum((output[:, 0] - y[:, 0]) ** 2 + (output[:, 2] - y[:, 2]) ** 2) / output.size(0)
             total_loss = 0
     print('total loss over the whole training set was {}'.format(trainLoss/trainDataLen))
-
+    # TODO: Delete the following lines once reinstating lr scheduling and 
+    # TODO: earl stopping
+    finalLoss = trainLoss/trainDataLen
+    return finalLoss
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~~~~~~~~~~~~~~~~~~ EVALUATION ~~~~~~~~~~~~~~~~~~~~~~~~ ###
 
@@ -865,8 +871,14 @@ if not testSession:
 
     # Letting the model know when the last epoch happens so we can record the MSEs of the individual samples
     for ep in range(0, epochs):
-        train(ep)
-        tloss = evaluate()
+        #train(ep)
+        #tloss = evaluate()
+        
+        # TODO: Delete this code and uncomment the lines below when you 
+        # TODO: want early stopping and lr scheduling again
+        
+        tloss = train(ep)
+        _ = evaluate()
 
         scheduler.step(tloss)
         # Updating the learning rate that will be displayed for each epoch
@@ -893,11 +905,11 @@ if not testSession:
             else:
                 numEpochsSinceBest += 1
                 print("worse loss: {} epochs since best loss".format(numEpochsSinceBest))
-                if(numEpochsSinceBest >= 41):
-                    print('No progress made in 31 epochs, model is over fitting')
+                if(numEpochsSinceBest >= 61):
+                    print('No progress made in 61 epochs, model is over fitting')
                     break
-                # What this does is reset the model back to the best model after 10 epochs of no improvement
-                # to get the benefit of the decreased step size
+               # What this does is reset the model back to the best model after 10 epochs of no improvement
+               # to get the benefit of the decreased step size
                 if((numEpochsSinceBest % 10) == 0):
                     model = modelBEST
                     print('model reset to best model')
