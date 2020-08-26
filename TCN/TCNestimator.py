@@ -464,6 +464,9 @@ else:
 # Generate the model
 model = TCN(input_channels, n_classes, channel_sizes, kernel_size=kernel_size, dropout=dropout)
 
+# Creating a backup of the model that we can use for early stopping
+modelBEST = TCN(input_channels, n_classes, channel_sizes, kernel_size=kernel_size, dropout=dropout)
+
 # Setting up the biases variable
 if (not testSession) and biasRemoval:
     biases_TandE = torch.zeros(measuredStateTRAIN[:,:,0,0].shape)
@@ -479,9 +482,11 @@ if(args.cuda):
             if(torch.cuda.device_count() > 1):
                 print('using multiple GPU\'s')
                 model = nn.DataParallel(model)
+                modelBEST = nn.DataParallel(modelBEST)
                 for m in range(0, torch.cuda.device_count()):
                     device = torch.device('cuda:' + str(m))
                     model.to(device)
+                    modelBEST.to(device)
             # If only a single GPU is available then do nothing because this is 
             # default behaviour for cuda
 
@@ -494,13 +499,12 @@ if(args.cuda):
                                  '--cuda_device argument')
             device = torch.device('cuda:' + str(cuda_device))
             model.to(device)
+            modelBEST.to(device)
                 
             
     else:
         raise ValueError('cuda not available, --cuda unavailable')
 
-# Creating a backup of the model that we can use for early stopping
-modelBEST = model
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~~~~~~~~~~~~~~ LOAD DATA INTO CUDA ~~~~~~~~~~~~~~~~~~~ ###
 
@@ -547,7 +551,7 @@ optimizer = getattr(optim, optimMethod)(model.parameters(), lr=lr)
 
 # Creating a learning rate scheduler that updates the learning rate when the model plateaus
 # Divides the learning rate by 2 if the model has not gotten a lower total loss in 10 epochs
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, verbose=True, patience=10)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, verbose=True, patience=9)
 
 # Defining index that will only grab the predicted values
 predInds = [1,3]
@@ -868,18 +872,11 @@ if not testSession:
 
     # How many times in a row we have had a worse loss than our best case loss scenario
     numEpochsSinceBest = 0
-
     # Letting the model know when the last epoch happens so we can record the MSEs of the individual samples
     for ep in range(0, epochs):
-        #train(ep)
-        #tloss = evaluate()
+        train(ep)
+        tloss = evaluate()
         
-        # TODO: Delete this code and uncomment the lines below when you 
-        # TODO: want early stopping and lr scheduling again
-        
-        tloss = train(ep)
-        _ = evaluate()
-
         scheduler.step(tloss)
         # Updating the learning rate that will be displayed for each epoch
         lr = optimizer.param_groups[0]['lr']
@@ -887,6 +884,7 @@ if not testSession:
         # Run through all epochs, find the best model and save it for testing
         if(ep == 0):
             bestloss = tloss
+            modelBEST.load_state_dict(model.state_dict())
             modelContext['model_state_dict'] = model.state_dict()
             modelContext['optimizer_state_dict'] = optimizer.state_dict()
             torch.save(modelContext, modelPath)
@@ -895,7 +893,7 @@ if not testSession:
             if(tloss <= bestloss):
                 numEpochsSinceBest = 0
                 bestloss = tloss
-                modelBEST = model
+                modelBEST.load_state_dict(model.state_dict())
                 modelContext['model_state_dict'] = model.state_dict()
                 modelContext['optimizer_state_dict'] = optimizer.state_dict()
                 modelContext['epoch'] = ep
@@ -911,12 +909,10 @@ if not testSession:
                # What this does is reset the model back to the best model after 10 epochs of no improvement
                # to get the benefit of the decreased step size
                 if((numEpochsSinceBest % 10) == 0):
-                    model = modelBEST
+                    model.load_state_dict(modelBEST.state_dict())
                     print('model reset to best model')
 
-
-
-
+    print('model saved')
     torch.save(modelContext, modelPath)
 else:
     # If we are just loading and testing a model, then we set the path properly to be saved

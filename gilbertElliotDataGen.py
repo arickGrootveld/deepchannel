@@ -546,6 +546,8 @@ if __name__ == "__main__":
                         help='record various variables and other features'
                         'explicitely intended to help with debugging (default=False)')
 
+    parser.add_argument('--ARCoeffs', nargs='+', default=[0.3, 0.1],
+                    help='Coefficients Passed to the Kalman Filter, will depend on the scenario you are looking at (default: [0.3, 0.1]')
     args = parser.parse_args()
 
     # Setting the args to their appropriate variables
@@ -569,7 +571,9 @@ if __name__ == "__main__":
             _ = GilElTestDataGen(numSequences=simuLen, sequenceLength=sequenceLen, randSeed=seed,
                                 goodTransProb=goodTransProb, badTransProb=badTransProb, initTest=initTest, debug=debugMode)
     else:
-        coeffs = [0.3, 0.1]
+        coeffs = []
+        for ARCoeff in args.ARCoeffs:
+            coeffs.append(float(ARCoeff))
         if not testGeneration:
             _ = GilElDataGenWrapper(numSequences=simuLen, sequenceLength=sequenceLen,
                                     randSeed=seed,
