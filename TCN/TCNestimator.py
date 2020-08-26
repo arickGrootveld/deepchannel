@@ -17,7 +17,7 @@ import sys
 sys.path.append("..") # Adds higher directory to python modules path.
 from model import TCN
 from mismatch_data_gen import ARDatagenMismatch
-from utilities import convertToBatched, matSave
+from utilities import convertToBatched, matSave, shuffleMeasTrainData, shuffleTrueTrainData
 from LeastSquares.LSFunction import LSTesting, LSTraining
 from KalmanFilter.KFFunction import KFTesting2 
 
@@ -147,6 +147,12 @@ parser.add_argument('--initTest', action='store_true',
                     'all the tested methods perform at channel initialization'
                     '(default: false)')
 
+parser.add_argument('--bias_removal', action='store_true',
+                    help='do data preprocessing to make each'
+                    'sequence start from the origin. Meant for '
+                    'Maneuvering Targets Model System'
+                    '(default: fals)')
+
 
 # Parse out the input arguments
 args = parser.parse_args()
@@ -213,6 +219,7 @@ seed = args.seed
 optimMethod = args.optim
 
 debug_mode = args.debug
+biasRemoval = args.bias_removal
 
 evalDataLen = int(args.eval_len)
 testDataLen = int(args.test_set_depth)
@@ -402,6 +409,13 @@ else:
     testSetLen = trueStateTEST.shape[0]
     testSeriesLength = trueStateTEST.shape[3]
 
+    altAlgs = False
+    if (('IMMPredVals' in testDataToBeLoaded) and
+        ('GKFPredVals' in testDataToBeLoaded)):
+        altAlgs = True
+        IMMPredVals = testDataToBeLoaded['IMMPredVals']
+        GKFPredVals = testDataToBeLoaded['GKFPredVals']
+
     print('test data loaded from: {}'.format(testFile))
     fileContent[u'testDataFile'] = testFile
 
@@ -450,6 +464,11 @@ else:
 # Generate the model
 model = TCN(input_channels, n_classes, channel_sizes, kernel_size=kernel_size, dropout=dropout)
 
+# Setting up the biases variable
+if (not testSession) and biasRemoval:
+    biases_TandE = torch.zeros(measuredStateTRAIN[:,:,0,0].shape)
+
+
 # Logic Structure of using cuda in either multiple GPU or single GPU 
 # orientations
 if(args.cuda):
@@ -480,14 +499,6 @@ if(args.cuda):
     else:
         raise ValueError('cuda not available, --cuda unavailable')
 
-
-    #if(torch.cuda.is_available() & (torch.cuda.device_count() > 1)):
-    #    print('using multiple gpu\'s')
-    #    model = nn.DataParallel(model)
-    #    for m in range(0, torch.cuda.device_count()):
-    #        device = torch.device('cuda:' + str(m))
-    #        model.to(device)
-
 # Creating a backup of the model that we can use for early stopping
 modelBEST = model
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
@@ -507,6 +518,9 @@ if args.cuda:
         # Evaluation set
         trueStateEVAL = trueStateEVAL.cuda()
         measuredStateEVAL = measuredStateEVAL.cuda()
+
+        if biasRemoval:
+            biases_TandE = biases_TandE.cuda()
 
     # Pushing the Squared Error calculations to cuda as well
     if debug_mode:
@@ -533,7 +547,7 @@ optimizer = getattr(optim, optimMethod)(model.parameters(), lr=lr)
 
 # Creating a learning rate scheduler that updates the learning rate when the model plateaus
 # Divides the learning rate by 2 if the model has not gotten a lower total loss in 10 epochs
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, verbose=True, patience=9)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.6, verbose=True, patience=19)
 
 # Defining index that will only grab the predicted values
 predInds = [1,3]
@@ -547,21 +561,35 @@ def train(epoch):
     total_loss = 0
     trainLoss = 0
 
+    # Shuffle the data each epoch
+    [shuffledMeasTRAIN, perm] = shuffleMeasTrainData(measuredStateTRAIN)
+    shuffledTrueTRAIN = shuffleTrueTrainData(trueStateTRAIN, perm)
  ################################
 
     # Training loop - run until we process every series of data
     for i in range(0, trainSeriesLength):
 
         # Grab the current series
-        x = measuredStateTRAIN[:, :, :, i]
-        y = trueStateTRAIN[:, predInds, i]
+        x = shuffledMeasTRAIN[:, :, :, i]
+        y = shuffledTrueTRAIN[:, predInds, i]
+        if(args.cuda):
+            x = x.cuda()
+            y = y.cuda()
+        # Subtracting the bias from each of the samples
+        if biasRemoval:
+            biases_TandE[:,:] = x[:, :, 0]
+            x = x - biases_TandE[:, :, None]
 
         x = x.float()
         y = y.float()
 
         # Forward/backpass
         optimizer.zero_grad()
-        output = model(x)
+        # Computing the output of the network and adding the bias back in
+        if biasRemoval:
+            output = model(x) + biases_TandE
+        else:
+            output = model(x)
         loss = F.mse_loss(output, y, reduction="sum")
         loss.backward()
 
@@ -583,8 +611,6 @@ def train(epoch):
                 epoch, processed, measuredStateTRAIN.size(3), 100. * processed / measuredStateTRAIN.size(3), lr, cur_loss))
             PredMSE = torch.sum((output[:, 0] - y[:, 0]) ** 2 + (output[:, 1] - y[:, 1]) ** 2) / output.size(0)
             # TrueMSE = torch.sum((output[:, 0] - y[:, 0]) ** 2 + (output[:, 2] - y[:, 2]) ** 2) / output.size(0)
-            print('PredMSE: ', PredMSE)
-            # print('TrueMSE: ', TrueMSE)
             total_loss = 0
     print('total loss over the whole training set was {}'.format(trainLoss/trainDataLen))
 
@@ -610,15 +636,27 @@ def evaluate():
         x_eval = measuredStateEVAL[:, :, :, i]
         y_eval = trueStateEVAL[:, predInds, i]
 
+        if args.cuda:
+            x_eval = x_eval.cuda()
+            y_eval = y_eval.cuda()
+        # Subtracting the bias from each of the samples
+        if biasRemoval:
+            biases_TandE[:,:] = x_eval[:, :, 0]
+            x_eval = x_eval - biases_TandE[:, :, None].type(torch.float64)
+
         x_eval = x_eval.float()
-        y_eval = y_eval.float()
+        y_eval = y_eval.type(torch.double)
 
         # Model eval setting
         model.eval()
         with torch.no_grad():
 
             # Compute output and loss
-            output = model(x_eval)
+            if biasRemoval:
+                output = model(x_eval).type(torch.float64) + biases_TandE.type(torch.float64)
+            else:
+                output = model(x_eval).type(torch.float64)
+            
             eval_loss = F.mse_loss(output, y_eval, reduction="sum")
 
             PredMSE = torch.sum((output[:, 0] - y_eval[:, 0]) ** 2 + (output[:, 1] - y_eval[:, 1]) ** 2) / output.size(0)
@@ -664,6 +702,17 @@ def test():
             x_test = measuredStateTEST[r, :, :, :, i]
             y_test = trueStateTEST[r, :, predInds, i]
 
+
+            if args.cuda:
+                x_test = x_test.cuda()
+                y_test = y_test.cuda()
+            
+            # Subtracting the bias from each of the samples
+            if biasRemoval:
+                biases = x_test[:, :, 0]
+                x_test = x_test - biases[:, :, None]
+            
+
             x_test = x_test.float()
             y_test = y_test.float()
 
@@ -672,9 +721,13 @@ def test():
             with torch.no_grad():
 
                 # Compute output and loss
-                output = modelBEST(x_test)
-                test_loss = F.mse_loss(output, y_test, reduction="sum")
+                if biasRemoval:
+                    output = modelBEST(x_test) + biases.type(torch.float32)
+                    
+                else:
+                    output = modelBEST(x_test)
 
+                test_loss = F.mse_loss(output, y_test, reduction="sum")
                 PredMSE = torch.sum(((output[:, 0] - y_test[:, 0]) ** 2) + (output[:, 1] - y_test[:, 1]) ** 2) / output.size(0)
 
                 if debug_mode:
@@ -686,6 +739,10 @@ def test():
                     
                     realValues[0, r, :, i] = y_test[:, 0]
                     realValues[1, r, :, i] = y_test[:, 1]
+                    # Setting the observed states back to what they
+                    # were before preprocessing
+                    if biasRemoval:
+                        x_test = x_test.type(torch.float64) + biases[:, :, None].type(torch.float64)
 
                     obsValues[0, r, :, :, i] = x_test[:, 0, :]
                     obsValues[1, r, :, :, i] = x_test[:, 1, :]
@@ -836,7 +893,7 @@ if not testSession:
             else:
                 numEpochsSinceBest += 1
                 print("worse loss: {} epochs since best loss".format(numEpochsSinceBest))
-                if(numEpochsSinceBest >= 31):
+                if(numEpochsSinceBest >= 41):
                     print('No progress made in 31 epochs, model is over fitting')
                     break
                 # What this does is reset the model back to the best model after 10 epochs of no improvement
@@ -847,7 +904,6 @@ if not testSession:
 
 
 
-        print(tloss)
 
     torch.save(modelContext, modelPath)
 else:
@@ -874,6 +930,10 @@ fileContent[u'testInfo'] = testDataInfo
 fileContent[u'modelPath'] = modelPath
 fileContent[u'trainingLength(seconds)'] = simRunTime
 fileContent[u'runType'] = 'TCN'
+
+if(altAlgs):
+    fileContent[u'IMMPredVals'] = IMMPredVals
+    fileContent[u'GKFPredVals'] = GKFPredVals
 
 print('log data saved to: ', logName)
 print('model parameters saved to: ', modelPath)

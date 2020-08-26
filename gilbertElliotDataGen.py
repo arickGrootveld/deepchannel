@@ -370,8 +370,7 @@ def GilElTestDataGen(sequenceLength=10, numSequences=100, goodCoefficients=[0.3,
                                                                           startingState='good')
             trueStateTEST[k, :, :, :], measuredStateTEST[k, :, :, :, :] = convertToBatched(subsetTestStateData[2],
                                                                                            subsetTestStateData[1],
-                                                                                           batch_size,
-                                                                                           debug=debug)
+                                                                                           batch_size)
             # Storing the data that the Least Squares and Kalman Filter will be using
             LSandKFTestData.append(subsetTestStateData)
 

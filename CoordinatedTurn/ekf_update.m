@@ -43,7 +43,9 @@ function [m,P,K,S, Lamda] = ekf_update (m,P,z,h,R)
     catch ex
         Lamda = mvnpdf(z,IM,R);
     end
-    
+    if(Lambda == 0)
+        Lamda = realmin;
+    end
   end
 
 end

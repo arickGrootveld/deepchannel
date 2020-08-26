@@ -13,7 +13,11 @@ function [X_p,P_p,c_j,X,P] = eimm_predict(X_ip,P_ip,w,p_ij,ind,dims,F,Q,dt)
             c_j(j) = c_j(j) + p_ij(i,j).*w(i);
         end
     end
-
+    
+    %if(c_j(1) == 0 || c_j(2) == 0)
+    %    c_j = [0.00000001, 0.0000001];
+    %end
+    
     % Mixing probabilities
     MU_ij = zeros(m,m);
     for i = 1:m

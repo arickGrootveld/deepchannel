@@ -30,7 +30,6 @@ trueStateMatData = h5.loadmat(dataInfo['saveData']['trueStateFiles'][0,0][0])
 obsStateMatData = h5.loadmat(dataInfo['saveData']['obsStateFiles'][0,0][0])
 
 # Formatting the data to be as the TCN expects it
-
 trueStateData = trueStateMatData['sTrueStates']
 obsStateData = obsStateMatData['Y']
 
@@ -76,6 +75,16 @@ if not testMode:
 
 
 else:
+
+    # If we are generating a test dataset, then we save the IMM,
+    # and Genie KF Results to use for comparison
+    algoPerformanceData = h5.loadmat(dataInfo['saveData']['altAlgFiles'][0,0][0])
+
+    IMMPredVals = algoPerformanceData['MM1']
+    GenieKFPredVals = algoPerformanceData['GKF_MM']
+    saveData['IMMPredVals'] = IMMPredVals
+    saveData['GKFPredVals'] = GenieKFPredVals
+
     testBatchSize = 10
     numBatches = int(np.floor(observedStates.shape[2] / testBatchSize))
 
@@ -105,6 +114,8 @@ else:
                     measuredStateTest[0, m, t, p, i] = observedStates[t, p, i*testBatchSize + m]
 
 
+
+    
 
     saveData['LSandKFTestData'] = [[systemStates, observedStates, finalStateValues]]
     
