@@ -86,4 +86,4 @@ gkfSaveData['gkfRuns'] = gkfRuns
 gkfSaveData['file'] = testFile
 gkfSaveData['initTest'] = args.initTest
 
-matSave('logs', 'log', gkfSaveData)
+matSave('logs', 'genieLog', gkfSaveData)
