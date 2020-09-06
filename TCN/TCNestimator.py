@@ -576,6 +576,9 @@ def train(epoch):
         # Grab the current series
         x = shuffledMeasTRAIN[:, :, :, i]
         y = shuffledTrueTRAIN[:, predInds, i]
+        #x = measuredStateTRAIN[:,:,:,i]
+        #y = trueStateTRAIN[:, predInds, i]
+        
         if(args.cuda):
             x = x.cuda()
             y = y.cuda()
@@ -617,7 +620,10 @@ def train(epoch):
             # TrueMSE = torch.sum((output[:, 0] - y[:, 0]) ** 2 + (output[:, 2] - y[:, 2]) ** 2) / output.size(0)
             total_loss = 0
     print('total loss over the whole training set was {}'.format(trainLoss/trainDataLen))
-
+    # TODO: Delete the following lines once reinstating lr scheduling and 
+    # TODO: earl stopping
+    finalLoss = trainLoss/trainDataLen
+    return finalLoss
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~~~~~~~~~~~~~~~~~~ EVALUATION ~~~~~~~~~~~~~~~~~~~~~~~~ ###
 
@@ -871,7 +877,6 @@ if not testSession:
         train(ep)
         tloss = evaluate()
         
-
         scheduler.step(tloss)
         # Updating the learning rate that will be displayed for each epoch
         lr = optimizer.param_groups[0]['lr']
