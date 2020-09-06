@@ -551,7 +551,7 @@ optimizer = getattr(optim, optimMethod)(model.parameters(), lr=lr)
 
 # Creating a learning rate scheduler that updates the learning rate when the model plateaus
 # Divides the learning rate by 2 if the model has not gotten a lower total loss in 10 epochs
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, verbose=True, patience=9)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, verbose=True, patience=19)
 
 # Defining index that will only grab the predicted values
 predInds = [1,3]
@@ -898,12 +898,12 @@ if not testSession:
             else:
                 numEpochsSinceBest += 1
                 print("worse loss: {} epochs since best loss".format(numEpochsSinceBest))
-                if(numEpochsSinceBest >= 61):
-                    print('No progress made in 31 epochs, model is over fitting')
+                if(numEpochsSinceBest >= 43):
+                    print('No progress made in 43 epochs, model is over fitting')
                     break
                 # What this does is reset the model back to the best model after 10 epochs of no improvement
                 # to get the benefit of the decreased step size
-                if((numEpochsSinceBest % 10) == 0):
+                if((numEpochsSinceBest % 20) == 0):
                     model.load_state_dict(modelBEST.state_dict())
                     print('model reset to best model')
 
