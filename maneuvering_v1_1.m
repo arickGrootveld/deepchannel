@@ -136,7 +136,7 @@ if SHUFFLE % useful for training, not so useful for test and debug
     XX=XX(idx,:,:);
     YY=YY(idx,:);
 end
-% save(outfile,'XX','YY')
+save(outfile,'XX','YY')
 
 
 %% plot trajectory of last realization
