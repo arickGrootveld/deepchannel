@@ -25,7 +25,7 @@ sigma_v2_2 = (.2*pi/180)^2; % (co)variance of process noise (turn rate, v2)
 R = (0.2*velocity_init_mean)^2*eye(2);  % covariance of measurement noise [maybe makes sense to increase w/velocity?]
 outfile = 'data/manTargOut.mat';     % output filename for storing XX and YY variables for NN
 SHUFFLE = true;             % shuffles data (across realizations) before saving
-seed = 100;                 % sets the seed of the rng state so that results can be reproduced
+seed = 101;                 % sets the seed of the rng state so that results can be reproduced
 
 %% non-tweakable parameters and intermediate variables
 G=[T^2/2 0; T 0; 0 T^2/2; 0 T];  % matrix for system model (state eq)
@@ -48,7 +48,7 @@ sampleM=zeros(4,4,N);            % allocate space for sampleM (sample minimum me
 sampleM_pred=zeros(4,4,N);       % allocate space for sampleM_pred (sample minimum predicted mean squared error)
 XX=zeros((N-seqLength)*numSims, seqLength, 2);  % allocate space for saved data for NN (inputs)
 YY=zeros((N-seqLength)*numSims, 2);             % allocate space for saved data for NN (outputs)
-
+GKF_MSE = 0;                     % variable to store the MSE value of the Genie KF
 
 %% generate all random variables
 v1_all=zeros(2,N,numSims);
@@ -118,7 +118,7 @@ for k=1:numSims
         e_pred=x_hat_pred(:,n)-x(:,n);     % error between prediction and true state
         sampleM(:,:,n)=sampleM(:,:,n)+e*e'/numSims;  % sample MSE
         sampleM_pred(:,:,n)=sampleM_pred(:,:,n)+e_pred*e_pred'/numSims;  % sample prediction MSE
-        
+        GKF_MSE = GKF_MSE + (((e_pred(1,1))^2 + (e_pred(2,1))^2) / length(XX));  % mean squared error of the Genie KF
     end
     
     % store data for NN training / test
