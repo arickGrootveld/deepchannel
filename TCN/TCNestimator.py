@@ -584,6 +584,7 @@ def train(epoch):
             y = y.cuda()
         # Subtracting the bias from each of the samples
         if biasRemoval:
+            x = torch.flip(x, [2])
             biases_TandE[:,:] = x[:, :, 0]
             x = x - biases_TandE[:, :, None]
 
@@ -651,6 +652,7 @@ def evaluate():
             y_eval = y_eval.cuda()
         # Subtracting the bias from each of the samples
         if biasRemoval:
+            x_eval = torch.flip(x_eval, [2])
             biases_TandE[:,:] = x_eval[:, :, 0]
             x_eval = x_eval - biases_TandE[:, :, None].type(torch.float64)
 
@@ -719,6 +721,7 @@ def test():
             
             # Subtracting the bias from each of the samples
             if biasRemoval:
+                x_test = torch.flip(x_test, 2)
                 biases = x_test[:, :, 0]
                 x_test = x_test - biases[:, :, None]
             
