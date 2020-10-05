@@ -566,18 +566,18 @@ def train(epoch):
     trainLoss = 0
 
     # Shuffle the data each epoch
-    [shuffledMeasTRAIN, perm] = shuffleMeasTrainData(measuredStateTRAIN)
-    shuffledTrueTRAIN = shuffleTrueTrainData(trueStateTRAIN, perm)
+    #[shuffledMeasTRAIN, perm] = shuffleMeasTrainData(measuredStateTRAIN)
+    #shuffledTrueTRAIN = shuffleTrueTrainData(trueStateTRAIN, perm)
  ################################
 
     # Training loop - run until we process every series of data
     for i in range(0, trainSeriesLength):
 
         # Grab the current series
-        x = shuffledMeasTRAIN[:, :, :, i]
-        y = shuffledTrueTRAIN[:, predInds, i]
-        #x = measuredStateTRAIN[:,:,:,i]
-        #y = trueStateTRAIN[:, predInds, i]
+        #x = shuffledMeasTRAIN[:, :, :, i]
+        #y = shuffledTrueTRAIN[:, predInds, i]
+        x = measuredStateTRAIN[:,:,:,i]
+        y = trueStateTRAIN[:, predInds, i]
         
         if(args.cuda):
             x = x.cuda()
@@ -621,8 +621,6 @@ def train(epoch):
             # TrueMSE = torch.sum((output[:, 0] - y[:, 0]) ** 2 + (output[:, 2] - y[:, 2]) ** 2) / output.size(0)
             total_loss = 0
     print('total loss over the whole training set was {}'.format(trainLoss/trainDataLen))
-    # TODO: Delete the following lines once reinstating lr scheduling and 
-    # TODO: earl stopping
     finalLoss = trainLoss/trainDataLen
     return finalLoss
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
@@ -721,7 +719,7 @@ def test():
             
             # Subtracting the bias from each of the samples
             if biasRemoval:
-                x_test = torch.flip(x_test, 2)
+                x_test = torch.flip(x_test, [2])
                 biases = x_test[:, :, 0]
                 x_test = x_test - biases[:, :, None]
             
@@ -909,8 +907,8 @@ if not testSession:
                 if(numEpochsSinceBest >= 43):
                     print('No progress made in 43 epochs, model is over fitting')
                     break
-                # What this does is reset the model back to the best model after 10 epochs of no improvement
-                # to get the benefit of the decreased step size
+               # What this does is reset the model back to the best model after 10 epochs of no improvement
+               # to get the benefit of the decreased step size
                 if((numEpochsSinceBest % 20) == 0):
                     model.load_state_dict(modelBEST.state_dict())
                     print('model reset to best model')

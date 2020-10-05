@@ -3,8 +3,8 @@ fdims = 5; %[x1 x2 v1 v2 w]
 hdims = 2;
 nmodels = 2;
 
-n = 30000;
-seed = 6333;
+n = 30000000;
+seed = 2202326;
 rng(seed);
 
 tic;
