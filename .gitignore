@@ -1,13 +1,5 @@
-ARProcessPredictor/logs
-ARProcessPredictor/data
-ARProcessPredictor/__pycache__
-ARMismatchPredictor/__pycache__
-ARMismatchPredictor/logs
-ARMismatchPredictor/data
 .vscode
-data
 **.swp
-ARMismatchPredictor/ar_mismatch_test.py
 **.idea
 **/__pycache__
 **.mat
